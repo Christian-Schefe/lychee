@@ -1,136 +1,117 @@
 package parser
 
-import lexer.CharToken
-import lexer.IntegerToken
+import lexer.OperatorToken
 import lexer.TokenStack
+import java.util.function.Predicate
 
+interface IExprVisitor {
+    fun visit(expr: MultiplicativeExpr)
+    fun visit(expr: AdditiveExpr)
+    fun visit(expr: RelationalExpr)
+    fun visit(expr: EqualityExpr)
+    fun visit(expr: LogicalAndExpr)
+    fun visit(expr: LogicalAndExpression)
+}
 
-class Expression(val leftTerm: Term, val rightTerms: List<Pair<Boolean, Term>>) : INode {
-    override fun toString(): String {
-        return "Expression(leftTerm=$leftTerm, rightTerms=$rightTerms)"
+fun <TExpr : BaseExpr<TOperand>, TOperand> parseBaseExpr(
+    tokens: TokenStack,
+    operandParser: (TokenStack) -> Result<TOperand>,
+    validToken: Predicate<OperatorToken>,
+    constructor: (TOperand, List<Pair<TOperand, OperatorToken>>) -> TExpr
+): Result<TExpr> {
+    val left = operandParser(tokens).getOrElse { return Result.failure(it) }
+    val rightTerms = mutableListOf<Pair<TOperand, OperatorToken>>()
+    while (tokens.remaining > 0) {
+        val opToken = tokens.peek() as? OperatorToken ?: break
+        if (!validToken.test(opToken)) break
+        val operand = operandParser(tokens).getOrElse { return Result.failure(it) }
+        rightTerms.add(operand to opToken)
     }
+    val expr = constructor(left, rightTerms)
+    return Result.success(expr)
+}
 
-    override fun accept(visitor: INodeVisitor) {
-        visitor.visit(this)
-    }
+abstract class BaseExpr<TOperand>(val left: TOperand, val right: List<Pair<TOperand, OperatorToken>>) : INode
+
+class MultiplicativeExpr(left: IFactor, right: List<Pair<IFactor, OperatorToken>>) : BaseExpr<IFactor>(left, right) {
+    override fun accept(visitor: INodeVisitor) = visitor.visit(this)
 
     companion object {
-        fun tryParse(tokens: TokenStack): Result<Expression> {
-            val leftTerm = Term.tryParse(tokens).getOrElse { return Result.failure(it) }
-            val rightTerms = mutableListOf<Pair<Boolean, Term>>()
-            while (tokens.remaining > 0) {
-                val token = tokens.peek()
-                val isAddition = when (token) {
-                    CharToken.PLUS -> true
-                    CharToken.MINUS -> false
-                    else -> break
-                }
-                tokens.pop()
-                val term = Term.tryParse(tokens).getOrElse { return Result.failure(it) }
-                rightTerms.add(isAddition to term)
-            }
-            return Result.success(Expression(leftTerm, rightTerms))
+        fun tryParse(tokens: TokenStack): Result<MultiplicativeExpr> {
+            return parseBaseExpr(tokens,
+                ::tryParseFactor,
+                { it == OperatorToken.MULTIPLY || it == OperatorToken.DIVIDE },
+                { left, right -> MultiplicativeExpr(left, right) })
         }
     }
 }
 
-class Term(val leftFactor: IFactor, val rightFactors: List<Pair<Boolean, IFactor>>) : INode {
-    override fun toString(): String {
-        return "Term(leftFactor=$leftFactor, rightFactors=$rightFactors)"
-    }
-
-    override fun accept(visitor: INodeVisitor) {
-        visitor.visit(this)
-    }
+class AdditiveExpr(left: MultiplicativeExpr, right: List<Pair<MultiplicativeExpr, OperatorToken>>) :
+    BaseExpr<MultiplicativeExpr>(left, right) {
+    override fun accept(visitor: INodeVisitor) = visitor.visit(this)
 
     companion object {
-        fun tryParse(tokens: TokenStack): Result<Term> {
-            val leftFactor = IFactor.tryParse(tokens).getOrElse { return Result.failure(it) }
-            val rightTerms = mutableListOf<Pair<Boolean, IFactor>>()
-            while (tokens.remaining > 0) {
-                val token = tokens.peek()
-                val isMultiplication = when (token) {
-                    CharToken.ASTERISK -> true
-                    CharToken.SLASH -> false
-                    else -> break
-                }
-                tokens.pop()
-                val factor = IFactor.tryParse(tokens).getOrElse { return Result.failure(it) }
-                rightTerms.add(isMultiplication to factor)
-            }
-            return Result.success(Term(leftFactor, rightTerms))
+        fun tryParse(tokens: TokenStack): Result<AdditiveExpr> {
+            return parseBaseExpr(tokens,
+                MultiplicativeExpr.Companion::tryParse,
+                { it == OperatorToken.ADD || it == OperatorToken.SUBTRACT },
+                { left, right -> AdditiveExpr(left, right) })
         }
     }
 }
 
-interface IFactor : INode {
+class RelationalExpr(left: AdditiveExpr, right: List<Pair<AdditiveExpr, OperatorToken>>) :
+    BaseExpr<AdditiveExpr>(left, right) {
+    override fun accept(visitor: INodeVisitor) = visitor.visit(this)
+
     companion object {
-        fun tryParse(tokens: TokenStack): Result<IFactor> {
-            val tokenIndex = tokens.index
-            ConstFactor.tryParse(tokens).onSuccess { return Result.success(it) }
-            tokens.index = tokenIndex
-            UnaryOpFactor.tryParse(tokens).onSuccess { return Result.success(it) }
-            tokens.index = tokenIndex
-            ParenExprFactor.tryParse(tokens).onSuccess { return Result.success(it) }
-            return Result.failure(ParsingException("Expected factor"))
+        fun tryParse(tokens: TokenStack): Result<RelationalExpr> {
+            return parseBaseExpr(tokens,
+                AdditiveExpr.Companion::tryParse,
+                { it == OperatorToken.LESS_THAN || it == OperatorToken.LESS_THAN_OR_EQUAL || it == OperatorToken.GREATER_THAN || it == OperatorToken.GREATER_THAN_OR_EQUAL },
+                { left, right -> RelationalExpr(left, right) })
         }
     }
 }
 
-class ConstFactor(val value: Int) : IFactor {
-    override fun toString(): String {
-        return "IntExpression(value=$value)"
-    }
-
-    override fun accept(visitor: INodeVisitor) {
-        visitor.visit(this)
-    }
+class EqualityExpr(left: RelationalExpr, right: List<Pair<RelationalExpr, OperatorToken>>) :
+    BaseExpr<RelationalExpr>(left, right) {
+    override fun accept(visitor: INodeVisitor) = visitor.visit(this)
 
     companion object {
-        fun tryParse(tokens: TokenStack): Result<ConstFactor> {
-            val intToken =
-                tokens.consumeFn { it as? IntegerToken } ?: return Result.failure(ParsingException("Expected integer"))
-            return Result.success(ConstFactor(intToken.value))
+        fun tryParse(tokens: TokenStack): Result<EqualityExpr> {
+            return parseBaseExpr(tokens,
+                RelationalExpr.Companion::tryParse,
+                { it == OperatorToken.EQUAL || it == OperatorToken.NOT_EQUAL },
+                { left, right -> EqualityExpr(left, right) })
         }
     }
 }
 
-class UnaryOpFactor(val operator: UnaryOperator, val factor: IFactor) : IFactor {
-    override fun toString(): String {
-        return "UnaryExpression(operator=$operator, factor=$factor)"
-    }
-
-    override fun accept(visitor: INodeVisitor) {
-        visitor.visit(this)
-    }
+class LogicalAndExpr(left: EqualityExpr, right: List<Pair<EqualityExpr, OperatorToken>>) :
+    BaseExpr<EqualityExpr>(left, right) {
+    override fun accept(visitor: INodeVisitor) = visitor.visit(this)
 
     companion object {
-        fun tryParse(tokens: TokenStack): Result<UnaryOpFactor> {
-            val token = tokens.pop() ?: return Result.failure(ParsingException("Expected token"))
-            val operator =
-                UnaryOperator.fromToken(token) ?: return Result.failure(ParsingException("Expected unary operator"))
-            val expression = IFactor.tryParse(tokens).getOrElse { return Result.failure(it) }
-            return Result.success(UnaryOpFactor(operator, expression))
+        fun tryParse(tokens: TokenStack): Result<LogicalAndExpr> {
+            return parseBaseExpr(tokens,
+                EqualityExpr.Companion::tryParse,
+                { it == OperatorToken.LOGICAL_AND },
+                { left, right -> LogicalAndExpr(left, right) })
         }
     }
 }
 
-class ParenExprFactor(val expression: Expression) : IFactor {
-    override fun toString(): String {
-        return "ParenthesizedExpression(expression=$expression)"
-    }
-
-    override fun accept(visitor: INodeVisitor) {
-        visitor.visit(this)
-    }
+class LogicalAndExpression(left: LogicalAndExpr, right: List<Pair<LogicalAndExpr, OperatorToken>>) :
+    BaseExpr<LogicalAndExpr>(left, right) {
+    override fun accept(visitor: INodeVisitor) = visitor.visit(this)
 
     companion object {
-        fun tryParse(tokens: TokenStack): Result<ParenExprFactor> {
-            tokens.popMatching { it == CharToken.OPEN_PAREN } ?: return Result.failure(ParsingException("Expected '('"))
-            val expression = Expression.tryParse(tokens).getOrElse { return Result.failure(it) }
-            tokens.popMatching { it == CharToken.CLOSE_PAREN }
-                ?: return Result.failure(ParsingException("Expected ')'"))
-            return Result.success(ParenExprFactor(expression))
+        fun tryParse(tokens: TokenStack): Result<LogicalAndExpression> {
+            return parseBaseExpr(tokens,
+                LogicalAndExpr.Companion::tryParse,
+                { it == OperatorToken.LOGICAL_OR },
+                { left, right -> LogicalAndExpression(left, right) })
         }
     }
 }

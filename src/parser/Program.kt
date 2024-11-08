@@ -8,25 +8,14 @@ interface INode {
     fun accept(visitor: INodeVisitor)
 }
 
-interface INodeVisitor {
+interface INodeVisitor : IExprVisitor, IFactorVisitor {
     fun visit(node: Program)
     fun visit(node: Function)
     fun visit(node: Statement)
-    fun visit(node: Expression)
-    fun visit(node: Term)
-    fun visit(node: ConstFactor)
-    fun visit(node: UnaryOpFactor)
-    fun visit(node: ParenExprFactor)
 }
 
-class Program(val function: Function) : INode {
-    override fun toString(): String {
-        return "Program(function=$function)"
-    }
-
-    override fun accept(visitor: INodeVisitor) {
-        visitor.visit(this)
-    }
+data class Program(val function: Function) : INode {
+    override fun accept(visitor: INodeVisitor) = visitor.visit(this)
 
     companion object {
         fun parse(tokens: TokenStack): Program {
@@ -36,14 +25,8 @@ class Program(val function: Function) : INode {
     }
 }
 
-class Function(val name: String, val statement: Statement) : INode {
-    override fun toString(): String {
-        return "Function(statement=$statement)"
-    }
-
-    override fun accept(visitor: INodeVisitor) {
-        visitor.visit(this)
-    }
+data class Function(val name: String, val statement: Statement) : INode {
+    override fun accept(visitor: INodeVisitor) = visitor.visit(this)
 
     companion object {
         fun parse(tokens: TokenStack): Function {
@@ -60,13 +43,7 @@ class Function(val name: String, val statement: Statement) : INode {
 }
 
 class Statement(val expression: Expression) : INode {
-    override fun toString(): String {
-        return "Statement(expression=$expression)"
-    }
-
-    override fun accept(visitor: INodeVisitor) {
-        visitor.visit(this)
-    }
+    override fun accept(visitor: INodeVisitor) = visitor.visit(this)
 
     companion object {
         fun parse(tokens: TokenStack): Statement {
