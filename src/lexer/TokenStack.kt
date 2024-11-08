@@ -28,6 +28,19 @@ class TokenStack(val tokens: List<IToken>) {
         return null
     }
 
+    fun peekMatching(predicate: Predicate<IToken>): IToken? {
+        val token = peek() ?: return null
+        if (predicate.test(token)) {
+            return token
+        }
+        return null
+    }
+
+    fun <T> peekTransformMatching(func: Function<IToken, T?>): T? {
+        val token = peek() ?: return null
+        return func.apply(token)
+    }
+
     fun <T> consumeFn(func: Function<IToken, T?>): T? {
         val token = peek() ?: return null
         val result = func.apply(token) ?: return null

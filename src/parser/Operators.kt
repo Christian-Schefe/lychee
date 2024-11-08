@@ -2,9 +2,12 @@ package parser
 
 import lexer.CharToken
 import lexer.IToken
+import lexer.OperatorToken
 
 enum class UnaryOperator(val token: IToken) {
-    LOGICAL_NOT(CharToken.LOGICAL_NOT), BITWISE_NOT(CharToken.BITWISE_NOT), NEGATE(CharToken.MINUS);
+    LOGICAL_NOT(OperatorToken.LOGICAL_NOT), BITWISE_NOT(OperatorToken.BITWISE_NOT), NEGATE(OperatorToken.SUBTRACT), POSITIVE(
+        OperatorToken.ADD
+    );
 
     companion object {
         val map = entries.associateBy { it.token }

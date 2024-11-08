@@ -2,116 +2,112 @@ package parser
 
 import lexer.OperatorToken
 import lexer.TokenStack
-import java.util.function.Predicate
 
 interface IExprVisitor {
-    fun visit(expr: MultiplicativeExpr)
-    fun visit(expr: AdditiveExpr)
-    fun visit(expr: RelationalExpr)
-    fun visit(expr: EqualityExpr)
-    fun visit(expr: LogicalAndExpr)
-    fun visit(expr: LogicalAndExpression)
+    fun visit(expr: Expr)
+    fun visit(expr: FactorExpr)
 }
 
-fun <TExpr : BaseExpr<TOperand>, TOperand> parseBaseExpr(
+private fun parseExpr(
     tokens: TokenStack,
-    operandParser: (TokenStack) -> Result<TOperand>,
-    validToken: Predicate<OperatorToken>,
-    constructor: (TOperand, List<Pair<TOperand, OperatorToken>>) -> TExpr
-): Result<TExpr> {
+    operandParser: (TokenStack) -> Result<IExpr>,
+    validTokens: List<OperatorToken>,
+    resultType: ExprType
+): Result<IExpr> {
     val left = operandParser(tokens).getOrElse { return Result.failure(it) }
-    val rightTerms = mutableListOf<Pair<TOperand, OperatorToken>>()
+    val rightTerms = mutableListOf<Pair<IExpr, OperatorToken>>()
     while (tokens.remaining > 0) {
         val opToken = tokens.peek() as? OperatorToken ?: break
-        if (!validToken.test(opToken)) break
+        if (!validTokens.contains(opToken)) break
+        tokens.pop()
         val operand = operandParser(tokens).getOrElse { return Result.failure(it) }
         rightTerms.add(operand to opToken)
     }
-    val expr = constructor(left, rightTerms)
-    return Result.success(expr)
+    return if (rightTerms.isEmpty()) Result.success(left)
+    else Result.success(Expr(resultType, left, rightTerms))
 }
 
-abstract class BaseExpr<TOperand>(val left: TOperand, val right: List<Pair<TOperand, OperatorToken>>) : INode
-
-class MultiplicativeExpr(left: IFactor, right: List<Pair<IFactor, OperatorToken>>) : BaseExpr<IFactor>(left, right) {
-    override fun accept(visitor: INodeVisitor) = visitor.visit(this)
-
+interface IExpr : INode {
     companion object {
-        fun tryParse(tokens: TokenStack): Result<MultiplicativeExpr> {
-            return parseBaseExpr(tokens,
-                ::tryParseFactor,
-                { it == OperatorToken.MULTIPLY || it == OperatorToken.DIVIDE },
-                { left, right -> MultiplicativeExpr(left, right) })
+        fun tryParse(tokens: TokenStack): Result<IExpr> {
+            return tryParseLogicalOr(tokens)
+        }
+
+        private fun tryParseMultiplicative(tokens: TokenStack): Result<IExpr> {
+            return parseExpr(
+                tokens,
+                FactorExpr.Companion::tryParse,
+                listOf(OperatorToken.MULTIPLY, OperatorToken.DIVIDE, OperatorToken.MODULO),
+                ExprType.MULTIPLICATIVE
+            )
+        }
+
+        private fun tryParseAdditive(tokens: TokenStack): Result<IExpr> {
+            return parseExpr(
+                tokens, ::tryParseMultiplicative, listOf(OperatorToken.ADD, OperatorToken.SUBTRACT), ExprType.ADDITIVE
+            )
+        }
+
+        private fun tryParseShift(tokens: TokenStack): Result<IExpr> {
+            return parseExpr(
+                tokens, ::tryParseAdditive, listOf(OperatorToken.LEFT_SHIFT, OperatorToken.RIGHT_SHIFT), ExprType.SHIFT
+            )
+        }
+
+        private fun tryParseRelational(tokens: TokenStack): Result<IExpr> {
+            return parseExpr(
+                tokens, ::tryParseShift, listOf(
+                    OperatorToken.LESS_THAN,
+                    OperatorToken.LESS_THAN_OR_EQUAL,
+                    OperatorToken.GREATER_THAN,
+                    OperatorToken.GREATER_THAN_OR_EQUAL
+                ), ExprType.RELATIONAL
+            )
+        }
+
+        private fun tryParseEquality(tokens: TokenStack): Result<IExpr> {
+            return parseExpr(
+                tokens, ::tryParseRelational, listOf(OperatorToken.EQUAL, OperatorToken.NOT_EQUAL), ExprType.EQUALITY
+            )
+        }
+
+        private fun tryParseBitwiseAnd(tokens: TokenStack): Result<IExpr> {
+            return parseExpr(tokens, ::tryParseEquality, listOf(OperatorToken.BITWISE_AND), ExprType.BITWISE_AND)
+        }
+
+        private fun tryParseBitwiseXor(tokens: TokenStack): Result<IExpr> {
+            return parseExpr(tokens, ::tryParseBitwiseAnd, listOf(OperatorToken.BITWISE_XOR), ExprType.BITWISE_XOR)
+        }
+
+        private fun tryParseBitwiseOr(tokens: TokenStack): Result<IExpr> {
+            return parseExpr(tokens, ::tryParseBitwiseXor, listOf(OperatorToken.BITWISE_OR), ExprType.BITWISE_OR)
+        }
+
+        private fun tryParseLogicalAnd(tokens: TokenStack): Result<IExpr> {
+            return parseExpr(tokens, ::tryParseBitwiseOr, listOf(OperatorToken.LOGICAL_AND), ExprType.LOGICAL_AND)
+        }
+
+        private fun tryParseLogicalOr(tokens: TokenStack): Result<IExpr> {
+            return parseExpr(tokens, ::tryParseLogicalAnd, listOf(OperatorToken.LOGICAL_OR), ExprType.LOGICAL_OR)
         }
     }
 }
 
-class AdditiveExpr(left: MultiplicativeExpr, right: List<Pair<MultiplicativeExpr, OperatorToken>>) :
-    BaseExpr<MultiplicativeExpr>(left, right) {
+class Expr(val type: ExprType, val left: IExpr, val right: List<Pair<IExpr, OperatorToken>>) : IExpr {
     override fun accept(visitor: INodeVisitor) = visitor.visit(this)
-
-    companion object {
-        fun tryParse(tokens: TokenStack): Result<AdditiveExpr> {
-            return parseBaseExpr(tokens,
-                MultiplicativeExpr.Companion::tryParse,
-                { it == OperatorToken.ADD || it == OperatorToken.SUBTRACT },
-                { left, right -> AdditiveExpr(left, right) })
-        }
-    }
 }
 
-class RelationalExpr(left: AdditiveExpr, right: List<Pair<AdditiveExpr, OperatorToken>>) :
-    BaseExpr<AdditiveExpr>(left, right) {
-    override fun accept(visitor: INodeVisitor) = visitor.visit(this)
-
-    companion object {
-        fun tryParse(tokens: TokenStack): Result<RelationalExpr> {
-            return parseBaseExpr(tokens,
-                AdditiveExpr.Companion::tryParse,
-                { it == OperatorToken.LESS_THAN || it == OperatorToken.LESS_THAN_OR_EQUAL || it == OperatorToken.GREATER_THAN || it == OperatorToken.GREATER_THAN_OR_EQUAL },
-                { left, right -> RelationalExpr(left, right) })
-        }
-    }
+enum class ExprType {
+    ADDITIVE, MULTIPLICATIVE, SHIFT, RELATIONAL, EQUALITY, BITWISE_AND, BITWISE_XOR, BITWISE_OR, LOGICAL_AND, LOGICAL_OR
 }
 
-class EqualityExpr(left: RelationalExpr, right: List<Pair<RelationalExpr, OperatorToken>>) :
-    BaseExpr<RelationalExpr>(left, right) {
+class FactorExpr(val factor: IFactor) : IExpr {
     override fun accept(visitor: INodeVisitor) = visitor.visit(this)
 
     companion object {
-        fun tryParse(tokens: TokenStack): Result<EqualityExpr> {
-            return parseBaseExpr(tokens,
-                RelationalExpr.Companion::tryParse,
-                { it == OperatorToken.EQUAL || it == OperatorToken.NOT_EQUAL },
-                { left, right -> EqualityExpr(left, right) })
-        }
-    }
-}
-
-class LogicalAndExpr(left: EqualityExpr, right: List<Pair<EqualityExpr, OperatorToken>>) :
-    BaseExpr<EqualityExpr>(left, right) {
-    override fun accept(visitor: INodeVisitor) = visitor.visit(this)
-
-    companion object {
-        fun tryParse(tokens: TokenStack): Result<LogicalAndExpr> {
-            return parseBaseExpr(tokens,
-                EqualityExpr.Companion::tryParse,
-                { it == OperatorToken.LOGICAL_AND },
-                { left, right -> LogicalAndExpr(left, right) })
-        }
-    }
-}
-
-class LogicalAndExpression(left: LogicalAndExpr, right: List<Pair<LogicalAndExpr, OperatorToken>>) :
-    BaseExpr<LogicalAndExpr>(left, right) {
-    override fun accept(visitor: INodeVisitor) = visitor.visit(this)
-
-    companion object {
-        fun tryParse(tokens: TokenStack): Result<LogicalAndExpression> {
-            return parseBaseExpr(tokens,
-                LogicalAndExpr.Companion::tryParse,
-                { it == OperatorToken.LOGICAL_OR },
-                { left, right -> LogicalAndExpression(left, right) })
+        fun tryParse(tokens: TokenStack): Result<FactorExpr> {
+            val factor = tryParseFactor(tokens).getOrElse { return Result.failure(it) }
+            return Result.success(FactorExpr(factor))
         }
     }
 }

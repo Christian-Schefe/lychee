@@ -1,32 +1,37 @@
 package assembler
 
+import util.withReplacedFileExtension
 import java.io.File
 import java.io.IOException
+import java.nio.file.Path
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.writeText
 
-fun assemble(assembly: String, outputPath: String) {
-    val assemblyOutputPath = outputPath + ".s"
-    writeAssemblyFile(assembly, assemblyOutputPath)
-    invokeGcc(assemblyOutputPath, outputPath)
+fun assemble(assembly: String, outputPath: Path) {
+    val assemblyPath = outputPath.withReplacedFileExtension("s")
+
+    println("Writing assembly to: ${assemblyPath.absolutePathString()}")
+    assemblyPath.writeText(assembly)
+    invokeGcc(assemblyPath, outputPath)
 }
 
-fun writeAssemblyFile(assembly: String, outputPath: String) {
-    val workingDirPath = System.getProperty("user.dir")
-    val absOutputPath = workingDirPath + "/" + outputPath
-    File(absOutputPath).writeText(assembly)
-}
-
-fun invokeGcc(inputFilePath: String, outputFilePath: String) {
-    val workingDirPath = System.getProperty("user.dir")
-    val absInputPath = workingDirPath + "/" + inputFilePath
-    val absOutputPath = workingDirPath + "/" + outputFilePath
-    val command = "C:/cygwin64/bin/x86_64-w64-mingw32-gcc.exe -o \"$absOutputPath\" \"$absInputPath\""
+fun invokeGcc(assemblyPath: Path, outputPath: Path) {
+    val command = arrayOf(
+        "C:/cygwin64/bin/x86_64-w64-mingw32-gcc.exe",
+        "-o",
+        outputPath.absolutePathString(),
+        assemblyPath.absolutePathString()
+    )
+    println("Running: ${command.joinToString(" ")}")
     exec(command, workingDir = File("C:/cygwin64/bin"))
 }
 
-fun exec(cmd: String, stdIn: String = "", captureOutput: Boolean = false, workingDir: File = File(".")): String? {
+fun exec(
+    cmd: Array<String>, stdIn: String = "", captureOutput: Boolean = false, workingDir: File = File(".")
+): String? {
     try {
-        val process = ProcessBuilder(*cmd.split("\\s".toRegex()).toTypedArray()).directory(workingDir)
+        val process = ProcessBuilder(*cmd).directory(workingDir)
             .redirectOutput(if (captureOutput) ProcessBuilder.Redirect.PIPE else ProcessBuilder.Redirect.INHERIT)
             .redirectError(if (captureOutput) ProcessBuilder.Redirect.PIPE else ProcessBuilder.Redirect.INHERIT).start()
             .apply {

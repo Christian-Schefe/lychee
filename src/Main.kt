@@ -2,14 +2,16 @@ import assembler.assemble
 import codegen.genAssembly
 import frontend.getInputData
 import lexer.lex
+import parser.PrintVisitor
 import parser.parse
 
 fun main(args: Array<String>) {
     val inputData = getInputData(args)
-    val tokens = lex(inputData.text)
-    println(tokens.tokens)
+    println(inputData)
+    val tokens = lex(inputData.readInputText())
+    println(tokens.tokens.joinToString(" "))
     val ast = parse(tokens)
-    println(ast)
+    PrintVisitor().visit(ast)
     val assembly = genAssembly(ast)
     println(assembly)
     assemble(assembly, inputData.outputPath)

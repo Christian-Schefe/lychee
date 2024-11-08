@@ -42,13 +42,13 @@ data class Function(val name: String, val statement: Statement) : INode {
     }
 }
 
-class Statement(val expression: Expression) : INode {
+class Statement(val expression: IExpr) : INode {
     override fun accept(visitor: INodeVisitor) = visitor.visit(this)
 
     companion object {
         fun parse(tokens: TokenStack): Statement {
             tokens.popMatching { it == KeywordToken.RETURN } ?: throw ParsingException("Expected 'return'")
-            val expr = Expression.tryParse(tokens).getOrElse { throw it }
+            val expr = IExpr.tryParse(tokens).getOrElse { throw it }
             tokens.popMatching { it == CharToken.SEMICOLON } ?: throw ParsingException("Expected ';'")
             return Statement(expr)
         }

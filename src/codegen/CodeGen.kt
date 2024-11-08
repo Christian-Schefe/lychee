@@ -15,7 +15,7 @@ fun generateComparisonExprCode(visitor: GeneratorVisitor, expr: Expr) {
         visitor.add("push %rax")
         factor.accept(visitor)
         visitor.add("pop %rcx")
-        visitor.add("cmpq %rcx, %rax")
+        visitor.add("cmpq %rax, %rcx")
         visitor.add("movq \$0, %rax")
         when (op) {
             OperatorToken.LESS_THAN -> visitor.add("setl %al")
@@ -70,7 +70,7 @@ fun generateMathExprCode(visitor: GeneratorVisitor, expr: Expr) {
         visitor.add("push %rax")
         factor.accept(visitor)
         val shouldSwap = when (op) {
-            OperatorToken.SUBTRACT, OperatorToken.DIVIDE -> true
+            OperatorToken.SUBTRACT, OperatorToken.DIVIDE, OperatorToken.MODULO -> true
             OperatorToken.LEFT_SHIFT, OperatorToken.RIGHT_SHIFT -> true
             else -> false
         }
