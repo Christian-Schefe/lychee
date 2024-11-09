@@ -1,4 +1,4 @@
-package assembler
+package backend
 
 import util.withReplacedFileExtension
 import java.io.File
@@ -25,11 +25,19 @@ fun invokeGcc(assemblyPath: Path, outputPath: Path) {
     )
     println("Running: ${command.joinToString(" ")}")
     exec(command, workingDir = File("C:/cygwin64/bin"))
+    runExecutable(outputPath)
+}
+
+fun runExecutable(executablePath: Path) {
+    val command = arrayOf(executablePath.absolutePathString())
+    println("Running: ${command.joinToString(" ")}")
+    val exitCode = exec(command)?.second
+    println("Exit code: $exitCode")
 }
 
 fun exec(
     cmd: Array<String>, stdIn: String = "", captureOutput: Boolean = false, workingDir: File = File(".")
-): String? {
+): Pair<String, Int>? {
     try {
         val process = ProcessBuilder(*cmd).directory(workingDir)
             .redirectOutput(if (captureOutput) ProcessBuilder.Redirect.PIPE else ProcessBuilder.Redirect.INHERIT)
@@ -44,9 +52,11 @@ fun exec(
                 }
                 waitFor(60, TimeUnit.SECONDS)
             }
+        val exitCode = process.exitValue()
         if (captureOutput) {
-            return process.inputStream.bufferedReader().readText()
+            return process.inputStream.bufferedReader().readText() to exitCode
         }
+        return "" to exitCode
     } catch (e: IOException) {
         e.printStackTrace()
     }

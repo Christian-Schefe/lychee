@@ -1,11 +1,19 @@
 package lexer
 
+data class TokenSource(val token: IToken, val line: Int, val column: Int) {
+    override fun toString(): String {
+        return "$line:$column ['$token']"
+    }
+}
+
 interface IToken {
     override fun toString(): String
 }
 
 enum class CharToken(val char: Char) : IToken {
-    SEMICOLON(';'), OPEN_BRACE('{'), CLOSE_BRACE('}'), OPEN_PAREN('('), CLOSE_PAREN(')');
+    SEMICOLON(';'), OPEN_BRACE('{'), CLOSE_BRACE('}'), OPEN_PAREN('('), CLOSE_PAREN(')'), COLON(':'), QUESTION_MARK(
+        '?'
+    );
 
     override fun toString(): String {
         return char.toString()
@@ -26,7 +34,13 @@ enum class OperatorToken(val str: String) : IToken {
     DIVIDE("/"), BITWISE_NOT("~"), LOGICAL_NOT("!"), MODULO("%"), LEFT_SHIFT("<<"), RIGHT_SHIFT(">>"), BITWISE_AND(
         "&"
     ),
-    BITWISE_OR("|"), BITWISE_XOR("^");
+    BITWISE_OR("|"), BITWISE_XOR("^"), INCREMENT("++"), DECREMENT("--"), ADD_ASSIGN("+="), SUBTRACT_ASSIGN("-="), MULTIPLY_ASSIGN(
+        "*="
+    ),
+    DIVIDE_ASSIGN("/="), MODULO_ASSIGN("%="), LEFT_SHIFT_ASSIGN("<<="), RIGHT_SHIFT_ASSIGN(">>="), BITWISE_AND_ASSIGN(
+        "&="
+    ),
+    BITWISE_OR_ASSIGN("|="), BITWISE_XOR_ASSIGN("^="), COMMA(",");
 
     override fun toString(): String {
         return str
@@ -34,11 +48,29 @@ enum class OperatorToken(val str: String) : IToken {
 
     companion object {
         val tokenMap = entries.associateBy { it.str }
+        val assignOpMap = listOf(
+            ASSIGN,
+            ADD_ASSIGN,
+            SUBTRACT_ASSIGN,
+            MULTIPLY_ASSIGN,
+            DIVIDE_ASSIGN,
+            MODULO_ASSIGN,
+            LEFT_SHIFT_ASSIGN,
+            RIGHT_SHIFT_ASSIGN,
+            BITWISE_AND_ASSIGN,
+            BITWISE_OR_ASSIGN,
+            BITWISE_XOR_ASSIGN
+        ).associateBy { it }
+        val incrementOpMap = mapOf(
+            INCREMENT to false, DECREMENT to true
+        )
     }
 }
 
 enum class KeywordToken(val keyword: String) : IToken {
-    INT("int"), RETURN("return");
+    INT("int"), RETURN("return"), IF("if"), ELSE("else"), WHILE("while"), FOR("for"), DO("do"), BREAK("break"), CONTINUE(
+        "continue"
+    );
 
     override fun toString(): String {
         return keyword

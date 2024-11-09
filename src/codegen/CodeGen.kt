@@ -9,27 +9,28 @@ fun genAssembly(ast: Program): String {
 }
 
 
-fun generateComparisonExprCode(visitor: GeneratorVisitor, expr: Expr) {
+fun generateComparisonExprCode(visitor: GeneratorVisitor, expr: BinOpExpr) {
     expr.left.accept(visitor)
     expr.right.forEach { (factor, op) ->
-        visitor.add("push %rax")
+        visitor.add(PushInstruction(Register.RAX))
         factor.accept(visitor)
-        visitor.add("pop %rcx")
-        visitor.add("cmpq %rax, %rcx")
-        visitor.add("movq \$0, %rax")
-        when (op) {
-            OperatorToken.LESS_THAN -> visitor.add("setl %al")
-            OperatorToken.LESS_THAN_OR_EQUAL -> visitor.add("setle %al")
-            OperatorToken.GREATER_THAN -> visitor.add("setg %al")
-            OperatorToken.GREATER_THAN_OR_EQUAL -> visitor.add("setge %al")
-            OperatorToken.EQUAL -> visitor.add("sete %al")
-            OperatorToken.NOT_EQUAL -> visitor.add("setne %al")
+        visitor.add(PopInstruction(Register.RCX))
+        visitor.add(CmpInstruction(Register.RAX, Register.RCX))
+        visitor.add(MoveInstruction(ConstantOperand(0), Register.RAX))
+        val condition = when (op) {
+            OperatorToken.LESS_THAN -> "l"
+            OperatorToken.LESS_THAN_OR_EQUAL -> "le"
+            OperatorToken.GREATER_THAN -> "g"
+            OperatorToken.GREATER_THAN_OR_EQUAL -> "ge"
+            OperatorToken.EQUAL -> "e"
+            OperatorToken.NOT_EQUAL -> "ne"
             else -> throw IllegalArgumentException("Invalid operator")
         }
+        visitor.add(SetInstruction(condition, Register.AL))
     }
 }
 
-fun generateLogicalExprCode(visitor: GeneratorVisitor, expr: Expr) {
+fun generateLogicalExprCode(visitor: GeneratorVisitor, expr: BinOpExpr) {
     expr.left.accept(visitor)
     if (expr.right.isEmpty()) {
         return
@@ -39,35 +40,33 @@ fun generateLogicalExprCode(visitor: GeneratorVisitor, expr: Expr) {
 
     expr.right.forEachIndexed { index, (factor, op) ->
         val clauseLabel = "${clausePrefix}_clause$index"
-        visitor.add("cmpq \$0, %rax")
+        visitor.add(CmpInstruction(ConstantOperand(0), Register.RAX))
         when (op) {
             OperatorToken.LOGICAL_AND -> {
-                visitor.add("jne $clauseLabel")
-                visitor.add("jmp $endLabel")
-                visitor.add("$clauseLabel:")
+                visitor.add(JumpInstruction("ne", clauseLabel))
             }
 
             OperatorToken.LOGICAL_OR -> {
-                visitor.add("je $clauseLabel")
-                visitor.add("movq \$1, %rax")
-                visitor.add("jmp $endLabel")
-                visitor.add("$clauseLabel:")
+                visitor.add(JumpInstruction("e", clauseLabel))
+                visitor.add(MoveInstruction(ConstantOperand(1), Register.RAX))
             }
 
             else -> throw IllegalArgumentException("Invalid operator")
         }
+        visitor.add(JumpInstruction(null, endLabel))
+        visitor.add(LabelInstruction(clauseLabel))
         factor.accept(visitor)
-        visitor.add("cmpq \$0, %rax")
-        visitor.add("movq \$0, %rax")
-        visitor.add("setne %al")
+        visitor.add(CmpInstruction(ConstantOperand(0), Register.RAX))
+        visitor.add(MoveInstruction(ConstantOperand(0), Register.RAX))
+        visitor.add(SetInstruction("ne", Register.AL))
     }
-    visitor.add("$endLabel:")
+    visitor.add(LabelInstruction(endLabel))
 }
 
-fun generateMathExprCode(visitor: GeneratorVisitor, expr: Expr) {
+fun generateMathExprCode(visitor: GeneratorVisitor, expr: BinOpExpr) {
     expr.left.accept(visitor)
     expr.right.forEach { (factor, op) ->
-        visitor.add("push %rax")
+        visitor.add(PushInstruction(Register.RAX))
         factor.accept(visitor)
         val shouldSwap = when (op) {
             OperatorToken.SUBTRACT, OperatorToken.DIVIDE, OperatorToken.MODULO -> true
@@ -75,30 +74,30 @@ fun generateMathExprCode(visitor: GeneratorVisitor, expr: Expr) {
             else -> false
         }
         if (shouldSwap) {
-            visitor.add("movq %rax, %rcx")
-            visitor.add("pop %rax")
+            visitor.add(MoveInstruction(Register.RAX, Register.RCX))
+            visitor.add(PopInstruction(Register.RAX))
         } else {
-            visitor.add("pop %rcx")
+            visitor.add(PopInstruction(Register.RCX))
         }
         when (op) {
-            OperatorToken.BITWISE_AND -> visitor.add("and %rcx, %rax")
-            OperatorToken.BITWISE_OR -> visitor.add("or %rcx, %rax")
-            OperatorToken.BITWISE_XOR -> visitor.add("xor %rcx, %rax")
-            OperatorToken.ADD -> visitor.add("add %rcx, %rax")
-            OperatorToken.MULTIPLY -> visitor.add("imul %rcx, %rax")
-            OperatorToken.SUBTRACT -> visitor.add("subq %rcx, %rax")
-            OperatorToken.LEFT_SHIFT -> visitor.add("shl %cl, %rax")
-            OperatorToken.RIGHT_SHIFT -> visitor.add("sar %cl, %rax")
+            OperatorToken.BITWISE_AND -> visitor.add(AndInstruction(Register.RCX, Register.RAX))
+            OperatorToken.BITWISE_OR -> visitor.add(OrInstruction(Register.RCX, Register.RAX))
+            OperatorToken.BITWISE_XOR -> visitor.add(XorInstruction(Register.RCX, Register.RAX))
+            OperatorToken.ADD -> visitor.add(AddInstruction(Register.RCX, Register.RAX))
+            OperatorToken.MULTIPLY -> visitor.add(MulInstruction(Register.RCX, Register.RAX))
+            OperatorToken.SUBTRACT -> visitor.add(SubInstruction(Register.RCX, Register.RAX))
+            OperatorToken.LEFT_SHIFT -> visitor.add(ShiftLeftInstruction(Register.CL, Register.RAX))
+            OperatorToken.RIGHT_SHIFT -> visitor.add(ShiftRightInstruction(Register.CL, Register.RAX))
 
             OperatorToken.DIVIDE -> {
-                visitor.add("cqto")
-                visitor.add("idivq %rcx")
+                visitor.add(CqtoInstruction())
+                visitor.add(DivInstruction(Register.RCX))
             }
 
             OperatorToken.MODULO -> {
-                visitor.add("cqto")
-                visitor.add("idivq %rcx")
-                visitor.add("movq %rdx, %rax")
+                visitor.add(CqtoInstruction())
+                visitor.add(DivInstruction(Register.RCX))
+                visitor.add(MoveInstruction(Register.RDX, Register.RAX))
             }
 
             else -> throw IllegalArgumentException("Invalid operator $op")

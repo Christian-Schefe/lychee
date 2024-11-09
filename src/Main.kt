@@ -1,4 +1,4 @@
-import assembler.assemble
+import backend.assemble
 import codegen.genAssembly
 import frontend.getInputData
 import lexer.lex
@@ -9,7 +9,7 @@ fun main(args: Array<String>) {
     val inputData = getInputData(args)
     println(inputData)
     val tokens = lex(inputData.readInputText())
-    println(tokens.tokens.joinToString(" "))
+    println(tokens.tokens.joinToString("\n"))
     val ast = parse(tokens)
     PrintVisitor().visit(ast)
     val assembly = genAssembly(ast)

@@ -3,7 +3,8 @@ package lexer
 import java.util.function.Function
 import java.util.function.Predicate
 
-class TokenStack(val tokens: List<IToken>) {
+class TokenStack(val tokens: List<TokenSource>) {
+    val curLocation get() = tokens.getOrNull(index)
     var index = 0
     val count = tokens.size
     val remaining: Int
@@ -16,7 +17,11 @@ class TokenStack(val tokens: List<IToken>) {
     }
 
     fun peek(): IToken? {
-        return tokens.getOrNull(index)
+        return tokens.getOrNull(index)?.token
+    }
+
+    fun at(index: Int): IToken? {
+        return tokens.getOrNull(index)?.token
     }
 
     fun popMatching(predicate: Predicate<IToken>): IToken? {

@@ -3,16 +3,27 @@ package lexer
 class LexerException(message: String) : Exception(message)
 
 fun lex(input: String): TokenStack {
-    val tokens = mutableListOf<IToken>()
+    val tokens = mutableListOf<TokenSource>()
     var freeIndex = 0
+    var lineCounter = 1
+    var columnCounter = 1
 
     while (freeIndex < input.length) {
         if (input[freeIndex].isWhitespace()) {
+            if (input[freeIndex] == '\n') {
+                lineCounter++
+                columnCounter = 0
+            } else {
+                columnCounter++
+            }
             freeIndex++
             continue
         }
-        val (token, newIndex) = readToken(input, freeIndex) ?: throw LexerException("Invalid token at index $freeIndex")
-        tokens.add(token)
+        val (token, newIndex) = readToken(input, freeIndex)
+            ?: throw LexerException("Invalid token at ln $lineCounter col $columnCounter")
+        val tokenSource = TokenSource(token, lineCounter, columnCounter)
+        tokens.add(tokenSource)
+        columnCounter += newIndex + 1 - freeIndex
         freeIndex = newIndex + 1
     }
     return TokenStack(tokens)
@@ -31,9 +42,16 @@ fun readToken(input: String, freeIndex: Int): Pair<IToken, Int>? {
         if (token != null) {
             lastValid = token to lookaheadIndex
         }
+        if (!canContinue(str)) {
+            break
+        }
         lookaheadIndex++
     }
     return lastValid
+}
+
+fun canContinue(input: String): Boolean {
+    return CharToken.tokenMap[input.last()] == null
 }
 
 fun isValidIdentifierChar(char: Char) = char.isLetterOrDigit() || char == '_' || char == '$'
