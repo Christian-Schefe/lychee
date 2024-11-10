@@ -10,7 +10,7 @@ class PrintVisitor : INodeVisitor {
     }
 
     override fun visit(node: Function) {
-        println("${getIndentString()}Function(name=${node.name})")
+        println("${getIndentString()}Function(name=${node.name}, params=${node.params})")
         indent += 1
         node.blockItems.forEach { it.accept(this) }
         indent -= 1

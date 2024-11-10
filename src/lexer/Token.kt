@@ -1,46 +1,58 @@
 package lexer
 
-data class TokenSource(val token: IToken, val line: Int, val column: Int) {
-    override fun toString(): String {
-        return "$line:$column ['$token']"
-    }
-}
+data class TokenSource(val token: IToken, val line: Int, val column: Int)
 
 interface IToken {
     override fun toString(): String
 }
 
-enum class CharToken(val char: Char) : IToken {
-    SEMICOLON(';'), OPEN_BRACE('{'), CLOSE_BRACE('}'), OPEN_PAREN('('), CLOSE_PAREN(')'), COLON(':'), QUESTION_MARK(
-        '?'
-    );
-
-    override fun toString(): String {
-        return char.toString()
-    }
-
-    companion object {
-        val tokenMap = entries.associateBy { it.char }
-    }
-}
-
-enum class OperatorToken(val str: String) : IToken {
-    ASSIGN("="), EQUAL("=="), NOT_EQUAL("!="), LESS_THAN("<"), LESS_THAN_OR_EQUAL("<="), GREATER_THAN(">"), GREATER_THAN_OR_EQUAL(
-        ">="
+enum class SymbolToken(val str: String, val shouldContinue: Boolean) : IToken {
+    SEMICOLON(";", false), OPEN_BRACE("{", false), CLOSE_BRACE("}", false), OPEN_PAREN(
+        "(", false
     ),
-    LOGICAL_AND("&&"), LOGICAL_OR("||"), ADD("+"), SUBTRACT("-"), MULTIPLY(
-        "*"
+    CLOSE_PAREN(
+        ")", false
     ),
-    DIVIDE("/"), BITWISE_NOT("~"), LOGICAL_NOT("!"), MODULO("%"), LEFT_SHIFT("<<"), RIGHT_SHIFT(">>"), BITWISE_AND(
-        "&"
+    COLON(":", false), QUESTION_MARK(
+        "?", false
     ),
-    BITWISE_OR("|"), BITWISE_XOR("^"), INCREMENT("++"), DECREMENT("--"), ADD_ASSIGN("+="), SUBTRACT_ASSIGN("-="), MULTIPLY_ASSIGN(
-        "*="
+    ASSIGN(
+        "=", true
     ),
-    DIVIDE_ASSIGN("/="), MODULO_ASSIGN("%="), LEFT_SHIFT_ASSIGN("<<="), RIGHT_SHIFT_ASSIGN(">>="), BITWISE_AND_ASSIGN(
-        "&="
+    EQUAL("==", false), NOT_EQUAL("!=", false), LESS_THAN("<", true), LESS_THAN_OR_EQUAL(
+        "<=", false
     ),
-    BITWISE_OR_ASSIGN("|="), BITWISE_XOR_ASSIGN("^="), COMMA(",");
+    GREATER_THAN(">", true), GREATER_THAN_OR_EQUAL(
+        ">=", false
+    ),
+    LOGICAL_AND("&&", false), LOGICAL_OR("||", false), PLUS("+", true), MINUS("-", true), ASTERISK(
+        "*", true
+    ),
+    DIVIDE(
+        "/", true
+    ),
+    BITWISE_NOT("~", false), LOGICAL_NOT("!", false), MODULO("%", true), LEFT_SHIFT("<<", true), RIGHT_SHIFT(
+        ">>", true
+    ),
+    BITWISE_AND(
+        "&", true
+    ),
+    BITWISE_OR("|", true), BITWISE_XOR("^", true), INCREMENT("++", false), DECREMENT("--", false), ADD_ASSIGN(
+        "+=", false
+    ),
+    SUBTRACT_ASSIGN("-=", false), MULTIPLY_ASSIGN(
+        "*=", false
+    ),
+    DIVIDE_ASSIGN("/=", false), MODULO_ASSIGN("%=", false), LEFT_SHIFT_ASSIGN("<<=", false), RIGHT_SHIFT_ASSIGN(
+        ">>=", false
+    ),
+    BITWISE_AND_ASSIGN(
+        "&=", false
+    ),
+    BITWISE_OR_ASSIGN("|=", false), BITWISE_XOR_ASSIGN("^=", false), COMMA(",", false), AMPERSAND(
+        "&", true
+    ),
+    ARROW("->", false);
 
     override fun toString(): String {
         return str
@@ -68,7 +80,7 @@ enum class OperatorToken(val str: String) : IToken {
 }
 
 enum class KeywordToken(val keyword: String) : IToken {
-    INT("int"), RETURN("return"), IF("if"), ELSE("else"), WHILE("while"), FOR("for"), DO("do"), BREAK("break"), CONTINUE(
+    RETURN("return"), IF("if"), ELSE("else"), WHILE("while"), FOR("for"), DO("do"), BREAK("break"), CONTINUE(
         "continue"
     );
 
@@ -84,6 +96,12 @@ enum class KeywordToken(val keyword: String) : IToken {
 data class IdentifierToken(val name: String) : IToken {
     override fun toString(): String {
         return "ID($name)"
+    }
+}
+
+data class StringToken(val value: String) : IToken {
+    override fun toString(): String {
+        return "STRING(\"$value\")"
     }
 }
 

@@ -4,34 +4,108 @@ interface IOperand {
     override fun toString(): String
 }
 
-enum class Register(val regName: String) : IOperand {
-    RAX("%rax"), RBX("%rbx"), RCX("%rcx"), RDX("%rdx"), RSI("%rsi"), RDI("%rdi"), RSP("%rsp"), RBP("%rbp"), R8("%r8"), R9(
-        "%r9"
-    ),
-    R10("%r10"), R11("%r11"), R12("%r12"), R13("%r13"), R14("%r14"), R15("%r15"), AL("%al"), CL("%cl");
+enum class DataSize(val postfix: String) {
+    BYTE("b"), WORD("w"), DWORD("l"), QWORD("q");
 
     override fun toString(): String {
-        return regName
+        return postfix
+    }
+}
+
+enum class Register(val regNames: Map<DataSize, String>) {
+    AX(
+        mapOf(DataSize.QWORD to "%rax", DataSize.DWORD to "%eax", DataSize.WORD to "ax", DataSize.BYTE to "al")
+    ),
+    BX(
+        mapOf(DataSize.QWORD to "%rbx", DataSize.DWORD to "%ebx", DataSize.WORD to "bx", DataSize.BYTE to "bl")
+    ),
+    CX(
+        mapOf(DataSize.QWORD to "%rcx", DataSize.DWORD to "%ecx", DataSize.WORD to "cx", DataSize.BYTE to "cl")
+    ),
+    DX(
+        mapOf(DataSize.QWORD to "%rdx", DataSize.DWORD to "%edx", DataSize.WORD to "dx", DataSize.BYTE to "dl")
+    ),
+    SI(
+        mapOf(DataSize.QWORD to "%rsi", DataSize.DWORD to "%esi", DataSize.WORD to "si", DataSize.BYTE to "sil")
+    ),
+    DI(
+        mapOf(DataSize.QWORD to "%rdi", DataSize.DWORD to "%edi", DataSize.WORD to "di", DataSize.BYTE to "dil")
+    ),
+    BP(
+        mapOf(DataSize.QWORD to "%rbp", DataSize.DWORD to "%ebp", DataSize.WORD to "bp", DataSize.BYTE to "bpl")
+    ),
+    SP(
+        mapOf(DataSize.QWORD to "%rsp", DataSize.DWORD to "%esp", DataSize.WORD to "sp", DataSize.BYTE to "spl")
+    );
+
+    fun getStr(size: DataSize): String {
+        return regNames[size] ?: error("Invalid size")
+    }
+}
+
+data class RegOp(val register: Register, val size: DataSize) : IOperand {
+    override fun toString(): String {
+        return register.getStr(size)
+    }
+
+    companion object {
+        val RAX = RegOp(Register.AX, DataSize.QWORD)
+        val EAX = RegOp(Register.AX, DataSize.DWORD)
+        val AX = RegOp(Register.AX, DataSize.WORD)
+        val AL = RegOp(Register.AX, DataSize.BYTE)
+        val RBX = RegOp(Register.BX, DataSize.QWORD)
+        val EBX = RegOp(Register.BX, DataSize.DWORD)
+        val BX = RegOp(Register.BX, DataSize.WORD)
+        val BL = RegOp(Register.BX, DataSize.BYTE)
+        val RCX = RegOp(Register.CX, DataSize.QWORD)
+        val ECX = RegOp(Register.CX, DataSize.DWORD)
+        val CX = RegOp(Register.CX, DataSize.WORD)
+        val CL = RegOp(Register.CX, DataSize.BYTE)
+        val RDX = RegOp(Register.DX, DataSize.QWORD)
+        val EDX = RegOp(Register.DX, DataSize.DWORD)
+        val DX = RegOp(Register.DX, DataSize.WORD)
+        val DL = RegOp(Register.DX, DataSize.BYTE)
+        val RSI = RegOp(Register.SI, DataSize.QWORD)
+        val ESI = RegOp(Register.SI, DataSize.DWORD)
+        val SI = RegOp(Register.SI, DataSize.WORD)
+        val SIL = RegOp(Register.SI, DataSize.BYTE)
+        val RDI = RegOp(Register.DI, DataSize.QWORD)
+        val EDI = RegOp(Register.DI, DataSize.DWORD)
+        val DI = RegOp(Register.DI, DataSize.WORD)
+        val DIL = RegOp(Register.DI, DataSize.BYTE)
+        val RBP = RegOp(Register.BP, DataSize.QWORD)
+        val EBP = RegOp(Register.BP, DataSize.DWORD)
+        val BP = RegOp(Register.BP, DataSize.WORD)
+        val BPL = RegOp(Register.BP, DataSize.BYTE)
+        val RSP = RegOp(Register.SP, DataSize.QWORD)
+        val ESP = RegOp(Register.SP, DataSize.DWORD)
+        val SP = RegOp(Register.SP, DataSize.WORD)
+        val SPL = RegOp(Register.SP, DataSize.BYTE)
     }
 }
 
 data class StackLocation(val offset: Int) : IOperand {
     override fun toString(): String {
-        return "-$offset(%rbp)"
+        return "${-offset}(%rbp)"
     }
 }
 
-data class ConstantOperand(val value: Int) : IOperand {
+open class ConstantOperand<T>(val value: T) : IOperand {
     override fun toString(): String {
-        return "$$value"
+        return "$value"
     }
+
+    class Byte(val byteValue: kotlin.Byte) : ConstantOperand<kotlin.Byte>(byteValue)
+    class Short(val shortValue: kotlin.Short) : ConstantOperand<kotlin.Short>(shortValue)
+    class Int(val intValue: kotlin.Int) : ConstantOperand<kotlin.Int>(intValue)
+    class Long(val longValue: kotlin.Long) : ConstantOperand<kotlin.Long>(longValue)
 }
 
 interface IInstruction {
     override fun toString(): String
 }
 
-class EntryPointInstruction(val name: String) : IInstruction {
+class GlobalInstruction(val name: String) : IInstruction {
     override fun toString(): String {
         return ".globl $name"
     }
@@ -43,15 +117,15 @@ class LabelInstruction(val name: String) : IInstruction {
     }
 }
 
-class PushInstruction(val source: IOperand) : IInstruction {
+class PushInstruction(val source: IOperand, val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "pushq $source"
+        return "push$size $source"
     }
 }
 
-class PopInstruction(val dest: IOperand) : IInstruction {
+class PopInstruction(val dest: IOperand, val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "popq $dest"
+        return "pop$size $dest"
     }
 }
 
@@ -61,33 +135,39 @@ class RetInstruction : IInstruction {
     }
 }
 
-class IncInstruction(val dest: IOperand) : IInstruction {
+class IncInstruction(val dest: IOperand, val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "incq $dest"
+        return "inc$size $dest"
     }
 }
 
-class DecInstruction(val dest: IOperand) : IInstruction {
+class DecInstruction(val dest: IOperand, val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "decq $dest"
+        return "dec$size $dest"
     }
 }
 
-class NegInstruction(val dest: IOperand) : IInstruction {
+class NegInstruction(val dest: IOperand, val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "negq $dest"
+        return "neg$size $dest"
     }
 }
 
-class NotInstruction(val dest: IOperand) : IInstruction {
+class NotInstruction(val dest: IOperand, val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "notq $dest"
+        return "not$size $dest"
     }
 }
 
-class MoveInstruction(val source: IOperand, val dest: IOperand) : IInstruction {
+class CallInstruction(val name: String) : IInstruction {
     override fun toString(): String {
-        return "movq $source, $dest"
+        return "call $name"
+    }
+}
+
+class MoveInstruction(val source: IOperand, val dest: IOperand, val size: DataSize) : IInstruction {
+    override fun toString(): String {
+        return "mov$size $source, $dest"
     }
 }
 
@@ -97,33 +177,33 @@ class SetInstruction(val condition: String, val dest: IOperand) : IInstruction {
     }
 }
 
-class AddInstruction(val source: IOperand, val dest: IOperand) : IInstruction {
+class AddInstruction(val source: IOperand, val dest: IOperand, val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "addq $source, $dest"
+        return "add$size $source, $dest"
     }
 }
 
-class SubInstruction(val source: IOperand, val dest: IOperand) : IInstruction {
+class SubInstruction(val source: IOperand, val dest: IOperand, val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "subq $source, $dest"
+        return "sub$size $source, $dest"
     }
 }
 
-class MulInstruction(val source: IOperand, val dest: IOperand) : IInstruction {
+class MulInstruction(val source: IOperand, val dest: IOperand, val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "imulq $source, $dest"
+        return "imul$size $source, $dest"
     }
 }
 
-class DivInstruction(val source: IOperand) : IInstruction {
+class DivInstruction(val source: IOperand, val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "idivq $source"
+        return "idiv$size $source"
     }
 }
 
-class CmpInstruction(val source: IOperand, val dest: IOperand) : IInstruction {
+class CmpInstruction(val source: IOperand, val dest: IOperand, val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "cmpq $source, $dest"
+        return "cmp$size $source, $dest"
     }
 }
 
@@ -134,38 +214,43 @@ class JumpInstruction(val condition: String?, val label: String) : IInstruction 
     }
 }
 
-class AndInstruction(val source: IOperand, val dest: IOperand) : IInstruction {
+class AndInstruction(val source: IOperand, val dest: IOperand, val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "andq $source, $dest"
+        return "and$size $source, $dest"
     }
 }
 
-class OrInstruction(val source: IOperand, val dest: IOperand) : IInstruction {
+class OrInstruction(val source: IOperand, val dest: IOperand, val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "orq $source, $dest"
+        return "or$size $source, $dest"
     }
 }
 
-class XorInstruction(val source: IOperand, val dest: IOperand) : IInstruction {
+class XorInstruction(val source: IOperand, val dest: IOperand, val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "xorq $source, $dest"
+        return "xor$size $source, $dest"
     }
 }
 
-class CqtoInstruction : IInstruction {
+class CqtoInstruction(val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "cqto"
+        return when (size) {
+            DataSize.QWORD -> "cqto"
+            DataSize.DWORD -> "cltd"
+            DataSize.WORD -> "cwtl"
+            else -> error("Invalid size")
+        }
     }
 }
 
-class ShiftLeftInstruction(val source: IOperand, val dest: IOperand) : IInstruction {
+class ShiftLeftInstruction(val source: IOperand, val dest: IOperand, val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "shlq $source, $dest"
+        return "shl$size $source, $dest"
     }
 }
 
-class ShiftRightInstruction(val source: IOperand, val dest: IOperand) : IInstruction {
+class ShiftRightInstruction(val source: IOperand, val dest: IOperand, val size: DataSize) : IInstruction {
     override fun toString(): String {
-        return "sarq $source, $dest"
+        return "sar$size $source, $dest"
     }
 }

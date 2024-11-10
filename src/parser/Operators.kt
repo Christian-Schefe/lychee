@@ -1,12 +1,11 @@
 package parser
 
-import lexer.CharToken
 import lexer.IToken
-import lexer.OperatorToken
+import lexer.SymbolToken
 
 enum class UnaryOperator(val token: IToken) {
-    LOGICAL_NOT(OperatorToken.LOGICAL_NOT), BITWISE_NOT(OperatorToken.BITWISE_NOT), NEGATE(OperatorToken.SUBTRACT), POSITIVE(
-        OperatorToken.ADD
+    LOGICAL_NOT(SymbolToken.LOGICAL_NOT), BITWISE_NOT(SymbolToken.BITWISE_NOT), NEGATE(SymbolToken.MINUS), POSITIVE(
+        SymbolToken.PLUS
     );
 
     companion object {

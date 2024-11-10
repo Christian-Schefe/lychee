@@ -1,7 +1,9 @@
 int main () {
-    return 2 + printf(a, 5 + 4, 1 ? 3 : 2, 2), 0, 7, 2 +2;
+    long a = 5;
+    return test(a);
 }
 
-int fun() {
-    return 2;
+int test(long n, int ni_) {
+    long a = n + ni_;
+    return 2 * a;
 }

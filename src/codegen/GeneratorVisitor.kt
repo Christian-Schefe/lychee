@@ -1,9 +1,10 @@
 package codegen
 
-import lexer.OperatorToken
+import lexer.SymbolToken
 import parser.*
 import parser.Function
 
+/*
 class GeneratorVisitor : INodeVisitor {
     private val lines = mutableListOf<IInstruction>()
     private var labelCounter = 0
@@ -35,25 +36,31 @@ class GeneratorVisitor : INodeVisitor {
     }
 
     override fun visit(node: Program) {
-        add(EntryPointInstruction("main"))
         node.functions.forEach { it.accept(this) }
     }
 
     override fun visit(node: Function) {
+        add(GlobalInstruction(node.name))
         add(LabelInstruction(node.name))
-        add(PushInstruction(Register.RBP))
-        add(MoveInstruction(Register.RSP, Register.RBP))
-        node.blockItems.forEach { it.accept(this) }
-        if (node.blockItems.none { it is ReturnStatement }) {
-            add(MoveInstruction(ConstantOperand(0), Register.RAX))
+        add(PushInstruction(RegOp.RBP, DataSize.QWORD))
+        add(MoveInstruction(RegOp.RSP, RegOp.RBP, DataSize.QWORD))
+        doBlock {
+            node.params.forEachIndexed { index, param ->
+                val offset = 16 + 8 * index
+                variables[param] = -offset to blockIndent
+            }
+            node.blockItems.forEach { it.accept(this) }
+            if (node.blockItems.none { it is ReturnStatement }) {
+                visit(ReturnStatement(ConstExpr(0)))
+            }
         }
-        add(MoveInstruction(Register.RBP, Register.RSP))
-        add(PopInstruction(Register.RBP))
-        add(RetInstruction())
     }
 
     override fun visit(statement: ReturnStatement) {
         statement.expression.accept(this)
+        add(MoveInstruction(Register.BP, Register.SP))
+        add(PopInstruction(Register.BP))
+        add(RetInstruction())
     }
 
     override fun visit(statement: ExprStatement) {
@@ -69,18 +76,18 @@ class GeneratorVisitor : INodeVisitor {
         variables[statement.name] = offset to blockIndent
         val source = if (statement.initializer.isPresent) {
             statement.initializer.get().accept(this)
-            Register.RAX
+            Register.A
         } else {
             ConstantOperand(0)
         }
-        add(SubInstruction(ConstantOperand(8), Register.RSP))
+        add(SubInstruction(ConstantOperand(8), Register.SP))
         add(MoveInstruction(source, StackLocation(offset)))
     }
 
     override fun visit(statement: IfStatement) {
         val endLabel = takeLabel()
         statement.expr.accept(this)
-        add(CmpInstruction(ConstantOperand(0), Register.RAX))
+        add(CmpInstruction(ConstantOperand(0), Register.A))
         if (statement.elseBranch.isPresent) {
             val falseLabel = takeLabel()
             add(JumpInstruction("e", falseLabel))
@@ -106,7 +113,9 @@ class GeneratorVisitor : INodeVisitor {
         val oldOffset = stackOffset
         blockIndent++
         action()
-        add(AddInstruction(ConstantOperand(stackOffset - oldOffset), Register.RSP))
+        if (stackOffset != oldOffset) {
+            add(AddInstruction(ConstantOperand(stackOffset - oldOffset), Register.SP))
+        }
         variables.clear()
         variables.putAll(oldMap)
         stackOffset = oldOffset
@@ -125,7 +134,7 @@ class GeneratorVisitor : INodeVisitor {
             statement.init.accept(this)
             add(LabelInstruction(loopLabel))
             statement.condition.accept(this)
-            add(CmpInstruction(ConstantOperand(0), Register.RAX))
+            add(CmpInstruction(ConstantOperand(0), Register.A))
             add(JumpInstruction("e", endLabel))
             statement.body.accept(this)
             add(LabelInstruction(continueLabel))
@@ -146,7 +155,7 @@ class GeneratorVisitor : INodeVisitor {
         currentBreakLabel = endLabel
         add(LabelInstruction(loopLabel))
         statement.condition.accept(this)
-        add(CmpInstruction(ConstantOperand(0), Register.RAX))
+        add(CmpInstruction(ConstantOperand(0), Register.A))
         add(JumpInstruction("e", endLabel))
         statement.body.accept(this)
         add(JumpInstruction(null, loopLabel))
@@ -167,7 +176,7 @@ class GeneratorVisitor : INodeVisitor {
         statement.body.accept(this)
         add(LabelInstruction(continueLabel))
         statement.condition.accept(this)
-        add(CmpInstruction(ConstantOperand(0), Register.RAX))
+        add(CmpInstruction(ConstantOperand(0), Register.A))
         add(JumpInstruction("ne", loopLabel))
         add(LabelInstruction(endLabel))
         currentBreakLabel = oldBreakLabel
@@ -216,7 +225,7 @@ class GeneratorVisitor : INodeVisitor {
     }
 
     override fun visit(expr: ConstExpr) {
-        add(MoveInstruction(ConstantOperand(expr.value), Register.RAX))
+        add(MoveInstruction(ConstantOperand(expr.value), Register.A))
     }
 
     override fun visit(expr: AssignExpr) {
@@ -224,73 +233,73 @@ class GeneratorVisitor : INodeVisitor {
         expr.expr.accept(this)
         var moveBack = true
         when (expr.op) {
-            OperatorToken.ASSIGN -> add(MoveInstruction(Register.RAX, StackLocation(offset)))
-            OperatorToken.ADD_ASSIGN -> add(AddInstruction(Register.RAX, StackLocation(offset)))
-            OperatorToken.SUBTRACT_ASSIGN -> add(SubInstruction(Register.RAX, StackLocation(offset)))
-            OperatorToken.MULTIPLY_ASSIGN -> {
-                add(MoveInstruction(StackLocation(offset), Register.RCX))
-                add(MulInstruction(Register.RCX, Register.RAX))
-                add(MoveInstruction(Register.RAX, StackLocation(offset)))
+            SymbolToken.ASSIGN -> add(MoveInstruction(Register.A, StackLocation(offset)))
+            SymbolToken.ADD_ASSIGN -> add(AddInstruction(Register.A, StackLocation(offset)))
+            SymbolToken.SUBTRACT_ASSIGN -> add(SubInstruction(Register.A, StackLocation(offset)))
+            SymbolToken.MULTIPLY_ASSIGN -> {
+                add(MoveInstruction(StackLocation(offset), Register.C))
+                add(MulInstruction(Register.C, Register.A))
+                add(MoveInstruction(Register.A, StackLocation(offset)))
                 moveBack = false
             }
 
-            OperatorToken.BITWISE_AND_ASSIGN -> add(AndInstruction(Register.RAX, StackLocation(offset)))
-            OperatorToken.BITWISE_OR_ASSIGN -> add(OrInstruction(Register.RAX, StackLocation(offset)))
-            OperatorToken.BITWISE_XOR_ASSIGN -> add(XorInstruction(Register.RAX, StackLocation(offset)))
+            SymbolToken.BITWISE_AND_ASSIGN -> add(AndInstruction(Register.A, StackLocation(offset)))
+            SymbolToken.BITWISE_OR_ASSIGN -> add(OrInstruction(Register.A, StackLocation(offset)))
+            SymbolToken.BITWISE_XOR_ASSIGN -> add(XorInstruction(Register.A, StackLocation(offset)))
 
-            OperatorToken.DIVIDE_ASSIGN -> {
-                add(MoveInstruction(Register.RAX, Register.RCX))
-                add(MoveInstruction(StackLocation(offset), Register.RAX))
+            SymbolToken.DIVIDE_ASSIGN -> {
+                add(MoveInstruction(Register.A, Register.C))
+                add(MoveInstruction(StackLocation(offset), Register.A))
                 add(CqtoInstruction())
-                add(DivInstruction(Register.RCX))
-                add(MoveInstruction(Register.RAX, StackLocation(offset)))
+                add(DivInstruction(Register.C))
+                add(MoveInstruction(Register.A, StackLocation(offset)))
                 moveBack = false
             }
 
-            OperatorToken.MODULO_ASSIGN -> {
-                add(MoveInstruction(Register.RAX, Register.RCX))
-                add(MoveInstruction(StackLocation(offset), Register.RAX))
+            SymbolToken.MODULO_ASSIGN -> {
+                add(MoveInstruction(Register.A, Register.C))
+                add(MoveInstruction(StackLocation(offset), Register.A))
                 add(CqtoInstruction())
-                add(DivInstruction(Register.RCX))
-                add(MoveInstruction(Register.RDX, StackLocation(offset)))
+                add(DivInstruction(Register.C))
+                add(MoveInstruction(Register.D, StackLocation(offset)))
             }
 
-            OperatorToken.LEFT_SHIFT_ASSIGN -> {
-                add(MoveInstruction(Register.RAX, Register.RCX))
-                add(MoveInstruction(StackLocation(offset), Register.RAX))
-                add(ShiftLeftInstruction(Register.CL, Register.RAX))
-                add(MoveInstruction(Register.RAX, StackLocation(offset)))
+            SymbolToken.LEFT_SHIFT_ASSIGN -> {
+                add(MoveInstruction(Register.A, Register.C))
+                add(MoveInstruction(StackLocation(offset), Register.A))
+                add(ShiftLeftInstruction(Register.CL, Register.A))
+                add(MoveInstruction(Register.A, StackLocation(offset)))
                 moveBack = false
             }
 
-            OperatorToken.RIGHT_SHIFT_ASSIGN -> {
-                add(MoveInstruction(Register.RAX, Register.RCX))
-                add(MoveInstruction(StackLocation(offset), Register.RAX))
-                add(ShiftRightInstruction(Register.CL, Register.RAX))
-                add(MoveInstruction(Register.RAX, StackLocation(offset)))
+            SymbolToken.RIGHT_SHIFT_ASSIGN -> {
+                add(MoveInstruction(Register.A, Register.C))
+                add(MoveInstruction(StackLocation(offset), Register.A))
+                add(ShiftRightInstruction(Register.CL, Register.A))
+                add(MoveInstruction(Register.A, StackLocation(offset)))
                 moveBack = false
             }
 
             else -> throw IllegalArgumentException("Invalid operator ${expr.op}")
         }
         if (moveBack) {
-            add(MoveInstruction(StackLocation(offset), Register.RAX))
+            add(MoveInstruction(StackLocation(offset), Register.A))
         }
     }
 
     override fun visit(expr: VarExpr) {
         val offset = getVarOffset(expr.name)
-        add(MoveInstruction(StackLocation(offset), Register.RAX))
+        add(MoveInstruction(StackLocation(offset), Register.A))
     }
 
     override fun visit(expr: IncrementExpr) {
         val offset = getVarOffset(expr.name)
         if (expr.isPostfix) {
-            add(MoveInstruction(StackLocation(offset), Register.RAX))
+            add(MoveInstruction(StackLocation(offset), Register.A))
             add(if (expr.isDecrement) DecInstruction(StackLocation(offset)) else IncInstruction(StackLocation(offset)))
         } else {
             add(if (expr.isDecrement) DecInstruction(StackLocation(offset)) else IncInstruction(StackLocation(offset)))
-            add(MoveInstruction(StackLocation(offset), Register.RAX))
+            add(MoveInstruction(StackLocation(offset), Register.A))
         }
     }
 
@@ -298,7 +307,7 @@ class GeneratorVisitor : INodeVisitor {
         val falseLabel = takeLabel()
         val endLabel = takeLabel()
         expr.condition.accept(this)
-        add(CmpInstruction(ConstantOperand(0), Register.RAX))
+        add(CmpInstruction(ConstantOperand(0), Register.A))
         add(JumpInstruction("e", falseLabel))
         expr.trueBranch.accept(this)
         add(JumpInstruction(null, endLabel))
@@ -308,21 +317,26 @@ class GeneratorVisitor : INodeVisitor {
     }
 
     override fun visit(expr: FunctionCallExpr) {
-        TODO("Not yet implemented")
+        expr.args.reversed().forEach {
+            it.accept(this)
+            add(PushInstruction(Register.A))
+        }
+        add(CallInstruction(expr.name))
+        add(AddInstruction(ConstantOperand(8 * expr.args.size), Register.SP))
     }
 
     override fun visit(expr: UnOpExpr) {
         expr.right.accept(this)
         when (expr.operator) {
-            UnaryOperator.NEGATE -> add(NegInstruction(Register.RAX))
-            UnaryOperator.BITWISE_NOT -> add(NotInstruction(Register.RAX))
+            UnaryOperator.NEGATE -> add(NegInstruction(Register.A))
+            UnaryOperator.BITWISE_NOT -> add(NotInstruction(Register.A))
             UnaryOperator.LOGICAL_NOT -> {
-                add(CmpInstruction(ConstantOperand(0), Register.RAX))
-                add(MoveInstruction(ConstantOperand(0), Register.RAX))
+                add(CmpInstruction(ConstantOperand(0), Register.A))
+                add(MoveInstruction(ConstantOperand(0), Register.A))
                 add(SetInstruction("e", Register.AL))
             }
 
             UnaryOperator.POSITIVE -> {}
         }
     }
-}
+}*/

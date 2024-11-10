@@ -22,9 +22,9 @@ interface IBlockItemVisitor {
 
 fun tryParseBlockItem(tokens: TokenStack): Result<IBlockItem> {
     val tokenIndex = tokens.index
-    DeclareBlockItem.tryParse(tokens).onSuccess { return Result.success(it) }
+    DeclareBlockItem.tryParse(tokens).onSuccess { return succeed(it) }
     tokens.index = tokenIndex
-    return tryParseStatement(tokens).onSuccess { return Result.success(it) }
+    return tryParseStatement(tokens).onSuccess { return succeed(it) }
 }
 
 fun tryParseStatement(tokens: TokenStack): Result<IStatement> {
@@ -47,12 +47,8 @@ class EmptyStatement : IStatement {
 
     companion object {
         fun tryParse(tokens: TokenStack): Pair<Result<IStatement>, Boolean> {
-            tokens.popMatching { it == CharToken.SEMICOLON } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    CharToken.SEMICOLON, tokens
-                )
-            ) to false
-            return Result.success(EmptyStatement()) to true
+            tokens.popMatching { it == SymbolToken.SEMICOLON } ?: return fail(SymbolToken.SEMICOLON, tokens, false)
+            return succeedTrue(EmptyStatement())
         }
     }
 }
@@ -62,18 +58,10 @@ class ReturnStatement(val expression: IExpr) : IStatement {
 
     companion object {
         fun tryParse(tokens: TokenStack): Pair<Result<IStatement>, Boolean> {
-            tokens.popMatching { it == KeywordToken.RETURN } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    KeywordToken.RETURN, tokens
-                )
-            ) to false
-            val expr = tryParseExpr(tokens).getOrElse { return Result.failure<IStatement>(it) to true }
-            tokens.popMatching { it == CharToken.SEMICOLON } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    CharToken.SEMICOLON, tokens
-                )
-            ) to true
-            return Result.success(ReturnStatement(expr)) to true
+            tokens.popMatching { it == KeywordToken.RETURN } ?: return fail(KeywordToken.RETURN, tokens, false)
+            val expr = tryParseExpr(tokens).getOrElse { return fail(it, true) }
+            tokens.popMatching { it == SymbolToken.SEMICOLON } ?: return fail(SymbolToken.SEMICOLON, tokens, true)
+            return succeedTrue(ReturnStatement(expr))
         }
     }
 }
@@ -83,48 +71,29 @@ class ExprStatement(val expression: IExpr) : IStatement {
 
     companion object {
         fun tryParse(tokens: TokenStack): Pair<Result<IStatement>, Boolean> {
-            val expr = tryParseExpr(tokens).getOrElse { return Result.failure<IStatement>(it) to false }
-            tokens.popMatching { it == CharToken.SEMICOLON } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    CharToken.SEMICOLON, tokens
-                )
-            ) to true
-            return Result.success(ExprStatement(expr)) to true
+            val expr = tryParseExpr(tokens).getOrElse { return fail(it, false) }
+            tokens.popMatching { it == SymbolToken.SEMICOLON } ?: return fail(SymbolToken.SEMICOLON, tokens, true)
+            return succeedTrue(ExprStatement(expr))
         }
     }
 }
 
-class DeclareBlockItem(val name: String, val initializer: Optional<IExpr>) : IBlockItem {
+class DeclareBlockItem(val name: String, val type: IDataType, val initializer: Optional<IExpr>) : IBlockItem {
     override fun accept(visitor: INodeVisitor) = visitor.visit(this)
 
     companion object {
         fun tryParse(tokens: TokenStack): Result<DeclareBlockItem> {
-            tokens.popMatching { it == KeywordToken.INT } ?: return Result.failure(
-                ParsingException(
-                    KeywordToken.INT, tokens
-                )
-            )
-            val idToken = tokens.consumeFn { it as? IdentifierToken } ?: return Result.failure(
-                ParsingException(
-                    "Identifier", tokens
-                )
-            )
-            val semicolon = tokens.popMatching { it == CharToken.SEMICOLON }
+            val typeToken = tokens.consumeFn { it as? IdentifierToken } ?: return fail("Type Name", tokens)
+            val type = IDataType.fromString(typeToken.name)
+            val idToken = tokens.consumeFn { it as? IdentifierToken } ?: return fail("Variable Name", tokens)
+            val semicolon = tokens.popMatching { it == SymbolToken.SEMICOLON }
             if (semicolon != null) {
-                return Result.success(DeclareBlockItem(idToken.name, Optional.empty()))
+                return succeed(DeclareBlockItem(idToken.name, type, Optional.empty()))
             }
-            tokens.popMatching { it == OperatorToken.ASSIGN } ?: return Result.failure(
-                ParsingException(
-                    OperatorToken.ASSIGN, tokens
-                )
-            )
-            val expr = tryParseExpr(tokens).getOrElse { return Result.failure(it) }
-            tokens.popMatching { it == CharToken.SEMICOLON } ?: return Result.failure(
-                ParsingException(
-                    CharToken.SEMICOLON, tokens
-                )
-            )
-            return Result.success(DeclareBlockItem(idToken.name, Optional.of(expr)))
+            tokens.popMatching { it == SymbolToken.ASSIGN } ?: return fail(SymbolToken.ASSIGN, tokens)
+            val expr = tryParseExpr(tokens).getOrElse { return fail(it) }
+            tokens.popMatching { it == SymbolToken.SEMICOLON } ?: return fail(SymbolToken.SEMICOLON, tokens)
+            return succeed(DeclareBlockItem(idToken.name, type, Optional.of(expr)))
         }
     }
 }
@@ -134,30 +103,18 @@ class IfStatement(val expr: IExpr, val ifBranch: IStatement, val elseBranch: Opt
 
     companion object {
         fun tryParse(tokens: TokenStack): Pair<Result<IStatement>, Boolean> {
-            tokens.popMatching { it == KeywordToken.IF } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    KeywordToken.IF, tokens
-                )
-            ) to false
-            tokens.popMatching { it == CharToken.OPEN_PAREN } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    CharToken.OPEN_PAREN, tokens
-                )
-            ) to true
-            val expr = tryParseExpr(tokens).getOrElse { return Result.failure<IStatement>(it) to true }
-            tokens.popMatching { it == CharToken.CLOSE_PAREN } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    CharToken.CLOSE_PAREN, tokens
-                )
-            ) to true
-            val ifBranch = tryParseStatement(tokens).getOrElse { return Result.failure<IStatement>(it) to true }
+            tokens.popMatching { it == KeywordToken.IF } ?: return fail(KeywordToken.IF, tokens, false)
+            tokens.popMatching { it == SymbolToken.OPEN_PAREN } ?: return fail(SymbolToken.OPEN_PAREN, tokens, true)
+            val expr = tryParseExpr(tokens).getOrElse { return fail(it, true) }
+            tokens.popMatching { it == SymbolToken.CLOSE_PAREN } ?: return fail(SymbolToken.CLOSE_PAREN, tokens, true)
+            val ifBranch = tryParseStatement(tokens).getOrElse { return fail(it, true) }
             if (tokens.peek() == KeywordToken.ELSE) {
                 tokens.pop()
             } else {
-                return Result.success(IfStatement(expr, ifBranch, Optional.empty())) to true
+                return succeed(IfStatement(expr, ifBranch, Optional.empty())) to true
             }
-            val elseBranch = tryParseStatement(tokens).getOrElse { return Result.failure<IStatement>(it) to true }
-            return Result.success(IfStatement(expr, ifBranch, Optional.of(elseBranch))) to true
+            val elseBranch = tryParseStatement(tokens).getOrElse { return fail(it, true) }
+            return succeed(IfStatement(expr, ifBranch, Optional.of(elseBranch))) to true
         }
     }
 }
@@ -167,18 +124,14 @@ class CompoundStatement(val blockItems: List<IBlockItem>) : IStatement {
 
     companion object {
         fun tryParse(tokens: TokenStack): Pair<Result<IStatement>, Boolean> {
-            tokens.popMatching { it == CharToken.OPEN_BRACE } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    CharToken.OPEN_BRACE, tokens
-                )
-            ) to false
+            tokens.popMatching { it == SymbolToken.OPEN_BRACE } ?: return fail(SymbolToken.OPEN_BRACE, tokens, false)
             val statements = mutableListOf<IBlockItem>()
-            while (tokens.peek() != CharToken.CLOSE_BRACE) {
-                val statement = tryParseBlockItem(tokens).getOrElse { return Result.failure<IStatement>(it) to true }
+            while (tokens.peek() != SymbolToken.CLOSE_BRACE) {
+                val statement = tryParseBlockItem(tokens).getOrElse { return fail(it, true) }
                 statements.add(statement)
             }
             tokens.pop()
-            return Result.success(CompoundStatement(statements)) to true
+            return succeed(CompoundStatement(statements)) to true
         }
     }
 }
@@ -190,55 +143,35 @@ class ForLoopStatement(
 
     companion object {
         fun tryParse(tokens: TokenStack): Pair<Result<IStatement>, Boolean> {
-            tokens.popMatching { it == KeywordToken.FOR } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    KeywordToken.FOR, tokens
-                )
-            ) to false
-            tokens.popMatching { it == CharToken.OPEN_PAREN } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    CharToken.OPEN_PAREN, tokens
-                )
-            ) to true
+            tokens.popMatching { it == KeywordToken.FOR } ?: return fail(KeywordToken.FOR, tokens, false)
+            tokens.popMatching { it == SymbolToken.OPEN_PAREN } ?: return fail(SymbolToken.OPEN_PAREN, tokens, true)
             val index = tokens.index
             val declare = DeclareBlockItem.tryParse(tokens).getOrNull()
             val init = declare ?: run {
                 tokens.index = index
-                tokens.popMatching { it == CharToken.SEMICOLON }?.let { return@run EmptyStatement() }
-                val expr = tryParseExpr(tokens).getOrNull() ?: return Result.failure<IStatement>(
-                    ParsingException(
-                        "Expression", tokens
-                    )
-                ) to true
-                tokens.popMatching { it == CharToken.SEMICOLON } ?: return Result.failure<IStatement>(
-                    ParsingException(
-                        CharToken.SEMICOLON, tokens
-                    )
-                ) to true
+                tokens.popMatching { it == SymbolToken.SEMICOLON }?.let { return@run EmptyStatement() }
+                val expr = tryParseExpr(tokens).getOrNull() ?: return fail("Declare or Expr", tokens, true)
+                tokens.popMatching { it == SymbolToken.SEMICOLON } ?: return fail(SymbolToken.SEMICOLON, tokens, true)
                 expr
             }
-            val condition = tokens.popMatching { it == CharToken.SEMICOLON }?.run { ConstExpr(1) } ?: run {
+            val condition = tokens.popMatching { it == SymbolToken.SEMICOLON }?.run { ConstExpr(1) } ?: run {
                 val expr = tryParseExpr(
                     tokens
-                ).getOrElse { return@tryParse Result.failure<IStatement>(it) to true }
-                tokens.popMatching { it == CharToken.SEMICOLON } ?: return@tryParse Result.failure<IStatement>(
-                    ParsingException(
-                        CharToken.SEMICOLON, tokens
-                    )
-                ) to true
+                ).getOrElse { return@tryParse fail(it, true) }
+                tokens.popMatching { it == SymbolToken.SEMICOLON } ?: return@tryParse fail(
+                    SymbolToken.SEMICOLON, tokens, true
+                )
                 expr
             }
-            val update = tokens.popMatching { it == CharToken.CLOSE_PAREN }?.run { Optional.empty<IExpr>() } ?: run {
-                val expr = tryParseExpr(tokens).getOrElse { return@tryParse Result.failure<IStatement>(it) to true }
-                tokens.popMatching { it == CharToken.CLOSE_PAREN } ?: return@tryParse Result.failure<IStatement>(
-                    ParsingException(
-                        CharToken.CLOSE_PAREN, tokens
-                    )
-                ) to true
+            val update = tokens.popMatching { it == SymbolToken.CLOSE_PAREN }?.run { Optional.empty<IExpr>() } ?: run {
+                val expr = tryParseExpr(tokens).getOrElse { return@tryParse fail(it, true) }
+                tokens.popMatching { it == SymbolToken.CLOSE_PAREN } ?: return@tryParse fail(
+                    SymbolToken.CLOSE_PAREN, tokens, true
+                )
                 Optional.of(expr)
             }
-            val body = tryParseStatement(tokens).getOrElse { return Result.failure<IStatement>(it) to true }
-            return Result.success(ForLoopStatement(init, condition, update, body)) to true
+            val body = tryParseStatement(tokens).getOrElse { return fail(it, true) }
+            return succeed(ForLoopStatement(init, condition, update, body)) to true
         }
     }
 }
@@ -248,24 +181,12 @@ class WhileLoopStatement(val condition: IExpr, val body: IStatement) : IStatemen
 
     companion object {
         fun tryParse(tokens: TokenStack): Pair<Result<IStatement>, Boolean> {
-            tokens.popMatching { it == KeywordToken.WHILE } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    KeywordToken.WHILE, tokens
-                )
-            ) to false
-            tokens.popMatching { it == CharToken.OPEN_PAREN } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    CharToken.OPEN_PAREN, tokens
-                )
-            ) to true
-            val condition = tryParseExpr(tokens).getOrElse { return Result.failure<IStatement>(it) to true }
-            tokens.popMatching { it == CharToken.CLOSE_PAREN } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    CharToken.CLOSE_PAREN, tokens
-                )
-            ) to true
-            val body = tryParseStatement(tokens).getOrElse { return Result.failure<IStatement>(it) to true }
-            return Result.success(WhileLoopStatement(condition, body)) to true
+            tokens.popMatching { it == KeywordToken.WHILE } ?: return fail(KeywordToken.WHILE, tokens, false)
+            tokens.popMatching { it == SymbolToken.OPEN_PAREN } ?: return fail(SymbolToken.OPEN_PAREN, tokens, true)
+            val condition = tryParseExpr(tokens).getOrElse { return fail(it, true) }
+            tokens.popMatching { it == SymbolToken.CLOSE_PAREN } ?: return fail(SymbolToken.CLOSE_PAREN, tokens, true)
+            val body = tryParseStatement(tokens).getOrElse { return fail(it, true) }
+            return succeed(WhileLoopStatement(condition, body)) to true
         }
     }
 }
@@ -275,34 +196,14 @@ class DoWhileLoopStatement(val body: IStatement, val condition: IExpr) : IStatem
 
     companion object {
         fun tryParse(tokens: TokenStack): Pair<Result<IStatement>, Boolean> {
-            tokens.popMatching { it == KeywordToken.DO } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    KeywordToken.DO, tokens
-                )
-            ) to false
-            val body = tryParseStatement(tokens).getOrElse { return Result.failure<IStatement>(it) to true }
-            tokens.popMatching { it == KeywordToken.WHILE } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    KeywordToken.WHILE, tokens
-                )
-            ) to true
-            tokens.popMatching { it == CharToken.OPEN_PAREN } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    CharToken.OPEN_PAREN, tokens
-                )
-            ) to true
-            val condition = tryParseExpr(tokens).getOrElse { return Result.failure<IStatement>(it) to true }
-            tokens.popMatching { it == CharToken.CLOSE_PAREN } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    CharToken.CLOSE_PAREN, tokens
-                )
-            ) to true
-            tokens.popMatching { it == CharToken.SEMICOLON } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    CharToken.SEMICOLON, tokens
-                )
-            ) to true
-            return Result.success(DoWhileLoopStatement(body, condition)) to true
+            tokens.popMatching { it == KeywordToken.DO } ?: return fail(KeywordToken.DO, tokens, false)
+            val body = tryParseStatement(tokens).getOrElse { return fail(it, true) }
+            tokens.popMatching { it == KeywordToken.WHILE } ?: return fail(KeywordToken.WHILE, tokens, true)
+            tokens.popMatching { it == SymbolToken.OPEN_PAREN } ?: return fail(SymbolToken.OPEN_PAREN, tokens, true)
+            val condition = tryParseExpr(tokens).getOrElse { return fail(it, true) }
+            tokens.popMatching { it == SymbolToken.CLOSE_PAREN } ?: return fail(SymbolToken.CLOSE_PAREN, tokens, true)
+            tokens.popMatching { it == SymbolToken.SEMICOLON } ?: return fail(SymbolToken.SEMICOLON, tokens, true)
+            return succeed(DoWhileLoopStatement(body, condition)) to true
         }
     }
 }
@@ -321,12 +222,8 @@ class LoopControlStatement(val type: LoopControlType) : IStatement {
                     )
                 ) to false
             }
-            tokens.popMatching { it == CharToken.SEMICOLON } ?: return Result.failure<IStatement>(
-                ParsingException(
-                    CharToken.SEMICOLON, tokens
-                )
-            ) to true
-            return Result.success(LoopControlStatement(type)) to true
+            tokens.popMatching { it == SymbolToken.SEMICOLON } ?: return fail(SymbolToken.SEMICOLON, tokens, true)
+            return succeed(LoopControlStatement(type)) to true
         }
     }
 }
@@ -334,3 +231,23 @@ class LoopControlStatement(val type: LoopControlType) : IStatement {
 enum class LoopControlType {
     BREAK, CONTINUE
 }
+
+interface IDataType {
+    companion object {
+        fun fromString(type: String): IDataType {
+            BuiltinType.idMap[type]?.let { return it }
+            return CustomType(type)
+        }
+    }
+}
+
+enum class BuiltinType(val id: String, val size: Int) : IDataType {
+    INT("int", 4), LONG("long", 8);
+
+    companion object {
+        val idMap = entries.associateBy { it.id }
+    }
+}
+
+class PointerType(val type: IDataType) : IDataType
+class CustomType(val name: String) : IDataType

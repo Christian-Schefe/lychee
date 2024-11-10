@@ -16,20 +16,20 @@ interface IExprVisitor {
 private fun parseExpr(
     tokens: TokenStack,
     operandParser: (TokenStack) -> Result<IExpr>,
-    validTokens: List<OperatorToken>,
+    validTokens: List<SymbolToken>,
     resultType: BinOpType
 ): Result<IExpr> {
-    val left = operandParser(tokens).getOrElse { return Result.failure(it) }
-    val rightTerms = mutableListOf<Pair<IExpr, OperatorToken>>()
+    val left = operandParser(tokens).getOrElse { return fail(it) }
+    val rightTerms = mutableListOf<Pair<IExpr, SymbolToken>>()
     while (tokens.remaining > 0) {
-        val opToken = tokens.peek() as? OperatorToken ?: break
+        val opToken = tokens.peek() as? SymbolToken ?: break
         if (!validTokens.contains(opToken)) break
         tokens.pop()
-        val operand = operandParser(tokens).getOrElse { return Result.failure(it) }
+        val operand = operandParser(tokens).getOrElse { return fail(it) }
         rightTerms.add(operand to opToken)
     }
-    return if (rightTerms.isEmpty()) Result.success(left)
-    else Result.success(BinOpExpr(resultType, left, rightTerms))
+    return if (rightTerms.isEmpty()) succeed(left)
+    else succeed(BinOpExpr(resultType, left, rightTerms))
 }
 
 fun tryParseExpr(tokens: TokenStack): Result<IExpr> {
@@ -38,7 +38,7 @@ fun tryParseExpr(tokens: TokenStack): Result<IExpr> {
 
 fun <T> tryParseOneOf(tokens: TokenStack, vararg options: (TokenStack) -> Pair<Result<T>, Boolean>): Result<T> {
     val index = tokens.index
-    var lastFailure = Result.failure<T>(ParsingException("Expected one of the provided options"))
+    var lastFailure = fail<T>(ParsingException("Expected one of the provided options"))
     for (option in options) {
         val result = option(tokens)
         if (result.first.isSuccess || result.second) return result.first
@@ -67,193 +67,144 @@ interface IExpr : INode {
         }
 
         private fun tryParseConst(tokens: TokenStack): Pair<Result<IExpr>, Boolean> {
-            val token = tokens.consumeFn { it as? IntegerToken } ?: return Result.failure<IExpr>(
-                ParsingException(
-                    "Constant", tokens
-                )
-            ) to false
-            return Result.success(ConstExpr(token.value)) to true
+            val token = tokens.consumeFn { it as? IntegerToken } ?: return fail("Integer", tokens, false)
+            return succeedTrue(ConstExpr(token.value))
         }
 
         private fun tryParseVar(tokens: TokenStack): Pair<Result<IExpr>, Boolean> {
-            val token = tokens.consumeFn { it as? IdentifierToken } ?: return Result.failure<IExpr>(
-                ParsingException(
-                    "Identifier", tokens
-                )
-            ) to false
-            return Result.success(VarExpr(token.name)) to true
+            val token = tokens.consumeFn { it as? IdentifierToken } ?: return fail("Identifier", tokens, false)
+            return succeedTrue(VarExpr(token.name))
         }
 
         private fun tryParseParenthesized(tokens: TokenStack): Pair<Result<IExpr>, Boolean> {
-            tokens.popMatching { it == CharToken.OPEN_PAREN } ?: return Result.failure<IExpr>(
-                ParsingException(
-                    CharToken.OPEN_PAREN, tokens
-                )
-            ) to false
-            val expr = tryParseExpr(tokens).getOrElse { return Result.failure<IExpr>(it) to true }
-            tokens.popMatching { it == CharToken.CLOSE_PAREN } ?: return Result.failure<IExpr>(
-                ParsingException(
-                    CharToken.CLOSE_PAREN, tokens
-                )
-            ) to true
-            return Result.success(expr) to true
+            tokens.popMatching { it == SymbolToken.OPEN_PAREN } ?: return fail(SymbolToken.OPEN_PAREN, tokens, false)
+            val expr = tryParseExpr(tokens).getOrElse { return fail(it, true) }
+            tokens.popMatching { it == SymbolToken.CLOSE_PAREN } ?: return fail(SymbolToken.CLOSE_PAREN, tokens, false)
+            return succeedTrue(expr)
         }
 
         private fun tryParseUnary(tokens: TokenStack): Pair<Result<IExpr>, Boolean> {
-            val op = tokens.consumeFn { UnaryOperator.fromToken(it) } ?: return Result.failure<IExpr>(
-                ParsingException(
-                    "Unary Operator", tokens
-                )
-            ) to false
-            val operand = tryParseHighestPrecedence(tokens).getOrElse { return Result.failure<IExpr>(it) to true }
-            return Result.success(UnOpExpr(op, operand)) to true
+            val op = tokens.consumeFn { UnaryOperator.fromToken(it) } ?: return fail("Unary Operator", tokens, false)
+            val operand = tryParseHighestPrecedence(tokens).getOrElse { return fail(it, true) }
+            return succeedTrue(UnOpExpr(op, operand))
         }
 
         private fun tryParseFunctionCall(tokens: TokenStack): Pair<Result<IExpr>, Boolean> {
-            val idToken = tokens.consumeFn { it as? IdentifierToken } ?: return Result.failure<IExpr>(
-                ParsingException(
-                    "Identifier", tokens
-                )
-            ) to false
-            tokens.popMatching { it == CharToken.OPEN_PAREN } ?: return Result.failure<IExpr>(
-                ParsingException(
-                    CharToken.OPEN_PAREN, tokens
-                )
-            ) to false
+            val idToken = tokens.consumeFn { it as? IdentifierToken } ?: return fail("Identifier", tokens, false)
+            tokens.popMatching { it == SymbolToken.OPEN_PAREN } ?: return fail(SymbolToken.OPEN_PAREN, tokens, false)
             val args = mutableListOf<IExpr>()
-            while (tokens.peek() != CharToken.CLOSE_PAREN) {
-                val arg = tryParseAssignmentOrLower(tokens).getOrElse { return Result.failure<IExpr>(it) to true }
+            while (tokens.peek() != SymbolToken.CLOSE_PAREN) {
+                val arg = tryParseAssignmentOrLower(tokens).getOrElse { return fail(it, true) }
                 args.add(arg)
-                if (tokens.peek() == OperatorToken.COMMA) {
+                if (tokens.peek() == SymbolToken.COMMA) {
                     tokens.pop()
-                } else if (tokens.peek() != CharToken.CLOSE_PAREN) {
-                    return Result.failure<IExpr>(
-                        ParsingException(
-                            OperatorToken.COMMA, tokens
-                        )
-                    ) to true
+                } else if (tokens.peek() != SymbolToken.CLOSE_PAREN) {
+                    return fail("',' or ')' in function call arguments", tokens, true)
                 }
             }
             tokens.pop()
-            return Result.success(FunctionCallExpr(idToken.name, args)) to true
+            return succeedTrue(FunctionCallExpr(idToken.name, args))
         }
 
         private fun tryParseIncrement(tokens: TokenStack): Pair<Result<IExpr>, Boolean> {
-            var isDecrement = tokens.consumeFn { OperatorToken.incrementOpMap[it] }
-            val idToken = tokens.consumeFn { it as? IdentifierToken } ?: return Result.failure<IExpr>(
-                ParsingException(
-                    "Identifier", tokens
-                )
-            ) to (isDecrement != null)
+            var isDecrement = tokens.consumeFn { SymbolToken.incrementOpMap[it] }
+            val idToken =
+                tokens.consumeFn { it as? IdentifierToken } ?: return fail("Identifier", tokens, (isDecrement != null))
             if (isDecrement != null) {
-                return Result.success(IncrementExpr(idToken.name, false, isDecrement)) to true
+                return succeedTrue(IncrementExpr(idToken.name, false, isDecrement))
             }
-            isDecrement = tokens.consumeFn { OperatorToken.incrementOpMap[it] } ?: return Result.failure<IExpr>(
-                ParsingException(
-                    "++ or --", tokens
-                )
-            ) to false
-            return Result.success(IncrementExpr(idToken.name, true, isDecrement)) to true
+            isDecrement = tokens.consumeFn { SymbolToken.incrementOpMap[it] } ?: return fail(
+                "++ or --", tokens, false
+            )
+            return succeedTrue(IncrementExpr(idToken.name, true, isDecrement))
         }
 
         private fun tryParseMultiplicative(tokens: TokenStack): Result<IExpr> {
             return parseExpr(
                 tokens,
                 ::tryParseHighestPrecedence,
-                listOf(OperatorToken.MULTIPLY, OperatorToken.DIVIDE, OperatorToken.MODULO),
+                listOf(SymbolToken.ASTERISK, SymbolToken.DIVIDE, SymbolToken.MODULO),
                 BinOpType.MULTIPLICATIVE
             )
         }
 
         private fun tryParseAdditive(tokens: TokenStack): Result<IExpr> {
             return parseExpr(
-                tokens, ::tryParseMultiplicative, listOf(OperatorToken.ADD, OperatorToken.SUBTRACT), BinOpType.ADDITIVE
+                tokens, ::tryParseMultiplicative, listOf(SymbolToken.PLUS, SymbolToken.MINUS), BinOpType.ADDITIVE
             )
         }
 
         private fun tryParseShift(tokens: TokenStack): Result<IExpr> {
             return parseExpr(
-                tokens, ::tryParseAdditive, listOf(OperatorToken.LEFT_SHIFT, OperatorToken.RIGHT_SHIFT), BinOpType.SHIFT
+                tokens, ::tryParseAdditive, listOf(SymbolToken.LEFT_SHIFT, SymbolToken.RIGHT_SHIFT), BinOpType.SHIFT
             )
         }
 
         private fun tryParseRelational(tokens: TokenStack): Result<IExpr> {
             return parseExpr(
                 tokens, ::tryParseShift, listOf(
-                    OperatorToken.LESS_THAN,
-                    OperatorToken.LESS_THAN_OR_EQUAL,
-                    OperatorToken.GREATER_THAN,
-                    OperatorToken.GREATER_THAN_OR_EQUAL
+                    SymbolToken.LESS_THAN,
+                    SymbolToken.LESS_THAN_OR_EQUAL,
+                    SymbolToken.GREATER_THAN,
+                    SymbolToken.GREATER_THAN_OR_EQUAL
                 ), BinOpType.RELATIONAL
             )
         }
 
         private fun tryParseEquality(tokens: TokenStack): Result<IExpr> {
             return parseExpr(
-                tokens, ::tryParseRelational, listOf(OperatorToken.EQUAL, OperatorToken.NOT_EQUAL), BinOpType.EQUALITY
+                tokens, ::tryParseRelational, listOf(SymbolToken.EQUAL, SymbolToken.NOT_EQUAL), BinOpType.EQUALITY
             )
         }
 
         private fun tryParseBitwiseAnd(tokens: TokenStack): Result<IExpr> {
-            return parseExpr(tokens, ::tryParseEquality, listOf(OperatorToken.BITWISE_AND), BinOpType.BITWISE_AND)
+            return parseExpr(tokens, ::tryParseEquality, listOf(SymbolToken.BITWISE_AND), BinOpType.BITWISE_AND)
         }
 
         private fun tryParseBitwiseXor(tokens: TokenStack): Result<IExpr> {
-            return parseExpr(tokens, ::tryParseBitwiseAnd, listOf(OperatorToken.BITWISE_XOR), BinOpType.BITWISE_XOR)
+            return parseExpr(tokens, ::tryParseBitwiseAnd, listOf(SymbolToken.BITWISE_XOR), BinOpType.BITWISE_XOR)
         }
 
         private fun tryParseBitwiseOr(tokens: TokenStack): Result<IExpr> {
-            return parseExpr(tokens, ::tryParseBitwiseXor, listOf(OperatorToken.BITWISE_OR), BinOpType.BITWISE_OR)
+            return parseExpr(tokens, ::tryParseBitwiseXor, listOf(SymbolToken.BITWISE_OR), BinOpType.BITWISE_OR)
         }
 
         private fun tryParseLogicalAnd(tokens: TokenStack): Result<IExpr> {
-            return parseExpr(tokens, ::tryParseBitwiseOr, listOf(OperatorToken.LOGICAL_AND), BinOpType.LOGICAL_AND)
+            return parseExpr(tokens, ::tryParseBitwiseOr, listOf(SymbolToken.LOGICAL_AND), BinOpType.LOGICAL_AND)
         }
 
         private fun tryParseLogicalOr(tokens: TokenStack): Result<IExpr> {
-            return parseExpr(tokens, ::tryParseLogicalAnd, listOf(OperatorToken.LOGICAL_OR), BinOpType.LOGICAL_OR)
+            return parseExpr(tokens, ::tryParseLogicalAnd, listOf(SymbolToken.LOGICAL_OR), BinOpType.LOGICAL_OR)
         }
 
         private fun tryParseTernary(tokens: TokenStack): Result<IExpr> {
-            val condition = tryParseLogicalOr(tokens).getOrElse { return Result.failure(it) }
-            tokens.popMatching { it == CharToken.QUESTION_MARK } ?: return Result.success(condition)
-            val trueBranch = tryParseExpr(tokens).getOrElse { return Result.failure(it) }
-            tokens.popMatching { it == CharToken.COLON } ?: return Result.failure(
-                ParsingException(
-                    CharToken.SEMICOLON, tokens
-                )
-            )
-            val falseBranch = tryParseTernary(tokens).getOrElse { return Result.failure(it) }
-            return Result.success(ConditionalExpr(condition, trueBranch, falseBranch))
+            val condition = tryParseLogicalOr(tokens).getOrElse { return fail(it) }
+            tokens.popMatching { it == SymbolToken.QUESTION_MARK } ?: return succeed(condition)
+            val trueBranch = tryParseExpr(tokens).getOrElse { return fail(it) }
+            tokens.popMatching { it == SymbolToken.COLON } ?: return fail(SymbolToken.COLON, tokens)
+            val falseBranch = tryParseTernary(tokens).getOrElse { return fail(it) }
+            return succeed(ConditionalExpr(condition, trueBranch, falseBranch))
         }
 
         private fun tryParseAssignmentOrLower(tokens: TokenStack): Result<IExpr> {
             val index = tokens.index
-            tryParseAssignment(tokens).onSuccess { return Result.success(it) }
+            tryParseAssignment(tokens).onSuccess { return succeed(it) }
             tokens.index = index
             return tryParseTernary(tokens)
         }
 
         private fun tryParseAssignment(tokens: TokenStack): Result<IExpr> {
-            val idToken = tokens.consumeFn { it as? IdentifierToken } ?: return Result.failure(
-                ParsingException(
-                    "Identifier", tokens
-                )
-            )
-            val op = tokens.consumeFn { OperatorToken.assignOpMap[it] } ?: return Result.failure(
-                ParsingException(
-                    "Assignment Operator", tokens
-                )
-            )
+            val idToken = tokens.consumeFn { it as? IdentifierToken } ?: return fail("Identifier", tokens)
+            val op = tokens.consumeFn { SymbolToken.assignOpMap[it] } ?: return fail("Assignment Operator", tokens)
             val tokenIndex = tokens.index
-            tryParseAssignment(tokens).onSuccess { return Result.success(AssignExpr(idToken.name, it, op)) }
+            tryParseAssignment(tokens).onSuccess { return succeed(AssignExpr(idToken.name, it, op)) }
             tokens.index = tokenIndex
-            val lowerExpr = tryParseTernary(tokens).getOrElse { return Result.failure(it) }
-            return Result.success(AssignExpr(idToken.name, lowerExpr, op))
+            val lowerExpr = tryParseTernary(tokens).getOrElse { return fail(it) }
+            return succeed(AssignExpr(idToken.name, lowerExpr, op))
         }
 
         private fun tryParseComma(tokens: TokenStack): Result<IExpr> {
-            return parseExpr(tokens, ::tryParseAssignmentOrLower, listOf(OperatorToken.COMMA), BinOpType.COMMA)
+            return parseExpr(tokens, ::tryParseAssignmentOrLower, listOf(SymbolToken.COMMA), BinOpType.COMMA)
         }
     }
 }
@@ -262,7 +213,7 @@ enum class BinOpType {
     ADDITIVE, MULTIPLICATIVE, SHIFT, RELATIONAL, EQUALITY, BITWISE_AND, BITWISE_XOR, BITWISE_OR, LOGICAL_AND, LOGICAL_OR, COMMA;
 }
 
-class BinOpExpr(val type: BinOpType, val left: IExpr, val right: List<Pair<IExpr, OperatorToken>>) : IExpr {
+class BinOpExpr(val type: BinOpType, val left: IExpr, val right: List<Pair<IExpr, SymbolToken>>) : IExpr {
     override fun accept(visitor: INodeVisitor) = visitor.visit(this)
 }
 
@@ -274,7 +225,7 @@ class UnOpExpr(val operator: UnaryOperator, val right: IExpr) : IExpr {
     override fun accept(visitor: INodeVisitor) = visitor.visit(this)
 }
 
-class AssignExpr(val name: String, val expr: IExpr, val op: OperatorToken) : IExpr {
+class AssignExpr(val name: String, val expr: IExpr, val op: SymbolToken) : IExpr {
     override fun accept(visitor: INodeVisitor) = visitor.visit(this)
 }
 
