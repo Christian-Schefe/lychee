@@ -1,0 +1,4 @@
+set 1 0x10005
+push_32 1
+pop_16 0
+exit
