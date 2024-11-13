@@ -43,6 +43,17 @@ pub(crate) enum BinopType {
     Shr,
 }
 
+#[derive(Debug)]
+pub(crate) enum JumpType {
+    Jmp,
+    Jz,
+    Jnz,
+    Jg,
+    Jge,
+    Jl,
+    Jle,
+}
+
 enum DataSize {
     I8 = 0b00,
     I16 = 0b01,

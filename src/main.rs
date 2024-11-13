@@ -1,10 +1,10 @@
+use crate::instructions::{BinopType, JumpType};
 use std::process::ExitCode;
-use crate::instructions::BinopType;
 
 mod input;
-mod registers;
-mod memory;
 mod instructions;
+mod memory;
+mod registers;
 
 fn main() -> ExitCode {
     let program = input::read_obj_file();
@@ -40,6 +40,13 @@ pub fn run(memory: &mut memory::Memory) -> u8 {
             0x0F => binop(pc, memory, BinopType::Shl),
             0x10 => binop(pc, memory, BinopType::Shr),
             0x11 => compare(pc, memory),
+            0x12 => jump(pc, memory, JumpType::Jmp),
+            0x13 => jump(pc, memory, JumpType::Jz),
+            0x14 => jump(pc, memory, JumpType::Jnz),
+            0x15 => jump(pc, memory, JumpType::Jg),
+            0x16 => jump(pc, memory, JumpType::Jge),
+            0x17 => jump(pc, memory, JumpType::Jl),
+            0x18 => jump(pc, memory, JumpType::Jle),
             0xFF => {
                 exit(&mut exit_code, pc, memory);
                 break;
@@ -58,7 +65,10 @@ fn load(pc: usize, memory: &mut memory::Memory) {
     let size = byte1 & 0b00000011;
     let register = (byte1 & 0b11110000) >> 4;
 
-    println!("Load: Size: {}, Register: {}, Address: {}", size, register, address);
+    println!(
+        "Load: Size: {}, Register: {}, Address: {}",
+        size, register, address
+    );
 
     let value = match size {
         0 => memory.data[address as usize] as i64,
@@ -81,7 +91,10 @@ fn store(pc: usize, memory: &mut memory::Memory) {
     let size = (byte1 & 0b00000011) as usize;
     let register = (byte1 & 0b11110000) >> 4;
 
-    println!("Store: Size: {}, Register: {}, Address: {}", size, register, address);
+    println!(
+        "Store: Size: {}, Register: {}, Address: {}",
+        size, register, address
+    );
 
     let bytes = memory.registers[register as usize].to_le_bytes();
     let byte_count = match size {
@@ -94,7 +107,8 @@ fn store(pc: usize, memory: &mut memory::Memory) {
 
     println!("Bytes: {:?}", &bytes[..byte_count]);
 
-    memory.data[address as usize..address as usize + byte_count].copy_from_slice(&bytes[..byte_count]);
+    memory.data[address as usize..address as usize + byte_count]
+        .copy_from_slice(&bytes[..byte_count]);
     memory.registers[registers::PC] += 10
 }
 
@@ -174,7 +188,10 @@ fn binop(pc: usize, memory: &mut memory::Memory, op_type: BinopType) {
         BinopType::Shr => value1 >> value2,
     };
 
-    println!("Binop {:?}: Register 1: {}, Register 2: {}, Result: {}", op_type, reg1, reg2, result);
+    println!(
+        "Binop {:?}: Register 1: {}, Register 2: {}, Result: {}",
+        op_type, reg1, reg2, result
+    );
 
     if result == 0 {
         memory.flags |= 1;
@@ -213,6 +230,25 @@ fn compare(pc: usize, memory: &mut memory::Memory) {
     }
 
     memory.registers[registers::PC] += 2
+}
+
+fn jump(pc: usize, memory: &mut memory::Memory, jump_type: JumpType) {
+    let should_jump = match jump_type {
+        JumpType::Jmp => true,
+        JumpType::Jz => memory.flags & 1 != 0,
+        JumpType::Jnz => memory.flags & 1 == 0,
+        JumpType::Jg => memory.flags & 2 != 0,
+        JumpType::Jge => memory.flags & 2 != 0 || memory.flags & 1 != 0,
+        JumpType::Jl => memory.flags & 2 == 0,
+        JumpType::Jle => memory.flags & 2 == 0 || memory.flags & 1 != 0,
+    };
+
+    let address = memory.read_i64_le(pc + 1, 8);
+    if should_jump {
+        memory.registers[registers::PC] = address;
+    } else {
+        memory.registers[registers::PC] += 9;
+    }
 }
 
 fn exit(exit_code: &mut u8, pc: usize, memory: &mut memory::Memory) {
