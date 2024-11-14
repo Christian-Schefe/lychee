@@ -1,5 +1,10 @@
 use std::collections::HashMap;
 
+extern crate lychee_vm;
+
+mod instruction_type;
+mod instruction;
+
 fn main() {
     let args = std::env::args().collect::<Vec<String>>();
     let path = &args[1];
