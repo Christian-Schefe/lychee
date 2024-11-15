@@ -1,10 +1,16 @@
-use crate::registers;
+use crate::constants;
+
+#[derive(Debug)]
+pub struct Flags {
+    pub zero: bool,
+    pub positive: bool,
+}
 
 pub struct Memory {
     size: usize,
     pub(crate) data: Vec<u8>,
-    pub(crate) registers: [i64; 16],
-    pub(crate) flags: u64,
+    pub(crate) registers: [u64; 16],
+    pub(crate) flags: Flags,
 }
 
 impl Memory {
@@ -13,40 +19,37 @@ impl Memory {
             size,
             data: vec![0; size],
             registers: [0; 16],
-            flags: 0,
+            flags: Flags {
+                zero: false,
+                positive: false,
+            },
         };
         memory.data[..program.len()].copy_from_slice(&program);
 
-        memory.registers[registers::SP] = size as i64;
+        memory.registers[constants::SP] = size as u64;
 
         memory
     }
 
     pub fn read_u64_le(&self, address: usize, bytes: usize) -> u64 {
-        let mut result = 0;
-        for i in 0..bytes {
-            result |= (self.data[address + i] as u64) << (i * 8);
-        }
-        result
+        let bytes = &self.data[address..address + bytes];
+        u64::from_le_bytes(bytes.try_into().unwrap())
     }
 
-    pub fn read_i64_le(&self, address: usize, bytes: usize) -> i64 {
-        let mut result = 0;
-        for i in 0..bytes {
-            result |= (self.data[address + i] as i64) << (i * 8);
-        }
-        result
+    pub fn read_bytes(&self, address: usize, bytes: usize) -> Vec<u8> {
+        self.data[address..address + bytes].to_vec()
     }
 
     pub fn write_u64_le(&mut self, address: usize, value: u64, bytes: usize) {
-        for i in 0..bytes {
-            self.data[address + i] = ((value >> (i * 8)) & 0xFF) as u8;
-        }
+        let byte_slice = &value.to_le_bytes()[..bytes];
+        self.data[address..address + bytes].copy_from_slice(&byte_slice);
     }
-    
-    pub fn write_i64_le(&mut self, address: usize, value: i64, bytes: usize) {
-        for i in 0..bytes {
-            self.data[address + i] = ((value >> (i * 8)) & 0xFF) as u8;
-        }
+
+    pub fn write_bytes(&mut self, address: usize, bytes: &[u8]) {
+        self.data[address..address + bytes.len()].copy_from_slice(bytes);
+    }
+
+    pub fn print_registers(&self) {
+        println!("Registers: {:?}", self.registers.map(|r| r as i64));
     }
 }

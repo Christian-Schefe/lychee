@@ -1,7 +1,0 @@
-set 0 1
-set 1 1
-_add:
-add 0 1
-jmp _add
-set 0 0x0
-exit

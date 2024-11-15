@@ -1,4 +1,9 @@
 use std::collections::HashMap;
+use std::iter::Iterator;
+use lazy_static::lazy_static;
+use lychee_vm::{OpCode, RegisterCode};
+use crate::instruction::Instruction;
+use crate::instruction_type::InstructionType;
 
 extern crate lychee_vm;
 
@@ -10,193 +15,130 @@ fn main() {
     let path = &args[1];
     let out_path = &args[2];
     let str = std::fs::read_to_string(path).unwrap();
-    let lines = str.lines();
-    let mut bytes = Vec::new();
-    let mut labels = HashMap::new();
-    for line in lines {
-        convert_line(line, &mut bytes, &mut labels);
-    }
+    let instructions = str.lines().filter(|line| !line.is_empty()).map(|line| convert_line(line)).collect::<Vec<Instruction>>();
+    instructions.iter().for_each(|instr| println!("{:?}", instr));
+    let bytes = instructions_to_bytes(instructions);
+
     std::fs::write(out_path, bytes).unwrap();
 }
 
-fn convert_line(line: &str, bytes: &mut Vec<u8>, labels: &mut HashMap<String, usize>) {
+fn convert_line(line: &str) -> Instruction {
     let parts = line.split_whitespace().collect::<Vec<&str>>();
 
     if parts[0].ends_with(":") {
         let label_str = parts[0].split(":").collect::<Vec<&str>>()[0];
-        labels.insert(label_str.to_string(), bytes.len());
-        return;
+        return Instruction::Label(label_str.to_string());
     }
 
-    let op = parts[0].split("_").collect::<Vec<&str>>()[0];
-    let op_bytes = match op {
-        "nop" => nop(),
-        "load" => load(parts),
-        "store" => store(parts),
-        "set" => set(parts),
-        "push" => push(parts),
-        "pop" => pop(parts),
-        "add" => binop(parts, 0),
-        "sub" => binop(parts, 1),
-        "mul" => binop(parts, 2),
-        "div" => binop(parts, 3),
-        "mod" => binop(parts, 4),
-        "and" => binop(parts, 5),
-        "or" => binop(parts, 6),
-        "xor" => binop(parts, 7),
-        "shl" => binop(parts, 8),
-        "shr" => binop(parts, 9),
-        "cmp" => cmp(parts),
-        "jmp" => jump(parts, &labels, 0),
-        "je" => jump(parts, &labels, 1),
-        "jne" => jump(parts, &labels, 2),
-        "jg" => jump(parts, &labels, 3),
-        "jge" => jump(parts, &labels, 4),
-        "jl" => jump(parts, &labels, 5),
-        "jle" => jump(parts, &labels, 6),
-        "exit" => exit(),
-        _ => panic!("Invalid operation"),
+    let opcode = OPCODE_MAP.get(parts[0]).cloned().unwrap();
+
+    let instruction = match opcode {
+        OpCode::Nop | OpCode::Ret | OpCode::Exit => InstructionType::parse_simple(opcode),
+        OpCode::Store | OpCode::Load => InstructionType::parse_register_size_address(opcode, parts),
+        OpCode::Push | OpCode::Pop => InstructionType::parse_size_register(opcode, parts),
+        OpCode::Add | OpCode::Sub | OpCode::Mul | OpCode::Div | OpCode::Mod | OpCode::And | OpCode::Or | OpCode::Xor | OpCode::Shl | OpCode::Shr | OpCode::Cmp => InstructionType::parse_two_registers(opcode, parts),
+        OpCode::Call | OpCode::Jmp | OpCode::Jz | OpCode::Jnz | OpCode::Jg | OpCode::Jge | OpCode::Jl | OpCode::Jle => InstructionType::parse_label(opcode, parts),
+        OpCode::Set => InstructionType::parse_register_immediate(opcode, parts),
+        OpCode::Not | OpCode::Inc | OpCode::Dec => InstructionType::parse_register(opcode, parts),
+        OpCode::ReadStdin | OpCode::WriteStdout => InstructionType::parse_register_address(opcode, parts),
     };
-    bytes.extend(op_bytes);
+
+    Instruction::Instr(instruction)
 }
 
-fn nop() -> Vec<u8> {
-    vec![0]
+fn instructions_to_bytes(instructions: Vec<Instruction>) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    let mut labels: HashMap<String, u64> = HashMap::new();
+    let mut label_placeholders: HashMap<String, Vec<u64>> = HashMap::new();
+
+    for instruction in instructions {
+        match instruction {
+            Instruction::Label(label) => {
+                let label_address = bytes.len() as u64;
+                if let Some(spots) = label_placeholders.get(&label) {
+                    for &spot in spots {
+                        let address_bytes: [u8; 8] = label_address.to_le_bytes();
+                        for i in 0..8 {
+                            bytes[spot as usize + i] = address_bytes[i];
+                        }
+                    }
+                }
+                label_placeholders.remove(&label);
+                if let Some(_) = labels.insert(label, label_address) {
+                    panic!("Label already exists");
+                }
+            }
+            Instruction::Instr(instr) => {
+                instr.add_bytes(&mut bytes, &labels, &mut label_placeholders);
+            }
+        }
+    }
+
+    bytes
 }
 
-fn load(parts: Vec<&str>) -> Vec<u8> {
-    let size_str = parts[0].split("_").collect::<Vec<&str>>()[1];
-    let size = match size_str {
-        "8" => 0,
-        "16" => 1,
-        "32" => 2,
-        "64" => 3,
-        _ => panic!("Invalid size"),
+lazy_static! {
+    static ref OPCODE_MAP: HashMap<String, OpCode> = {
+        HashMap::from([
+            ("nop".to_string(), OpCode::Nop),
+            ("load".to_string(), OpCode::Load),
+            ("store".to_string(), OpCode::Store),
+            ("set".to_string(), OpCode::Set),
+            ("push".to_string(), OpCode::Push),
+            ("pop".to_string(), OpCode::Pop),
+            ("add".to_string(), OpCode::Add),
+            ("sub".to_string(), OpCode::Sub),
+            ("mul".to_string(), OpCode::Mul),
+            ("div".to_string(), OpCode::Div),
+            ("mod".to_string(), OpCode::Mod),
+            ("and".to_string(), OpCode::And),
+            ("or".to_string(), OpCode::Or),
+            ("xor".to_string(), OpCode::Xor),
+            ("shl".to_string(), OpCode::Shl),
+            ("shr".to_string(), OpCode::Shr),
+            ("cmp".to_string(), OpCode::Cmp),
+            ("jmp".to_string(), OpCode::Jmp),
+            ("jz".to_string(), OpCode::Jz),
+            ("jnz".to_string(), OpCode::Jnz),
+            ("jg".to_string(), OpCode::Jg),
+            ("jge".to_string(), OpCode::Jge),
+            ("jl".to_string(), OpCode::Jl),
+            ("jle".to_string(), OpCode::Jle),
+            ("call".to_string(), OpCode::Call),
+            ("ret".to_string(), OpCode::Ret),
+            ("inc".to_string(), OpCode::Inc),
+            ("dec".to_string(), OpCode::Dec),
+            ("exit".to_string(), OpCode::Exit),
+        ])
     };
-    let register = parts[1].parse::<u8>().unwrap();
-    let address = parse_u64(parts[2]);
-    let mut bytes = vec![1];
-    let byte1 = (size & 0b00000011) | (register << 4);
-    bytes.push(byte1);
-    bytes.extend(&address.to_le_bytes());
-    bytes
-}
 
-fn store(parts: Vec<&str>) -> Vec<u8> {
-    let size_str = parts[0].split("_").collect::<Vec<&str>>()[1];
-    let size = match size_str {
-        "8" => 0,
-        "16" => 1,
-        "32" => 2,
-        "64" => 3,
-        _ => panic!("Invalid size"),
+    static ref REGISTER_MAP: HashMap<String, RegisterCode> = {
+        HashMap::from([
+            ("r0".to_string(), RegisterCode::R0),
+            ("r1".to_string(), RegisterCode::R1),
+            ("r2".to_string(), RegisterCode::R2),
+            ("r3".to_string(), RegisterCode::R3),
+            ("r4".to_string(), RegisterCode::R4),
+            ("r5".to_string(), RegisterCode::R5),
+            ("r6".to_string(), RegisterCode::R6),
+            ("r7".to_string(), RegisterCode::R7),
+            ("r8".to_string(), RegisterCode::R8),
+            ("r9".to_string(), RegisterCode::R9),
+            ("r10".to_string(), RegisterCode::R10),
+            ("r11".to_string(), RegisterCode::R11),
+            ("r12".to_string(), RegisterCode::R12),
+            ("bp".to_string(), RegisterCode::BP),
+            ("sp".to_string(), RegisterCode::SP),
+            ("pc".to_string(), RegisterCode::PC),
+        ])
     };
-    let register = parts[1].parse::<u8>().unwrap();
-    let address = parse_u64(parts[2]);
-    let mut bytes = vec![2];
-    let byte1 = (size & 0b00000011) | (register << 4);
-    bytes.push(byte1);
-    bytes.extend(&address.to_le_bytes());
-    bytes
-}
 
-fn set(parts: Vec<&str>) -> Vec<u8> {
-    let byte_count = 8;
-    let register = parts[1].parse::<u8>().unwrap();
-    let value = parse_i64(parts[2]);
-    let mut bytes = vec![3];
-    let byte1 = (byte_count - 1) | (register << 4);
-    bytes.push(byte1);
-    bytes.extend(&value.to_le_bytes());
-    bytes
-}
-
-fn push(parts: Vec<&str>) -> Vec<u8> {
-    let size_str = parts[0].split("_").collect::<Vec<&str>>()[1];
-    let size = match size_str {
-        "8" => 0,
-        "16" => 1,
-        "32" => 2,
-        "64" => 3,
-        _ => panic!("Invalid size"),
+    static ref SIZE_MAP: HashMap<String, u8> = {
+        HashMap::from([
+            ("#8".to_string(), 0b00),
+            ("#16".to_string(), 0b01),
+            ("#32".to_string(), 0b10),
+            ("#64".to_string(), 0b11),
+        ])
     };
-    let register = parts[1].parse::<u8>().unwrap();
-    let mut bytes = vec![4];
-    let byte1 = (size & 0b00000011) | (register << 4);
-    bytes.push(byte1);
-    bytes
-}
-
-fn pop(parts: Vec<&str>) -> Vec<u8> {
-    let size_str = parts[0].split("_").collect::<Vec<&str>>()[1];
-    let size = match size_str {
-        "8" => 0,
-        "16" => 1,
-        "32" => 2,
-        "64" => 3,
-        _ => panic!("Invalid size"),
-    };
-    let register = parts[1].parse::<u8>().unwrap();
-    let mut bytes = vec![5];
-    let byte1 = (size & 0b00000011) | (register << 4);
-    bytes.push(byte1);
-    bytes
-}
-
-fn binop(parts: Vec<&str>, op: u8) -> Vec<u8> {
-    let register1 = parts[1].parse::<u8>().unwrap();
-    let register2 = parts[2].parse::<u8>().unwrap();
-    let mut bytes = vec![6 + op];
-    let byte1 = (register1 & 0x0F) | ((register2 & 0x0F) << 4);
-    bytes.push(byte1);
-    bytes
-}
-
-fn cmp(parts: Vec<&str>) -> Vec<u8> {
-    let register1 = parts[1].parse::<u8>().unwrap();
-    let register2 = parts[2].parse::<u8>().unwrap();
-    let mut bytes = vec![0x11];
-    let byte1 = (register1 & 0x0F) | ((register2 & 0x0F) << 4);
-    bytes.push(byte1);
-    bytes
-}
-
-fn jump(parts: Vec<&str>, labels: &HashMap<String, usize>, op: u8) -> Vec<u8> {
-    let address = parse_address(parts[1], &labels);
-    let mut bytes = vec![0x12 + op];
-    bytes.extend(&address.to_le_bytes());
-    bytes
-}
-
-fn exit() -> Vec<u8> {
-    vec![0xFF]
-}
-
-fn parse_address(value: &str, labels: &HashMap<String, usize>) -> u64 {
-    if value.starts_with("0x") {
-        return u64::from_str_radix(&value[2..], 16).unwrap();
-    }
-    if value.starts_with("_") {
-        return labels.get(value).unwrap().clone() as u64;
-    }
-    value.parse::<u64>().unwrap()
-}
-
-fn parse_u64(value: &str) -> u64 {
-    if value.starts_with("0x") {
-        u64::from_str_radix(&value[2..], 16).unwrap()
-    } else {
-        value.parse::<u64>().unwrap()
-    }
-}
-
-fn parse_i64(value: &str) -> i64 {
-    if value.starts_with("-") {
-        return parse_i64(&value[1..]) * -1;
-    }
-    if value.starts_with("0x") {
-        i64::from_str_radix(&value[2..], 16).unwrap()
-    } else {
-        value.parse::<i64>().unwrap()
-    }
 }

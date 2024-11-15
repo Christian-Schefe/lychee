@@ -13,6 +13,7 @@ pub enum BinopType {
 }
 
 #[repr(u8)]
+#[derive(Clone, Debug)]
 pub enum OpCode {
     Nop = 0x00,
     Load = 0x01,
@@ -41,5 +42,30 @@ pub enum OpCode {
     Jle = 0x18,
     Call = 0x19,
     Ret = 0x1A,
+    Inc = 0x1B,
+    Dec = 0x1C,
+    ReadStdin = 0x1D,
+    WriteStdout = 0x1E,
     Exit = 0xFF,
+}
+
+#[repr(u8)]
+#[derive(Clone, Debug)]
+pub enum RegisterCode {
+    R0 = 0x00,
+    R1 = 0x01,
+    R2 = 0x02,
+    R3 = 0x03,
+    R4 = 0x04,
+    R5 = 0x05,
+    R6 = 0x06,
+    R7 = 0x07,
+    R8 = 0x08,
+    R9 = 0x09,
+    R10 = 0x0A,
+    R11 = 0x0B,
+    R12 = 0x0C,
+    BP = 0x0D,
+    SP = 0x0E,
+    PC = 0x0F,
 }
