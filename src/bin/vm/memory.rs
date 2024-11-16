@@ -1,3 +1,5 @@
+use std::io::Read;
+use std::iter::repeat;
 use crate::constants;
 
 #[derive(Debug)]
@@ -27,13 +29,16 @@ impl Memory {
         memory.data[..program.len()].copy_from_slice(&program);
 
         memory.registers[constants::SP] = size as u64;
+        memory.registers[constants::BP] = size as u64;
 
         memory
     }
 
     pub fn read_u64_le(&self, address: usize, bytes: usize) -> u64 {
-        let bytes = &self.data[address..address + bytes];
-        u64::from_le_bytes(bytes.try_into().unwrap())
+        let mut buffer = [0; 8];
+        let byte_arr = &self.data[address..address + bytes];
+        buffer[..bytes].copy_from_slice(&byte_arr);
+        u64::from_le_bytes(buffer)
     }
 
     pub fn read_bytes(&self, address: usize, bytes: usize) -> Vec<u8> {

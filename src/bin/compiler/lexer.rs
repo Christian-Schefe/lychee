@@ -1,181 +1,30 @@
 pub mod token_stack;
+pub mod token;
 
+use std::string::String;
 use std::path::PathBuf;
+use crate::lexer::token::{StaticToken, Token, STATIC_TOKEN_MAP};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum Token {
-    Semicolon,
-    OpenParen,
-    CloseParen,
-    OpenBrace,
-    CloseBrace,
-    Comma,
-    Colon,
-    QuestionMark,
-    Plus,
-    Minus,
-    Star,
-    Slash,
-    Percent,
-    Caret,
-    Ampersand,
-    Pipe,
-    LogicalOr,
-    LogicalAnd,
-    ShiftLeft,
-    ShiftRight,
-    Tilde,
-    ExclamationMark,
-    LessThan,
-    GreaterThan,
-    LessThanOrEqual,
-    GreaterThanOrEqual,
-    Equal,
-    NotEqual,
-    Dot,
-    Identifier(String),
-    Integer(i64),
-    String(String),
-    Increment,
-    Decrement,
-    Assign,
-    PlusAssign,
-    MinusAssign,
-    StarAssign,
-    SlashAssign,
-    PercentAssign,
-    CaretAssign,
-    AmpersandAssign,
-    PipeAssign,
-    LeftShiftAssign,
-    RightShiftAssign,
-    Keyword(Keyword),
-    EOF,
+#[derive(Debug, Clone)]
+pub struct Location {
+    pub line: usize,
+    pub column: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum Keyword {
-    Return
-}
-
-impl Token {
-    fn is_final(&self) -> bool {
-        match self {
-            Token::Semicolon => true,
-            Token::OpenParen => true,
-            Token::CloseParen => true,
-            Token::OpenBrace => true,
-            Token::CloseBrace => true,
-            Token::Comma => true,
-            Token::Colon => true,
-            Token::QuestionMark => true,
-            Token::Tilde => true,
-            Token::LogicalOr => true,
-            Token::LogicalAnd => true,
-            Token::Equal => true,
-            Token::NotEqual => true,
-            Token::LessThanOrEqual => true,
-            Token::GreaterThanOrEqual => true,
-            Token::Dot => true,
-            Token::Increment => true,
-            Token::Decrement => true,
-            Token::PlusAssign => true,
-            Token::MinusAssign => true,
-            Token::StarAssign => true,
-            Token::SlashAssign => true,
-            Token::PercentAssign => true,
-            Token::CaretAssign => true,
-            Token::AmpersandAssign => true,
-            Token::PipeAssign => true,
-            Token::LeftShiftAssign => true,
-            Token::RightShiftAssign => true,
-            _ => false,
-        }
-    }
-
-    fn from_str(str: &str) -> Option<Self> {
-        if let Some(token) = match str {
-            ";" => Some(Token::Semicolon),
-            "(" => Some(Token::OpenParen),
-            ")" => Some(Token::CloseParen),
-            "{" => Some(Token::OpenBrace),
-            "}" => Some(Token::CloseBrace),
-            "," => Some(Token::Comma),
-            ":" => Some(Token::Colon),
-            "?" => Some(Token::QuestionMark),
-            "+" => Some(Token::Plus),
-            "-" => Some(Token::Minus),
-            "*" => Some(Token::Star),
-            "/" => Some(Token::Slash),
-            "%" => Some(Token::Percent),
-            "^" => Some(Token::Caret),
-            "&" => Some(Token::Ampersand),
-            "|" => Some(Token::Pipe),
-            "<<" => Some(Token::ShiftLeft),
-            ">>" => Some(Token::ShiftRight),
-            "~" => Some(Token::Tilde),
-            "||" => Some(Token::LogicalOr),
-            "&&" => Some(Token::LogicalAnd),
-            "!" => Some(Token::ExclamationMark),
-            "<" => Some(Token::LessThan),
-            ">" => Some(Token::GreaterThan),
-            "<=" => Some(Token::LessThanOrEqual),
-            ">=" => Some(Token::GreaterThanOrEqual),
-            "==" => Some(Token::Equal),
-            "=" => Some(Token::Assign),
-            "!=" => Some(Token::NotEqual),
-            "." => Some(Token::Dot),
-            "++" => Some(Token::Increment),
-            "--" => Some(Token::Decrement),
-            "+=" => Some(Token::PlusAssign),
-            "-=" => Some(Token::MinusAssign),
-            "*=" => Some(Token::StarAssign),
-            "/=" => Some(Token::SlashAssign),
-            "%=" => Some(Token::PercentAssign),
-            "^=" => Some(Token::CaretAssign),
-            "&=" => Some(Token::AmpersandAssign),
-            "|=" => Some(Token::PipeAssign),
-            "<<=" => Some(Token::LeftShiftAssign),
-            ">>=" => Some(Token::RightShiftAssign),
-            "return" => Some(Token::Keyword(Keyword::Return)),
-            _ => None,
-        } {
-            Some(token)
-        } else if let Some(token) = Token::integer_from_str(str) {
-            Some(token)
-        } else if let Some(token) = Token::identifier_from_str(str) {
-            Some(token)
-        } else {
-            None
-        }
-    }
-
-    fn integer_from_str(str: &str) -> Option<Self> {
-        match str.parse::<i64>() {
-            Ok(int) => Some(Token::Integer(int)),
-            Err(_) => None,
-        }
-    }
-
-    fn identifier_from_str(str: &str) -> Option<Self> {
-        let mut chars = str.chars();
-        if let Some(first_char) = chars.next() {
-            if first_char.is_alphabetic() && chars.all(|c| c.is_alphanumeric() || c == '_') {
-                Some(Token::Identifier(str.to_string()))
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    }
+pub trait HasLocation {
+    fn location(&self) -> &Location;
 }
 
 #[derive(Debug, Clone)]
 pub struct SrcToken {
     pub(crate) token: Token,
-    pub(crate) line: usize,
-    pub(crate) column: usize,
+    pub(crate) location: Location,
+}
+
+impl HasLocation for SrcToken {
+    fn location(&self) -> &Location {
+        &self.location
+    }
 }
 
 pub fn lex(input_path: PathBuf) -> Vec<SrcToken> {
@@ -201,11 +50,11 @@ pub fn lex(input_path: PathBuf) -> Vec<SrcToken> {
         } else {
             read_token(&input, offset)
         };
-        tokens.push(SrcToken { token, line, column });
+        tokens.push(SrcToken { token, location: Location { line, column } });
         column += new_offset - offset;
         offset = new_offset;
     }
-    tokens.push(SrcToken { token: Token::EOF, line, column });
+    tokens.push(SrcToken { token: Token::EOF, location: Location { line, column } });
 
     tokens
 }
@@ -240,22 +89,31 @@ fn read_string(input: &Vec<char>, offset: usize) -> (Token, usize) {
 }
 
 fn read_token(input: &Vec<char>, offset: usize) -> (Token, usize) {
-    let mut last_valid_token = None;
-
-    for i in offset..input.len() {
-        let substr: String = input[offset..=i].iter().collect();
-        if let Some(token) = Token::from_str(&substr) {
-            if token.is_final() {
-                return (token, i + 1);
-            } else {
-                last_valid_token = Some((token, i + 1));
-            }
+    for len in (1..=StaticToken::MAX_LENGTH).rev() {
+        if offset + len > input.len() {
+            continue;
+        }
+        let substr: String = input[offset..offset + len].iter().collect();
+        if let Some(token) = STATIC_TOKEN_MAP.get(&substr) {
+            return (Token::Static(token.clone()), offset + len);
         }
     }
 
-    if let Some((token, j)) = last_valid_token {
-        return (token, j);
+    let mut substr = String::new();
+    let mut last_valid = None;
+
+    for i in offset..input.len() {
+        substr.push(input[i]);
+        if let Some(token) = Token::token_from_str(&substr) {
+            last_valid = Some((token, i + 1));
+        } else {
+            break;
+        }
     }
 
-    panic!("Invalid token");
+    if let Some((token, new_offset)) = last_valid {
+        (token, new_offset)
+    } else {
+        panic!("Invalid token: {}", substr);
+    }
 }

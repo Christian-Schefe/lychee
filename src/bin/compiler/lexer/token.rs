@@ -1,0 +1,186 @@
+use std::collections::HashMap;
+use lazy_static::lazy_static;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum StaticToken {
+    Semicolon,
+    OpenParen,
+    CloseParen,
+    OpenBrace,
+    CloseBrace,
+    OpenBracket,
+    CloseBracket,
+    Comma,
+    Colon,
+    QuestionMark,
+    Plus,
+    Minus,
+    Asterisk,
+    Slash,
+    Percent,
+    Caret,
+    Ampersand,
+    Pipe,
+    LogicalOr,
+    LogicalAnd,
+    ShiftLeft,
+    ShiftRight,
+    Tilde,
+    ExclamationMark,
+    LessThan,
+    GreaterThan,
+    LessThanOrEqual,
+    GreaterThanOrEqual,
+    Equals,
+    NotEquals,
+    Dot,
+    Increment,
+    Decrement,
+    Assign,
+    AddAssign,
+    SubAssign,
+    MulAssign,
+    DivAssign,
+    ModAssign,
+    XorAssign,
+    AndAssign,
+    OrAssign,
+    ShiftLeftAssign,
+    ShiftRightAssign,
+}
+
+impl StaticToken {
+    pub fn get_str(&self) -> String {
+        match self {
+            StaticToken::Semicolon => ";".to_string(),
+            StaticToken::OpenParen => "(".to_string(),
+            StaticToken::CloseParen => ")".to_string(),
+            StaticToken::OpenBrace => "{".to_string(),
+            StaticToken::CloseBrace => "}".to_string(),
+            StaticToken::OpenBracket => "[".to_string(),
+            StaticToken::CloseBracket => "]".to_string(),
+            StaticToken::Comma => ",".to_string(),
+            StaticToken::Colon => ":".to_string(),
+            StaticToken::QuestionMark => "?".to_string(),
+            StaticToken::Plus => "+".to_string(),
+            StaticToken::Minus => "-".to_string(),
+            StaticToken::Asterisk => "*".to_string(),
+            StaticToken::Slash => "/".to_string(),
+            StaticToken::Percent => "%".to_string(),
+            StaticToken::Caret => "^".to_string(),
+            StaticToken::Ampersand => "&".to_string(),
+            StaticToken::Pipe => "|".to_string(),
+            StaticToken::LogicalOr => "||".to_string(),
+            StaticToken::LogicalAnd => "&&".to_string(),
+            StaticToken::ShiftLeft => "<<".to_string(),
+            StaticToken::ShiftRight => ">>".to_string(),
+            StaticToken::Tilde => "~".to_string(),
+            StaticToken::ExclamationMark => "!".to_string(),
+            StaticToken::LessThan => "<".to_string(),
+            StaticToken::GreaterThan => ">".to_string(),
+            StaticToken::LessThanOrEqual => "<=".to_string(),
+            StaticToken::GreaterThanOrEqual => ">=".to_string(),
+            StaticToken::Equals => "==".to_string(),
+            StaticToken::NotEquals => "!=".to_string(),
+            StaticToken::Dot => ".".to_string(),
+            StaticToken::Increment => "++".to_string(),
+            StaticToken::Decrement => "--".to_string(),
+            StaticToken::Assign => "=".to_string(),
+            StaticToken::AddAssign => "+=".to_string(),
+            StaticToken::SubAssign => "-=".to_string(),
+            StaticToken::MulAssign => "*=".to_string(),
+            StaticToken::DivAssign => "/=".to_string(),
+            StaticToken::ModAssign => "%=".to_string(),
+            StaticToken::XorAssign => "^=".to_string(),
+            StaticToken::AndAssign => "&=".to_string(),
+            StaticToken::OrAssign => "|=".to_string(),
+            StaticToken::ShiftLeftAssign => "<<=".to_string(),
+            StaticToken::ShiftRightAssign => ">>=".to_string(),
+        }
+    }
+
+    pub const VALUES: [StaticToken; 44] = [
+        StaticToken::Semicolon,
+        StaticToken::OpenParen,
+        StaticToken::CloseParen,
+        StaticToken::OpenBrace,
+        StaticToken::CloseBrace,
+        StaticToken::OpenBracket,
+        StaticToken::CloseBracket,
+        StaticToken::Comma,
+        StaticToken::Colon,
+        StaticToken::QuestionMark,
+        StaticToken::Plus,
+        StaticToken::Minus,
+        StaticToken::Asterisk,
+        StaticToken::Slash,
+        StaticToken::Percent,
+        StaticToken::Caret,
+        StaticToken::Ampersand,
+        StaticToken::Pipe,
+        StaticToken::LogicalOr,
+        StaticToken::LogicalAnd,
+        StaticToken::ShiftLeft,
+        StaticToken::ShiftRight,
+        StaticToken::Tilde,
+        StaticToken::ExclamationMark,
+        StaticToken::LessThan,
+        StaticToken::GreaterThan,
+        StaticToken::LessThanOrEqual,
+        StaticToken::GreaterThanOrEqual,
+        StaticToken::Equals,
+        StaticToken::NotEquals,
+        StaticToken::Dot,
+        StaticToken::Increment,
+        StaticToken::Decrement,
+        StaticToken::Assign,
+        StaticToken::AddAssign,
+        StaticToken::SubAssign,
+        StaticToken::MulAssign,
+        StaticToken::DivAssign,
+        StaticToken::ModAssign,
+        StaticToken::XorAssign,
+        StaticToken::AndAssign,
+        StaticToken::OrAssign,
+        StaticToken::ShiftLeftAssign,
+        StaticToken::ShiftRightAssign,
+    ];
+
+    pub const MAX_LENGTH: usize = 3;
+}
+
+lazy_static! {
+    pub static ref STATIC_TOKEN_MAP : HashMap<String, StaticToken> = StaticToken::VALUES.iter().map(|token| (token.get_str(), token.clone())).collect();
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Token {
+    Static(StaticToken),
+    Identifier(String),
+    Integer(i32),
+    Long(i64),
+    String(String),
+    Keyword(Keyword),
+    EOF,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Keyword {
+    Return
+}
+
+impl Token {
+    pub(crate) fn token_from_str(str: &str) -> Option<Self> {
+        if str == "return" {
+            Some(Token::Keyword(Keyword::Return))
+        } else if str.chars().all(|c| c.is_numeric()) {
+            Some(Token::Integer(str.parse().unwrap()))
+        } else if str.len() >= 2 && str.chars().enumerate().all(|(i, c)| if i == str.len() - 1 { c == 'l' } else { c.is_numeric() }) {
+            Some(Token::Long(str[..str.len() - 1].parse().unwrap()))
+        } else if str.chars().enumerate().all(|(i, c)| if i == 0 { c.is_alphabetic() } else { c.is_alphanumeric() } || c == '_') {
+            Some(Token::Identifier(str.to_string()))
+        } else {
+            None
+        }
+    }
+}

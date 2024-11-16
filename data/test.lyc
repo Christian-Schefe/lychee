@@ -1,11 +1,5 @@
 int main () {
-    long a = 5;
-    string b = "hello world!\n gfdh";
-    a += 5 + 5 * 5;
-    return test(a);
-}
-
-int test(long n, int ni_) {
-    long a = n + ni_;
-    return 2 * a;
+    int a = 5;
+    a += a + 1;
+    return a;
 }

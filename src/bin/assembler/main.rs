@@ -36,10 +36,10 @@ fn convert_line(line: &str) -> Instruction {
         OpCode::Nop | OpCode::Ret | OpCode::Exit => InstructionType::parse_simple(opcode),
         OpCode::Store | OpCode::Load => InstructionType::parse_register_size_address(opcode, parts),
         OpCode::Push | OpCode::Pop => InstructionType::parse_size_register(opcode, parts),
-        OpCode::Add | OpCode::Sub | OpCode::Mul | OpCode::Div | OpCode::Mod | OpCode::And | OpCode::Or | OpCode::Xor | OpCode::Shl | OpCode::Shr | OpCode::Cmp => InstructionType::parse_two_registers(opcode, parts),
+        OpCode::Add | OpCode::Sub | OpCode::Mul | OpCode::Div | OpCode::Mod | OpCode::And | OpCode::Or | OpCode::Xor | OpCode::Shl | OpCode::Shr | OpCode::Cmp | OpCode::Move => InstructionType::parse_two_registers(opcode, parts),
         OpCode::Call | OpCode::Jmp | OpCode::Jz | OpCode::Jnz | OpCode::Jg | OpCode::Jge | OpCode::Jl | OpCode::Jle => InstructionType::parse_label(opcode, parts),
         OpCode::Set => InstructionType::parse_register_immediate(opcode, parts),
-        OpCode::Not | OpCode::Inc | OpCode::Dec => InstructionType::parse_register(opcode, parts),
+        OpCode::Not | OpCode::Inc | OpCode::Dec | OpCode::Neg | OpCode::SetZ | OpCode::SetNz | OpCode::SetG | OpCode::SetGe | OpCode::SetL | OpCode::SetLe => InstructionType::parse_register(opcode, parts),
         OpCode::ReadStdin | OpCode::WriteStdout => InstructionType::parse_register_address(opcode, parts),
     };
 
@@ -94,6 +94,7 @@ lazy_static! {
             ("and".to_string(), OpCode::And),
             ("or".to_string(), OpCode::Or),
             ("xor".to_string(), OpCode::Xor),
+            ("not".to_string(), OpCode::Not),
             ("shl".to_string(), OpCode::Shl),
             ("shr".to_string(), OpCode::Shr),
             ("cmp".to_string(), OpCode::Cmp),
@@ -108,6 +109,16 @@ lazy_static! {
             ("ret".to_string(), OpCode::Ret),
             ("inc".to_string(), OpCode::Inc),
             ("dec".to_string(), OpCode::Dec),
+            ("read".to_string(), OpCode::ReadStdin),
+            ("write".to_string(), OpCode::WriteStdout),
+            ("mov".to_string(), OpCode::Move),
+            ("neg".to_string(), OpCode::Neg),
+            ("setz".to_string(), OpCode::SetZ),
+            ("setnz".to_string(), OpCode::SetNz),
+            ("setg".to_string(), OpCode::SetG),
+            ("setge".to_string(), OpCode::SetGe),
+            ("setl".to_string(), OpCode::SetL),
+            ("setle".to_string(), OpCode::SetLe),
             ("exit".to_string(), OpCode::Exit),
         ])
     };

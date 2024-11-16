@@ -46,6 +46,14 @@ pub enum OpCode {
     Dec = 0x1C,
     ReadStdin = 0x1D,
     WriteStdout = 0x1E,
+    Move = 0x1F,
+    Neg = 0x20,
+    SetZ = 0x21,
+    SetNz = 0x22,
+    SetG = 0x23,
+    SetGe = 0x24,
+    SetL = 0x25,
+    SetLe = 0x26,
     Exit = 0xFF,
 }
 

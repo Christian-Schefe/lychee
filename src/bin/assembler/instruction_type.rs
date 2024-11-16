@@ -157,9 +157,9 @@ impl InstructionType {
     }
 
     pub fn parse_two_registers(opcode: OpCode, parts: Vec<&str>) -> Self {
-        let source_register = REGISTER_MAP.get(parts[1]).cloned().unwrap();
-        let dest_register = REGISTER_MAP.get(parts[2]).cloned().unwrap();
-        InstructionType::TwoRegisters { opcode: opcode as u8, source_register: source_register as u8, dest_register: dest_register as u8 }
+        let dest_register = REGISTER_MAP.get(parts[1]).cloned().unwrap();
+        let src_register = REGISTER_MAP.get(parts[2]).cloned().unwrap();
+        InstructionType::TwoRegisters { opcode: opcode as u8, source_register: src_register as u8, dest_register: dest_register as u8 }
     }
 
     pub fn add_bytes(&self, bytes: &mut Vec<u8>, labels: &HashMap<String, u64>, label_placeholders: &mut HashMap<String, Vec<u64>>) {
