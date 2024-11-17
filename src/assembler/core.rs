@@ -1,28 +1,16 @@
 use std::collections::HashMap;
 use std::iter::Iterator;
 use lazy_static::lazy_static;
-use lychee_vm::{OpCode, RegisterCode};
-use crate::instruction::Instruction;
-use crate::instruction_type::InstructionType;
+use lychee_compiler::{OpCode, RegisterCode};
+use crate::assembler::instruction_type::InstructionType;
 
-extern crate lychee_vm;
-
-mod instruction_type;
-mod instruction;
-
-fn main() {
-    let args = std::env::args().collect::<Vec<String>>();
-    let path = &args[1];
-    let out_path = &args[2];
-    let str = std::fs::read_to_string(path).unwrap();
-    let instructions = str.lines().filter(|line| !line.is_empty()).map(|line| convert_line(line)).collect::<Vec<Instruction>>();
-    instructions.iter().for_each(|instr| println!("{:?}", instr));
-    let bytes = instructions_to_bytes(instructions);
-
-    std::fs::write(out_path, bytes).unwrap();
+#[derive(Debug)]
+pub enum Instruction {
+    Label(String),
+    Instr(InstructionType),
 }
 
-fn convert_line(line: &str) -> Instruction {
+pub(crate) fn convert_line(line: &str) -> Instruction {
     let parts = line.split_whitespace().collect::<Vec<&str>>();
 
     if parts[0].ends_with(":") {
@@ -30,7 +18,10 @@ fn convert_line(line: &str) -> Instruction {
         return Instruction::Label(label_str.to_string());
     }
 
-    let opcode = OPCODE_MAP.get(parts[0]).cloned().unwrap();
+    let opcode = match OPCODE_MAP.get(parts[0]).cloned() {
+        Some(opcode) => opcode,
+        None => panic!("Invalid opcode: {}", parts[0]),
+    };
 
     let instruction = match opcode {
         OpCode::Nop | OpCode::Ret | OpCode::Exit => InstructionType::parse_simple(opcode),
@@ -46,7 +37,7 @@ fn convert_line(line: &str) -> Instruction {
     Instruction::Instr(instruction)
 }
 
-fn instructions_to_bytes(instructions: Vec<Instruction>) -> Vec<u8> {
+pub(crate) fn instructions_to_bytes(instructions: Vec<Instruction>) -> Vec<u8> {
     let mut bytes = Vec::new();
     let mut labels: HashMap<String, u64> = HashMap::new();
     let mut label_placeholders: HashMap<String, Vec<u64>> = HashMap::new();
@@ -78,7 +69,7 @@ fn instructions_to_bytes(instructions: Vec<Instruction>) -> Vec<u8> {
 }
 
 lazy_static! {
-    static ref OPCODE_MAP: HashMap<String, OpCode> = {
+    pub static ref OPCODE_MAP: HashMap<String, OpCode> = {
         HashMap::from([
             ("nop".to_string(), OpCode::Nop),
             ("load".to_string(), OpCode::Load),
@@ -123,7 +114,7 @@ lazy_static! {
         ])
     };
 
-    static ref REGISTER_MAP: HashMap<String, RegisterCode> = {
+    pub static ref REGISTER_MAP: HashMap<String, RegisterCode> = {
         HashMap::from([
             ("r0".to_string(), RegisterCode::R0),
             ("r1".to_string(), RegisterCode::R1),
@@ -144,7 +135,7 @@ lazy_static! {
         ])
     };
 
-    static ref SIZE_MAP: HashMap<String, u8> = {
+    pub static ref SIZE_MAP: HashMap<String, u8> = {
         HashMap::from([
             ("#8".to_string(), 0b00),
             ("#16".to_string(), 0b01),

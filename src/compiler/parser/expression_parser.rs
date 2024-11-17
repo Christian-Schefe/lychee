@@ -1,9 +1,9 @@
-use crate::lexer::Location;
-use crate::lexer::token::{StaticToken, Token};
-use crate::lexer::token_stack::TokenStack;
-use crate::parser::parser_error::{ParseResult, LocationError};
-use crate::parser::{parse_statement, pop_or_err};
-use crate::parser::syntax_tree::{BinaryOp, Expression, Literal, SrcExpression, UnaryOp, ASSIGN_OP_MAP};
+use crate::compiler::lexer::Location;
+use crate::compiler::lexer::token::{StaticToken, Token};
+use crate::compiler::lexer::token_stack::TokenStack;
+use crate::compiler::parser::parser_error::{ParseResult, LocationError};
+use crate::compiler::parser::{parse_statement, parse_type, pop_or_err};
+use crate::compiler::parser::syntax_tree::{BinaryOp, Expression, Literal, SrcExpression, UnaryOp, ASSIGN_OP_MAP};
 
 pub fn parse_expression(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
     let offset = tokens.offset;
@@ -46,6 +46,7 @@ fn parse_ternary_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression>
     if let Token::Static(StaticToken::QuestionMark) = tokens.peek().token {
         tokens.pop();
         let true_expr = parse_expression(tokens)?;
+        pop_or_err(tokens, Token::Static(StaticToken::Colon))?;
         let false_expr = parse_ternary_or_lower(tokens)?;
         return Ok(SrcExpression::new(Expression::Ternary {
             condition: Box::new(expr),
@@ -145,19 +146,48 @@ fn parse_primary(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
     }
     tokens.offset = offset;
 
-    let token = tokens.pop();
+    let token = tokens.peek();
     let location = token.location.clone();
     match &token.token {
         Token::Static(StaticToken::OpenParen) => {
-            let expr = parse_expression(tokens)?;
+            let offset = tokens.offset;
+            let cast_expr = parse_cast(&location, tokens);
+            if cast_expr.is_ok() {
+                return cast_expr;
+            }
+            tokens.offset = offset;
+            tokens.pop();
+            let mut expr = parse_expression(tokens)?;
+            expr.location = location;
             pop_or_err(tokens, Token::Static(StaticToken::CloseParen))?;
             Ok(expr)
         }
-        Token::Static(StaticToken::OpenBrace) => parse_block(&location, tokens),
-        Token::Integer(int) => Ok(SrcExpression::new(Expression::Literal(Literal::Int(*int)), &location)),
-        Token::Long(long) => Ok(SrcExpression::new(Expression::Literal(Literal::Long(*long)), &location)),
-        Token::String(string) => Ok(SrcExpression::new(Expression::Literal(Literal::String(string.to_string())), &location)),
-        Token::Identifier(name) => Ok(SrcExpression::new(Expression::Variable(name.to_string()), &location)),
+        Token::Static(StaticToken::OpenBrace) => parse_block_expr(tokens),
+        Token::Integer(int) => {
+            let expr = SrcExpression::new(Expression::Literal(Literal::Int(*int)), &location);
+            tokens.pop();
+            Ok(expr)
+        }
+        Token::Long(long) => {
+            let expr = SrcExpression::new(Expression::Literal(Literal::Long(*long)), &location);
+            tokens.pop();
+            Ok(expr)
+        }
+        Token::String(string) => {
+            let expr = SrcExpression::new(Expression::Literal(Literal::String(string.to_string())), &location);
+            tokens.pop();
+            Ok(expr)
+        }
+        Token::Boolean(boolean) => {
+            let expr = SrcExpression::new(Expression::Literal(Literal::Bool(*boolean)), &location);
+            tokens.pop();
+            Ok(expr)
+        }
+        Token::Identifier(name) => {
+            let expr = SrcExpression::new(Expression::Variable(name.to_string()), &location);
+            tokens.pop();
+            Ok(expr)
+        }
         _ => Err(LocationError::expect("Primary expression", token)),
     }
 }
@@ -186,17 +216,33 @@ fn parse_function_call(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
     Ok(SrcExpression::new(Expression::FunctionCall { function: id, args }, &location))
 }
 
-fn parse_block(location: &Location, tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
+pub fn parse_block_expr(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
+    let location = tokens.peek().location.clone();
+    pop_or_err(tokens, Token::Static(StaticToken::OpenBrace))?;
     let mut statements = Vec::new();
     while tokens.peek().token != Token::Static(StaticToken::CloseBrace) {
+        let offset = tokens.offset;
         let statement = parse_statement(tokens);
         if statement.is_err() {
-            let final_expr = parse_expression(tokens)?;
+            tokens.offset = offset;
+            let final_expr = parse_expression(tokens).map_err(|_| statement.unwrap_err())?;
             pop_or_err(tokens, Token::Static(StaticToken::CloseBrace))?;
-            return Ok(SrcExpression::new(Expression::Block(statements, Some(Box::new(final_expr))), location));
+            return Ok(SrcExpression::new(Expression::Block(statements, Some(Box::new(final_expr))), &location));
         }
         statements.push(statement?);
     }
     pop_or_err(tokens, Token::Static(StaticToken::CloseBrace))?;
-    Ok(SrcExpression::new(Expression::Block(statements, None), location))
+    Ok(SrcExpression::new(Expression::Block(statements, None), &location))
+}
+
+fn parse_cast(location: &Location, tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
+    pop_or_err(tokens, Token::Static(StaticToken::OpenParen))?;
+    let var_type = parse_type(tokens)?;
+    if let Some(var_type) = var_type {
+        pop_or_err(tokens, Token::Static(StaticToken::CloseParen))?;
+        let expr = parse_primary(tokens)?;
+        Ok(SrcExpression::new(Expression::Cast { var_type, expr: Box::new(expr) }, location))
+    } else {
+        Err(LocationError::expect("Type", tokens.peek()))
+    }
 }

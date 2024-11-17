@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
-use crate::parser::analyzed_syntax_tree::{AnalyzedFunction, AnalyzedProgram};
-use crate::parser::syntax_tree::{BinaryOp, Expression, Literal, SrcExpression, SrcStatement, Statement, UnaryOp};
+use crate::compiler::parser::analyzed_syntax_tree::{AnalyzedFunction, AnalyzedProgram};
+use crate::compiler::parser::syntax_tree::{BinaryOp, Expression, Literal, SrcExpression, SrcStatement, Statement, Type, UnaryOp};
 
 struct Context {
     output: Vec<String>,
@@ -35,7 +35,7 @@ struct FunctionContext {
     return_label: String,
 }
 
-pub fn generate_code(program: AnalyzedProgram, output: PathBuf) {
+pub fn generate_code(program: AnalyzedProgram, output: &PathBuf) {
     let mut context = Context {
         output: Vec::new(),
         function_labels: HashMap::new(),
@@ -59,6 +59,9 @@ pub fn generate_code(program: AnalyzedProgram, output: PathBuf) {
     }
 
     context.push(&format!("call {}", context.function_labels[&program.main_function]));
+    if program.functions[&program.main_function].return_type.is_none() {
+        context.push("set r0 0");
+    }
     context.push("exit");
 
     for (_, function) in program.functions {
@@ -75,26 +78,24 @@ fn generate_function_code(context: &mut Context, function: AnalyzedFunction) {
         name: function.name,
         var_stack_offsets: HashMap::new(),
         var_type_sizes: HashMap::new(),
-        current_stack_offset: 8,
+        current_stack_offset: -8,
     };
     context.push_label(context.function_labels[&context.fn_context.name].clone());
     context.push("push #64 bp");
     context.push("mov bp sp");
 
     let mut argument_offset = 16;
-    for (name, ty) in &function.args {
+    for (name, ty) in function.args.iter().rev() {
         let offset = argument_offset;
         context.fn_context.var_stack_offsets.insert(name.clone(), offset);
         context.fn_context.var_type_sizes.insert(name.clone(), ty.size());
         argument_offset += ty.size() as isize;
     }
 
-    context.push(&format!("set r0 {}", function.local_var_stack_size));
-    context.push(&format!("sub sp r0"));
+    context.push(&format!("set r0 {}", function.local_var_stack_size + 8));
+    context.push("sub sp r0");
 
-    for statement in function.statements {
-        generate_statement_code(context, statement);
-    }
+    generate_expression_code(context, function.expr);
 
     context.push_label(context.fn_context.return_label.clone());
     context.push("mov sp bp");
@@ -125,6 +126,21 @@ fn generate_statement_code(context: &mut Context, statement: SrcStatement) {
         Statement::Expr(expr) => {
             generate_expression_code(context, expr);
         }
+        Statement::If { condition, true_expr, false_expr } => {
+            let false_label = context.get_new_label();
+            let end_label = context.get_new_label();
+            generate_expression_code(context, condition);
+            context.push("set r1 0");
+            context.push("cmp r0 r1");
+            context.push(&format!("jz {}", false_label));
+            generate_expression_code(context, true_expr);
+            context.push(&format!("jmp {}", end_label));
+            context.push_label(false_label);
+            if let Some(false_expr) = false_expr {
+                generate_expression_code(context, false_expr);
+            }
+            context.push_label(end_label);
+        }
     }
 }
 
@@ -138,6 +154,9 @@ fn generate_expression_code(context: &mut Context, expr: SrcExpression) {
                 Literal::Long(long) => {
                     context.push(&format!("set r0 {}", long));
                 }
+                Literal::Bool(boolean) => {
+                    context.push(&format!("set r0 {}", if boolean { 1 } else { 0 }));
+                }
                 _ => unimplemented!()
             }
         }
@@ -147,12 +166,16 @@ fn generate_expression_code(context: &mut Context, expr: SrcExpression) {
             context.push(&format!("load #{} r0 [bp;{}]", size, offset));
         }
         Expression::FunctionCall { function, args } => {
+            let mut total_size = 0;
             for (i, arg) in args.into_iter().enumerate() {
-                let arg_size = context.function_arg_sizes[&function][i] * 8;
+                let arg_bytes = context.function_arg_sizes[&function][i];
                 generate_expression_code(context, arg);
-                context.push(&format!("push #{} r0", arg_size));
+                context.push(&format!("push #{} r0", arg_bytes * 8));
+                total_size += arg_bytes;
             }
             context.push(&format!("call {}", context.function_labels[&function]));
+            context.push(&format!("set r1 {}", total_size));
+            context.push("add sp r1");
         }
         Expression::Block(statements, final_expr) => {
             for statement in statements {
@@ -200,6 +223,18 @@ fn generate_expression_code(context: &mut Context, expr: SrcExpression) {
                 BinaryOp::Assign | BinaryOp::AddAssign | BinaryOp::SubAssign | BinaryOp::MulAssign | BinaryOp::DivAssign | BinaryOp::AndAssign | BinaryOp::OrAssign | BinaryOp::XorAssign | BinaryOp::ModAssign | BinaryOp::ShlAssign | BinaryOp::ShrAssign => {
                     generate_assignment_binop(context, op, *left, *right);
                 }
+            }
+        }
+        Expression::Cast { var_type, expr } => {
+            generate_expression_code(context, *expr);
+            let bit_size = var_type.size() * 8;
+            if var_type == Type::Bool {
+                context.push("set r1 1");
+                context.push("and r0 r1");
+            } else if bit_size < 64 {
+                let mask = (1u64 << bit_size) - 1;
+                context.push(&format!("set r1 {}", mask));
+                context.push("and r0 r1");
             }
         }
     }
@@ -260,8 +295,8 @@ fn generate_relational_binop(context: &mut Context, op: BinaryOp, left: SrcExpre
         BinaryOp::LessEquals => context.push("setle r0"),
         BinaryOp::Greater => context.push("setg r0"),
         BinaryOp::GreaterEquals => context.push("setge r0"),
-        BinaryOp::Equals => context.push("sete r0"),
-        BinaryOp::NotEquals => context.push("setne r0"),
+        BinaryOp::Equals => context.push("setz r0"),
+        BinaryOp::NotEquals => context.push("setnz r0"),
         _ => unreachable!()
     }
 }

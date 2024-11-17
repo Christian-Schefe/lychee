@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::parser::syntax_tree::{SrcStatement, Type};
+use crate::compiler::parser::syntax_tree::{SrcExpression, Type};
 
 pub struct AnalyzedProgram {
     pub functions: HashMap<String, AnalyzedFunction>,
@@ -11,5 +11,5 @@ pub struct AnalyzedFunction {
     pub args: Vec<(String, Type)>,
     pub return_type: Option<Type>,
     pub local_var_stack_size: usize,
-    pub statements: Vec<SrcStatement>,
+    pub expr: SrcExpression,
 }

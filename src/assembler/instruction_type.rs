@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use lychee_vm::OpCode;
-use crate::{REGISTER_MAP, SIZE_MAP};
+use lychee_compiler::OpCode;
+use crate::assembler::core::{REGISTER_MAP, SIZE_MAP};
 
 #[derive(Debug)]
 pub enum MemoryAddress {

@@ -1,4 +1,4 @@
-use crate::parser::syntax_tree::{Expression, Function, Program, Statement};
+use crate::compiler::parser::syntax_tree::{Expression, Function, Program, Statement};
 
 pub trait PrettyPrint {
     fn pretty_print(&self, indent: usize) -> String;
@@ -29,11 +29,9 @@ impl PrettyPrint for Function {
         } else {
             result.push_str("()");
         }
-        result.push_str(" {\n");
-        for statement in &self.statements {
-            result.push_str(&statement.statement.pretty_print(indent + 1));
-        }
-        result.push_str("}\n");
+        result.push_str("\n");
+        result.push_str(&self.expr.expr.pretty_print(indent));
+        result.push_str("\n\n");
         result
     }
 }
@@ -64,6 +62,17 @@ impl PrettyPrint for Statement {
                 result.push_str(&expr.expr.pretty_print(indent));
                 result.push_str(";\n");
             }
+            Statement::If { condition, true_expr, false_expr } => {
+                result.push_str("if ");
+                result.push_str(&condition.expr.pretty_print(indent));
+                result.push_str(" ");
+                result.push_str(&true_expr.expr.pretty_print(indent));
+                if let Some(false_expr) = false_expr {
+                    result.push_str(" else ");
+                    result.push_str(&false_expr.expr.pretty_print(indent));
+                }
+                result.push_str("\n");
+            }
         }
         result
     }
@@ -74,12 +83,21 @@ impl PrettyPrint for Expression {
         match self {
             Expression::Block(statements, expr) => {
                 let mut result = String::new();
+                result.push_str("{\n");
                 for statement in statements {
                     result.push_str(&statement.statement.pretty_print(indent + 1));
                 }
                 if let Some(expr) = expr {
-                    result.push_str(&expr.expr.pretty_print(indent));
+                    for _ in 0..=indent {
+                        result.push_str("    ");
+                    }
+                    result.push_str(&expr.expr.pretty_print(indent + 1));
+                    result.push_str("\n");
                 }
+                for _ in 0..indent {
+                    result.push_str("    ");
+                }
+                result.push_str("}");
                 result
             }
             Expression::Binary { op, left, right } => {
@@ -103,6 +121,9 @@ impl PrettyPrint for Expression {
                 }
                 result.push_str(")");
                 result
+            }
+            Expression::Cast { var_type, expr } => {
+                format!("({:?}){}", var_type, expr.expr.pretty_print(indent))
             }
         }
     }

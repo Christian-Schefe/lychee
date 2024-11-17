@@ -1,14 +1,21 @@
 pub mod token_stack;
 pub mod token;
 
+use std::fmt::Display;
 use std::string::String;
 use std::path::PathBuf;
-use crate::lexer::token::{StaticToken, Token, STATIC_TOKEN_MAP};
+use crate::compiler::lexer::token::{StaticToken, Token, STATIC_TOKEN_MAP};
 
 #[derive(Debug, Clone)]
 pub struct Location {
     pub line: usize,
     pub column: usize,
+}
+
+impl Display for Location {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "line {}, column {}", self.line, self.column)
+    }
 }
 
 pub trait HasLocation {
@@ -27,7 +34,7 @@ impl HasLocation for SrcToken {
     }
 }
 
-pub fn lex(input_path: PathBuf) -> Vec<SrcToken> {
+pub fn lex(input_path: &PathBuf) -> Vec<SrcToken> {
     let input: Vec<char> = std::fs::read_to_string(input_path).unwrap().chars().collect();
     let mut offset = 0;
     let mut tokens = Vec::new();

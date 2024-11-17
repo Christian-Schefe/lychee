@@ -1,5 +1,5 @@
 use std::fmt::{Debug, Display};
-use crate::lexer::{HasLocation, Location, SrcToken};
+use crate::compiler::lexer::{HasLocation, Location, SrcToken};
 
 pub type ParseResult<T> = Result<T, LocationError>;
 
@@ -9,6 +9,13 @@ pub struct LocationError {
 }
 
 impl LocationError {
+    pub fn msg(msg: &str, location: &Location) -> Self {
+        LocationError {
+            message: msg.to_string(),
+            location: location.clone(),
+        }
+    }
+    
     pub fn expect<T: Debug, T2: Debug + HasLocation>(expected: T, actual: &T2) -> Self {
         LocationError {
             message: format!("Expected {:?}, found {:?}", expected, actual),

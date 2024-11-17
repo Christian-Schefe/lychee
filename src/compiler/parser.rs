@@ -1,8 +1,8 @@
-use crate::lexer::token::{Keyword, StaticToken, Token};
-use crate::lexer::token_stack::TokenStack;
-use crate::parser::expression_parser::parse_expression;
-use crate::parser::parser_error::{ParseResult, LocationError};
-use crate::parser::syntax_tree::{Function, Program, SrcFunction, SrcStatement, Statement, Type};
+use crate::compiler::lexer::token::{Keyword, StaticToken, Token};
+use crate::compiler::lexer::token_stack::TokenStack;
+use crate::compiler::parser::expression_parser::{parse_block_expr, parse_expression};
+use crate::compiler::parser::parser_error::{LocationError, ParseResult};
+use crate::compiler::parser::syntax_tree::{Function, Program, SrcFunction, SrcStatement, Statement, Type};
 
 pub mod syntax_tree;
 mod parser_error;
@@ -66,21 +66,13 @@ fn parse_function(tokens: &mut TokenStack) -> ParseResult<SrcFunction> {
     }
     pop_or_err(tokens, Token::Static(StaticToken::CloseParen))?;
 
-    pop_or_err(tokens, Token::Static(StaticToken::OpenBrace))?;
-
-    let mut statements = Vec::new();
-
-    while tokens.peek().token != Token::Static(StaticToken::CloseBrace) {
-        let statement = parse_statement(tokens)?;
-        statements.push(statement);
-    }
-    tokens.pop();
+    let expr = parse_expression(tokens)?;
 
     Ok(SrcFunction::new(Function {
         return_type,
         args,
         name,
-        statements,
+        expr,
     }, &location))
 }
 
@@ -98,15 +90,25 @@ fn parse_statement(tokens: &mut TokenStack) -> ParseResult<SrcStatement> {
             pop_or_err(tokens, Token::Static(StaticToken::Semicolon))?;
             Ok(SrcStatement::new(Statement::Return(Some(expr)), &location))
         }
+        Token::Keyword(Keyword::If) => {
+            tokens.pop();
+            let condition = parse_expression(tokens)?;
+            let true_expr = parse_block_expr(tokens)?;
+            let false_expr = if tokens.peek().token == Token::Keyword(Keyword::Else) {
+                tokens.pop();
+                Some(parse_block_expr(tokens)?)
+            } else {
+                None
+            };
+            Ok(SrcStatement::new(Statement::If { condition, true_expr, false_expr }, &location))
+        }
         _ => {
             let offset = tokens.offset;
-            match parse_declaration_statement(tokens) {
-                Ok(declaration) => {
-                    pop_or_err(tokens, Token::Static(StaticToken::Semicolon))?;
-                    return Ok(SrcStatement::new(declaration, &location));
-                }
-                Err(_) => tokens.offset = offset
+            if let Ok(declaration) = parse_declaration_statement(tokens) {
+                pop_or_err(tokens, Token::Static(StaticToken::Semicolon))?;
+                return Ok(SrcStatement::new(declaration, &location));
             }
+            tokens.offset = offset;
             let expr = parse_expression(tokens)?;
             pop_or_err(tokens, Token::Static(StaticToken::Semicolon))?;
             Ok(SrcStatement::new(Statement::Expr(expr), &location))
@@ -141,15 +143,17 @@ fn parse_type(tokens: &mut TokenStack) -> ParseResult<Option<Type>> {
     let token = tokens.pop();
     if let Token::Identifier(str) = &token.token {
         match str.as_str() {
-            "void" => Ok(None),
             "int" => Ok(Some(Type::Int)),
             "long" => Ok(Some(Type::Long)),
+            "bool" => Ok(Some(Type::Bool)),
             "string" => Ok(Some(Type::String)),
             _ => Err(LocationError {
                 message: format!("Unknown type: {}", str),
                 location: token.location.clone(),
             }),
         }
+    } else if let Token::Keyword(Keyword::Void) = token.token {
+        Ok(None)
     } else {
         Err(LocationError::expect("Type", token))
     }

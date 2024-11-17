@@ -160,19 +160,39 @@ pub enum Token {
     Integer(i32),
     Long(i64),
     String(String),
+    Boolean(bool),
     Keyword(Keyword),
     EOF,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Keyword {
-    Return
+    Return,
+    Void,
+    If,
+    Else,
+}
+
+impl Keyword {
+    pub fn from_str(str: &str) -> Option<Self> {
+        match str {
+            "return" => Some(Keyword::Return),
+            "void" => Some(Keyword::Void),
+            "if" => Some(Keyword::If),
+            "else" => Some(Keyword::Else),
+            _ => None
+        }
+    }
 }
 
 impl Token {
     pub(crate) fn token_from_str(str: &str) -> Option<Self> {
-        if str == "return" {
-            Some(Token::Keyword(Keyword::Return))
+        if let Some(keyword) = Keyword::from_str(str) {
+            Some(Token::Keyword(keyword))
+        } else if str == "true" {
+            Some(Token::Boolean(true))
+        } else if str == "false" {
+            Some(Token::Boolean(false))
         } else if str.chars().all(|c| c.is_numeric()) {
             Some(Token::Integer(str.parse().unwrap()))
         } else if str.len() >= 2 && str.chars().enumerate().all(|(i, c)| if i == str.len() - 1 { c == 'l' } else { c.is_numeric() }) {

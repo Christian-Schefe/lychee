@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use lazy_static::lazy_static;
-use crate::lexer::{HasLocation, Location};
-use crate::lexer::token::StaticToken;
+use crate::compiler::lexer::{HasLocation, Location};
+use crate::compiler::lexer::token::StaticToken;
 
 #[derive(Debug)]
 pub struct Program {
@@ -34,7 +34,7 @@ pub struct Function {
     pub name: String,
     pub args: Vec<(String, Type)>,
     pub return_type: Option<Type>,
-    pub statements: Vec<SrcStatement>,
+    pub expr: SrcExpression,
 }
 
 #[derive(Debug, Clone)]
@@ -65,6 +65,11 @@ pub enum Statement {
         var_type: Type,
         name: String,
         value: Option<SrcExpression>,
+    },
+    If {
+        condition: SrcExpression,
+        true_expr: SrcExpression,
+        false_expr: Option<SrcExpression>,
     },
     Expr(SrcExpression),
 }
@@ -112,6 +117,10 @@ pub enum Expression {
     FunctionCall {
         function: String,
         args: Vec<SrcExpression>,
+    },
+    Cast {
+        var_type: Type,
+        expr: Box<SrcExpression>,
     },
 }
 
@@ -177,6 +186,7 @@ pub enum Literal {
     Int(i32),
     Long(i64),
     String(String),
+    Bool(bool),
 }
 
 impl Literal {
@@ -185,6 +195,7 @@ impl Literal {
             Literal::Int(_) => Type::Int,
             Literal::Long(_) => Type::Long,
             Literal::String(_) => Type::String,
+            Literal::Bool(_) => Type::Bool,
         }
     }
 }
@@ -212,6 +223,21 @@ impl Type {
     pub fn is_integer(&self) -> bool {
         match self {
             Type::Int | Type::Long => true,
+            _ => false,
+        }
+    }
+
+    pub fn can_cast_to(&self, other: &Type) -> bool {
+        if self == other {
+            return true;
+        }
+        match (self, other) {
+            (Type::Int, Type::Long) => true,
+            (Type::Int, Type::Bool) => true,
+            (Type::Long, Type::Int) => true,
+            (Type::Long, Type::Bool) => true,
+            (Type::Bool, Type::Int) => true,
+            (Type::Bool, Type::Long) => true,
             _ => false,
         }
     }

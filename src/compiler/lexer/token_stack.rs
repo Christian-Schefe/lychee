@@ -1,4 +1,5 @@
-use crate::lexer::{SrcToken, Token};
+use crate::compiler::lexer::SrcToken;
+use crate::compiler::lexer::token::Token;
 
 pub(crate) struct TokenStack {
     stack: Vec<SrcToken>,
