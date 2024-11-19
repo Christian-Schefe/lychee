@@ -1,10 +1,10 @@
-pub mod token_stack;
 pub mod token;
+pub mod token_stack;
 
-use std::fmt::Display;
-use std::string::String;
-use std::path::PathBuf;
 use crate::compiler::lexer::token::{StaticToken, Token, STATIC_TOKEN_MAP};
+use std::fmt::Display;
+use std::path::PathBuf;
+use std::string::String;
 
 #[derive(Debug, Clone)]
 pub struct Location {
@@ -35,7 +35,10 @@ impl HasLocation for SrcToken {
 }
 
 pub fn lex(input_path: &PathBuf) -> Vec<SrcToken> {
-    let input: Vec<char> = std::fs::read_to_string(input_path).unwrap().chars().collect();
+    let input: Vec<char> = std::fs::read_to_string(input_path)
+        .unwrap()
+        .chars()
+        .collect();
     let mut offset = 0;
     let mut tokens = Vec::new();
     let mut line = 1;
@@ -57,11 +60,17 @@ pub fn lex(input_path: &PathBuf) -> Vec<SrcToken> {
         } else {
             read_token(&input, offset)
         };
-        tokens.push(SrcToken { token, location: Location { line, column } });
+        tokens.push(SrcToken {
+            token,
+            location: Location { line, column },
+        });
         column += new_offset - offset;
         offset = new_offset;
     }
-    tokens.push(SrcToken { token: Token::EOF, location: Location { line, column } });
+    tokens.push(SrcToken {
+        token: Token::EOF,
+        location: Location { line, column },
+    });
 
     tokens
 }
@@ -111,10 +120,10 @@ fn read_token(input: &Vec<char>, offset: usize) -> (Token, usize) {
 
     for i in offset..input.len() {
         substr.push(input[i]);
-        if let Some(token) = Token::token_from_str(&substr) {
-            last_valid = Some((token, i + 1));
-        } else {
-            break;
+        match Token::token_from_str(&substr) {
+            Ok(token) => last_valid = Some((token, i + 1)),
+            Err(true) => break,
+            Err(false) => (),
         }
     }
 

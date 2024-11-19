@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use lazy_static::lazy_static;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum StaticToken {
@@ -150,7 +150,10 @@ impl StaticToken {
 }
 
 lazy_static! {
-    pub static ref STATIC_TOKEN_MAP : HashMap<String, StaticToken> = StaticToken::VALUES.iter().map(|token| (token.get_str(), token.clone())).collect();
+    pub static ref STATIC_TOKEN_MAP: HashMap<String, StaticToken> = StaticToken::VALUES
+        .iter()
+        .map(|token| (token.get_str(), token.clone()))
+        .collect();
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -180,27 +183,27 @@ impl Keyword {
             "void" => Some(Keyword::Void),
             "if" => Some(Keyword::If),
             "else" => Some(Keyword::Else),
-            _ => None
+            _ => None,
         }
     }
 }
 
 impl Token {
-    pub(crate) fn token_from_str(str: &str) -> Option<Self> {
+    pub(crate) fn token_from_str(str: &str) -> Result<Self, bool> {
         if let Some(keyword) = Keyword::from_str(str) {
-            Some(Token::Keyword(keyword))
+            Ok(Token::Keyword(keyword))
         } else if str == "true" {
-            Some(Token::Boolean(true))
+            Ok(Token::Boolean(true))
         } else if str == "false" {
-            Some(Token::Boolean(false))
+            Ok(Token::Boolean(false))
         } else if str.chars().all(|c| c.is_numeric()) {
-            Some(Token::Integer(str.parse().unwrap()))
+            str.parse::<i32>().map(|x| Token::Integer(x)).map_err(|_| false)
         } else if str.len() >= 2 && str.chars().enumerate().all(|(i, c)| if i == str.len() - 1 { c == 'l' } else { c.is_numeric() }) {
-            Some(Token::Long(str[..str.len() - 1].parse().unwrap()))
+            str[..str.len() - 1].parse::<i64>().map(|x| Token::Long(x)).map_err(|_| true)
         } else if str.chars().enumerate().all(|(i, c)| if i == 0 { c.is_alphabetic() } else { c.is_alphanumeric() } || c == '_') {
-            Some(Token::Identifier(str.to_string()))
+            Ok(Token::Identifier(str.to_string()))
         } else {
-            None
+            Err(true)
         }
     }
 }

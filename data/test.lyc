@@ -1,7 +1,11 @@
 int main() {
     int amount = 12;
     int result = euclid(amount, 40);
-    return result;
+    return (int)((bool)test() && (bool)result);
+}
+
+long test() {
+    5000000000l
 }
 
 int euclid(int n, int b) {

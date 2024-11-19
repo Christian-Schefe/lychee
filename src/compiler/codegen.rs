@@ -229,8 +229,9 @@ fn generate_expression_code(context: &mut Context, expr: SrcExpression) {
             generate_expression_code(context, *expr);
             let bit_size = var_type.size() * 8;
             if var_type == Type::Bool {
-                context.push("set r1 1");
-                context.push("and r0 r1");
+                context.push("set r1 0");
+                context.push("cmp r0 r1");
+                context.push("setnz r0");
             } else if bit_size < 64 {
                 let mask = (1u64 << bit_size) - 1;
                 context.push(&format!("set r1 {}", mask));

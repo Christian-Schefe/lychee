@@ -104,7 +104,7 @@ impl PrettyPrint for Expression {
                 format!("({} {:?} {})", left.expr.pretty_print(indent), op, right.expr.pretty_print(indent))
             }
             Expression::Unary { op, expr } => {
-                format!("{:?}{}", op, expr.expr.pretty_print(indent))
+                format!("{:?} {}", op, expr.expr.pretty_print(indent))
             }
             Expression::Literal(lit) => format!("{:?}", lit),
             Expression::Variable(name) => name.clone(),

@@ -66,7 +66,7 @@ fn parse_function(tokens: &mut TokenStack) -> ParseResult<SrcFunction> {
     }
     pop_or_err(tokens, Token::Static(StaticToken::CloseParen))?;
 
-    let expr = parse_expression(tokens)?;
+    let expr = parse_block_expr(tokens)?;
 
     Ok(SrcFunction::new(Function {
         return_type,

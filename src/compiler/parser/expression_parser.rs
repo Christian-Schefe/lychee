@@ -240,7 +240,7 @@ fn parse_cast(location: &Location, tokens: &mut TokenStack) -> ParseResult<SrcEx
     let var_type = parse_type(tokens)?;
     if let Some(var_type) = var_type {
         pop_or_err(tokens, Token::Static(StaticToken::CloseParen))?;
-        let expr = parse_primary(tokens)?;
+        let expr = parse_unary_or_lower(tokens)?;
         Ok(SrcExpression::new(Expression::Cast { var_type, expr: Box::new(expr) }, location))
     } else {
         Err(LocationError::expect("Type", tokens.peek()))
