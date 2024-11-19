@@ -70,13 +70,9 @@ fn analyze_function(context: &mut ValidationContext, function: &SrcFunction) -> 
     for (name, ty) in &function.function.args {
         context.variable_types.insert(name.clone(), ty.clone());
     }
-    let expr_type = analyze_expr(context, &function.function.expr)?;
     let return_type = function.function.return_type.clone().unwrap_or(Type::Unit);
-    if expr_type != return_type {
-        if !always_returns_expr(&function.function.expr) {
-            return Err(LocationError::msg(&format!("Function '{}' must return type '{:?}'. Found type '{:?}'.", function.function.name, return_type, &expr_type), &function.function.expr.location));
-        }
-    }
+    analyze_expr(context, &function.function.expr, Some(&return_type))?;
+
     let stack_space = calc_local_var_stack_space_expr(&function.function.expr);
     Ok(AnalyzedFunction {
         name: function.function.name.clone(),
@@ -93,10 +89,7 @@ fn analyze_statement(context: &mut ValidationContext, statement: &SrcStatement) 
             let function = context.function_declarations.get(context.current_function.as_ref().unwrap()).unwrap();
             if let Some(return_type) = function.return_type.clone() {
                 let expr = expr.as_ref().ok_or(LocationError::msg(&format!("Return statement needs to return a value of type '{:?}'.", &return_type), &statement.location))?;
-                let expr_type = analyze_expr(context, expr)?;
-                if expr_type != return_type {
-                    return Err(LocationError::msg(&format!("Return statement needs to return a value of type '{:?}'. Found type '{:?}'.", &return_type, &expr_type), &expr.location));
-                }
+                analyze_expr(context, expr, Some(&return_type))?;
             } else {
                 if let Some(src_expr) = expr {
                     return Err(LocationError::msg("Return statement cannot return a value.", &src_expr.location));
@@ -108,31 +101,25 @@ fn analyze_statement(context: &mut ValidationContext, statement: &SrcStatement) 
                 return Err(LocationError::msg(&format!("Variable '{}' has already been declared.", name), &statement.location));
             }
             if let Some(value) = value {
-                let value_type = analyze_expr(context, value)?;
-                if var_type != &value_type {
-                    return Err(LocationError::expect_at(var_type, &value_type, &value.location));
-                }
+                analyze_expr(context, value, Some(var_type))?;
             }
             context.variable_types.insert(name.clone(), var_type.clone());
         }
         Statement::Expr(expr) => {
-            analyze_expr(context, expr)?;
+            analyze_expr(context, expr, None)?;
         }
         Statement::If { condition, true_expr, false_expr } => {
-            let condition_type = analyze_expr(context, condition)?;
-            if condition_type != Type::Bool {
-                return Err(LocationError::msg(&format!("If condition must be of type '{:?}'. Found type '{:?}'.", Type::Bool, &condition_type), &condition.location));
-            }
-            analyze_expr(context, true_expr)?;
+            analyze_expr(context, condition, Some(&Type::Bool))?;
+            analyze_expr(context, true_expr, None)?;
             if let Some(false_expr) = false_expr {
-                analyze_expr(context, false_expr)?;
+                analyze_expr(context, false_expr, None)?;
             }
         }
     }
     Ok(())
 }
 
-fn analyze_expr(context: &mut ValidationContext, expr: &SrcExpression) -> ValidationResult<Type> {
+fn analyze_expr(context: &mut ValidationContext, expr: &SrcExpression, expected_type: Option<&Type>) -> ValidationResult<Type> {
     match &expr.expr {
         Expression::Block(statements, return_expr) => {
             let mut always_returns = false;
@@ -149,101 +136,116 @@ fn analyze_expr(context: &mut ValidationContext, expr: &SrcExpression) -> Valida
                 if always_returns {
                     return Err(LocationError::msg("Unreachable code.", &return_expr.location));
                 }
-                let return_expr_type = analyze_expr(context, return_expr)?;
-                Ok(return_expr_type)
+                analyze_expr(context, return_expr, expected_type)
             } else {
                 Ok(Type::Unit)
             }
         }
-        Expression::Literal(literal) => Ok(literal.get_type()),
+        Expression::Literal(literal) => {
+            if expected_type.is_none_or(|x| *x == literal.get_type()) {
+                Ok(literal.get_type())
+            } else {
+                Err(LocationError::msg(&format!("Expected type '{:?}', found type '{:?}'.", expected_type, literal.get_type()), &expr.location))
+            }
+        }
         Expression::Unary { op, expr } => {
-            let expr_type = analyze_expr(context, expr)?;
             match op {
                 UnaryOp::Positive | UnaryOp::Negate | UnaryOp::LogicalNot | UnaryOp::Not => {
-                    if expr_type.is_integer() {
-                        Ok(expr_type)
+                    if expected_type.is_none_or(|x| x.is_integer()) {
+                        let expr_type = analyze_expr(context, expr, expected_type)?;
+                        if expr_type.is_integer() {
+                            Ok(expr_type)
+                        } else {
+                            Err(LocationError::msg(&format!("Unary operation requires an integer type. Found type '{:?}'.", &expr_type), &expr.location))
+                        }
                     } else {
-                        Err(LocationError::expect_at("integer", &expr_type, &expr.location))
+                        Err(LocationError::msg(&format!("Unary operation yields an integer type. Found type '{:?}'.", expected_type), &expr.location))
                     }
                 }
             }
         }
         Expression::Binary { op, left, right } => {
-            let left_type = analyze_expr(context, left)?;
-            let right_type = analyze_expr(context, right)?;
             match op {
                 BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod | BinaryOp::And | BinaryOp::Or | BinaryOp::Xor | BinaryOp::Shl | BinaryOp::Shr => {
-                    if left_type.is_integer() && left_type == right_type {
-                        Ok(left_type)
+                    if expected_type.is_none_or(|x| x.is_integer()) {
+                        let left_type = analyze_expr(context, left, expected_type)?;
+                        if !left_type.is_integer() {
+                            return Err(LocationError::msg(&format!("Binary operation requires an integer type. Found type '{:?}'.", &left_type), &left.location));
+                        }
+                        analyze_expr(context, right, Some(&left_type))
                     } else {
-                        Err(LocationError::expect2("same type integers", &left_type, &right_type, &expr.location))
+                        Err(LocationError::msg(&format!("Binary operation yields an integer type. Found type '{:?}'.", &expected_type), &expr.location))
                     }
                 }
                 BinaryOp::Less | BinaryOp::LessEquals | BinaryOp::Greater | BinaryOp::GreaterEquals => {
-                    if left_type.is_integer() && right_type.is_integer() {
+                    if expected_type.is_none_or(|x| *x == Type::Bool) {
+                        let left_type = analyze_expr(context, left, None)?;
+                        if !left_type.is_integer() {
+                            return Err(LocationError::msg(&format!("Comparison operation requires an integer type. Found type '{:?}'.", &left_type), &left.location));
+                        }
+                        analyze_expr(context, right, Some(&left_type))?;
                         Ok(Type::Bool)
                     } else {
-                        Err(LocationError::expect2("two integers", &left_type, &right_type, &expr.location))
+                        Err(LocationError::msg(&format!("Comparison operation yields a boolean type. Found type '{:?}'.", expected_type), &expr.location))
                     }
                 }
                 BinaryOp::Equals | BinaryOp::NotEquals => {
-                    if left_type.is_integer() && right_type.is_integer() {
-                        Ok(Type::Bool)
-                    } else if left_type == right_type {
+                    if expected_type.is_none_or(|x| *x == Type::Bool) {
+                        let left_type = analyze_expr(context, left, None)?;
+                        analyze_expr(context, right, Some(&left_type))?;
                         Ok(Type::Bool)
                     } else {
-                        Err(LocationError::expect2("two integers or same type", &left_type, &right_type, &expr.location))
+                        Err(LocationError::msg(&format!("Comparison operation yields a boolean type. Found type '{:?}'.", expected_type), &expr.location))
                     }
                 }
                 BinaryOp::LogicalOr | BinaryOp::LogicalAnd => {
-                    if left_type != Type::Bool {
-                        Err(LocationError::msg(&format!("Logical operation requires type '{:?}'. Found type '{:?}'.", Type::Bool, &left_type), &left.location))
-                    } else if right_type != Type::Bool {
-                        Err(LocationError::msg(&format!("Logical operation requires type '{:?}'. Found type '{:?}'.", Type::Bool, &right_type), &right.location))
+                    if expected_type.is_none_or(|x| *x == Type::Bool) {
+                        analyze_expr(context, left, Some(&Type::Bool))?;
+                        analyze_expr(context, right, Some(&Type::Bool))
                     } else {
-                        Ok(Type::Bool)
+                        Err(LocationError::msg(&format!("Binary operation yields a boolean type. Found type '{:?}'.", expected_type), &expr.location))
                     }
                 }
                 BinaryOp::Assign => {
                     if is_assignable(&left.expr) {
-                        if left_type == right_type {
-                            Ok(left_type)
-                        } else {
-                            Err(LocationError::expect_at("same type", &left_type, &expr.location))
-                        }
+                        let var_type = analyze_expr(context, right, expected_type)?;
+                        analyze_expr(context, left, Some(&var_type))?;
+                        Ok(var_type)
                     } else {
-                        Err(LocationError::expect_at("assignable", &left_type, &expr.location))
+                        Err(LocationError::msg("Expected assignable expression", &expr.location))
                     }
                 }
                 BinaryOp::AddAssign | BinaryOp::SubAssign | BinaryOp::MulAssign | BinaryOp::DivAssign | BinaryOp::ModAssign | BinaryOp::AndAssign | BinaryOp::OrAssign | BinaryOp::XorAssign | BinaryOp::ShlAssign | BinaryOp::ShrAssign => {
                     if is_assignable(&left.expr) {
-                        if left_type.is_integer() && left_type == right_type {
-                            Ok(left_type)
-                        } else {
-                            Err(LocationError::expect2("same type integers", &left_type, &right_type, &expr.location))
+                        let var_type = analyze_expr(context, left, expected_type)?;
+                        if !var_type.is_integer() {
+                            return Err(LocationError::msg(&format!("Binary assignment operation requires an integer type. Found type '{:?}'.", &var_type), &left.location));
                         }
+                        analyze_expr(context, right, Some(&var_type))?;
+                        Ok(var_type)
                     } else {
-                        Err(LocationError::expect_at("assignable", &left_type, &expr.location))
+                        Err(LocationError::msg("Expected assignable expression", &expr.location))
                     }
                 }
             }
         }
         Expression::Ternary { condition, true_expr, false_expr } => {
-            let condition_type = analyze_expr(context, condition)?;
-            if condition_type == Type::Bool {
-                let true_type = analyze_expr(context, true_expr)?;
-                let false_type = analyze_expr(context, false_expr)?;
-                if true_type == false_type {
-                    Ok(true_type)
-                } else {
-                    Err(LocationError::msg(&format!("Ternary true and false expressions must have the same type. Found type '{:?}' at {} and type '{:?}' at {}", &true_type, &true_expr.location, &false_type, &false_expr.location), &expr.location))
-                }
+            if expected_type.is_none_or(|x| *x == Type::Bool) {
+                analyze_expr(context, condition, Some(&Type::Bool))?;
+                let true_type = analyze_expr(context, true_expr, None)?;
+                analyze_expr(context, false_expr, Some(&true_type))?;
+                Ok(Type::Bool)
             } else {
-                Err(LocationError::msg(&format!("Ternary condition must be of type '{:?}'. Found type '{:?}'", Type::Bool, &condition_type), &expr.location))
+                Err(LocationError::msg(&format!("Ternary operation yields a boolean type. Found type '{:?}'.", expected_type), &expr.location))
             }
         }
         Expression::Variable(name) => {
             let var_type = context.variable_types.get(name).cloned().ok_or(LocationError::msg(&format!("Variable '{}' has not been declared.", name), &expr.location))?;
+            if let Some(expected_type) = expected_type {
+                if var_type != *expected_type {
+                    return Err(LocationError::msg(&format!("Expected type '{:?}', found type '{:?}'.", expected_type, var_type), &expr.location));
+                }
+            }
             Ok(var_type)
         }
         Expression::FunctionCall { function, args } => {
@@ -251,16 +253,24 @@ fn analyze_expr(context: &mut ValidationContext, expr: &SrcExpression) -> Valida
             if function.args.len() != args.len() {
                 return Err(LocationError::msg(&format!("Expected {} arguments, found {}", function.args.len(), args.len()), &expr.location));
             }
-            for (arg, expected_type) in args.iter().zip(function.args.iter()) {
-                let arg_type = analyze_expr(context, arg)?;
-                if arg_type != *expected_type {
-                    return Err(LocationError::msg(&format!("Expected argument of type '{:?}', found type '{:?}'", expected_type, &arg_type), &arg.location));
+            let return_type = function.return_type.unwrap_or(Type::Unit);
+            if let Some(expected_type) = expected_type {
+                if return_type != *expected_type {
+                    return Err(LocationError::msg(&format!("Expected type '{:?}', found type '{:?}'.", expected_type, return_type), &expr.location));
                 }
             }
-            Ok(function.return_type.unwrap_or(Type::Unit))
+            for (arg, expected_arg_type) in args.iter().zip(function.args.iter()) {
+                analyze_expr(context, arg, Some(expected_arg_type))?;
+            }
+            Ok(return_type)
         }
         Expression::Cast { var_type, expr } => {
-            let expr_type = analyze_expr(context, expr)?;
+            if let Some(expected_type) = expected_type {
+                if *var_type != *expected_type {
+                    return Err(LocationError::msg(&format!("Expected type '{:?}', found type '{:?}'.", expected_type, var_type), &expr.location));
+                }
+            }
+            let expr_type = analyze_expr(context, expr, None)?;
             if expr_type.can_cast_to(var_type) {
                 Ok(var_type.clone())
             } else {

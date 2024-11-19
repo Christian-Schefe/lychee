@@ -1,6 +1,7 @@
 int main() {
     char a = readchar();
-    writechar((char)((byte)a + 127b));
+    5 + !'a';
+    writechar(((byte)a + 127b));
     (int)(byte)a
 }
 
