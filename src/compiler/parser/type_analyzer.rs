@@ -2,12 +2,13 @@ use std::collections::HashMap;
 use crate::compiler::lexer::Location;
 use crate::compiler::parser::analyzed_syntax_tree::{AnalyzedFunction, AnalyzedProgram};
 use crate::compiler::parser::parser_error::LocationError;
-use crate::compiler::parser::syntax_tree::{BinaryOp, Expression, Program, SrcExpression, SrcFunction, SrcStatement, Statement, Type, UnaryOp};
+use crate::compiler::parser::syntax_tree::{BinaryOp, Expression, Program, SrcExpression, SrcFunction, SrcStatement, Statement, UnaryOp};
+use crate::compiler::parser::types::Type;
 
 pub type ValidationResult<T> = Result<T, LocationError>;
 
 struct ValidationContext {
-    function_return_types: HashMap<String, FunctionDeclaration>,
+    function_declarations: HashMap<String, FunctionDeclaration>,
     current_function: Option<String>,
     variable_types: HashMap<String, Type>,
 }
@@ -18,12 +19,26 @@ struct FunctionDeclaration {
     args: Vec<Type>,
 }
 
+fn add_builtin_function_declarations(context: &mut ValidationContext) {
+    let write_declaration = FunctionDeclaration {
+        return_type: Some(Type::Unit),
+        args: vec![Type::Char],
+    };
+    let read_declaration = FunctionDeclaration {
+        return_type: Type::Char.into(),
+        args: vec![],
+    };
+    context.function_declarations.insert("writechar".to_string(), write_declaration);
+    context.function_declarations.insert("readchar".to_string(), read_declaration);
+}
+
 pub fn analyze_program(program: &Program) -> ValidationResult<AnalyzedProgram> {
     let mut context = ValidationContext {
-        function_return_types: HashMap::new(),
+        function_declarations: HashMap::new(),
         current_function: None,
         variable_types: HashMap::new(),
     };
+    add_builtin_function_declarations(&mut context);
     let main_function = program.functions.iter().find(|f| f.function.name == "main").ok_or(LocationError::msg("Program requires a main function.", &Location { line: 1, column: 1 }))?;
     if main_function.function.return_type.as_ref().is_some_and(|x| *x != Type::Int) {
         return Err(LocationError::msg("Main function must return void or an integer.", &main_function.location));
@@ -33,7 +48,10 @@ pub fn analyze_program(program: &Program) -> ValidationResult<AnalyzedProgram> {
             return_type: function.function.return_type.clone(),
             args: function.function.args.iter().map(|(_, ty)| ty.clone()).collect(),
         };
-        context.function_return_types.insert(function.function.name.clone(), declaration);
+        if context.function_declarations.contains_key(&function.function.name) {
+            return Err(LocationError::msg(&format!("Function '{}' has already been declared.", function.function.name), &function.location));
+        }
+        context.function_declarations.insert(function.function.name.clone(), declaration);
     }
     let mut analyzed_functions = HashMap::new();
     for function in &program.functions {
@@ -59,7 +77,7 @@ fn analyze_function(context: &mut ValidationContext, function: &SrcFunction) -> 
             return Err(LocationError::msg(&format!("Function '{}' must return type '{:?}'. Found type '{:?}'.", function.function.name, return_type, &expr_type), &function.function.expr.location));
         }
     }
-    let mut stack_space = calc_local_var_stack_space_expr(&function.function.expr);
+    let stack_space = calc_local_var_stack_space_expr(&function.function.expr);
     Ok(AnalyzedFunction {
         name: function.function.name.clone(),
         args: function.function.args.clone(),
@@ -72,7 +90,7 @@ fn analyze_function(context: &mut ValidationContext, function: &SrcFunction) -> 
 fn analyze_statement(context: &mut ValidationContext, statement: &SrcStatement) -> ValidationResult<()> {
     match &statement.statement {
         Statement::Return(expr) => {
-            let function = context.function_return_types.get(context.current_function.as_ref().unwrap()).unwrap();
+            let function = context.function_declarations.get(context.current_function.as_ref().unwrap()).unwrap();
             if let Some(return_type) = function.return_type.clone() {
                 let expr = expr.as_ref().ok_or(LocationError::msg(&format!("Return statement needs to return a value of type '{:?}'.", &return_type), &statement.location))?;
                 let expr_type = analyze_expr(context, expr)?;
@@ -229,7 +247,7 @@ fn analyze_expr(context: &mut ValidationContext, expr: &SrcExpression) -> Valida
             Ok(var_type)
         }
         Expression::FunctionCall { function, args } => {
-            let function = context.function_return_types.get(function).ok_or(LocationError::msg(&format!("Function '{}' has not been declared.", function), &expr.location))?.clone();
+            let function = context.function_declarations.get(function).ok_or(LocationError::msg(&format!("Function '{}' has not been declared.", function), &expr.location))?.clone();
             if function.args.len() != args.len() {
                 return Err(LocationError::msg(&format!("Expected {} arguments, found {}", function.args.len(), args.len()), &expr.location));
             }

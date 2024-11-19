@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use lazy_static::lazy_static;
 use crate::compiler::lexer::{HasLocation, Location};
 use crate::compiler::lexer::token::StaticToken;
+use crate::compiler::parser::types::Type;
 
 #[derive(Debug)]
 pub struct Program {
@@ -181,64 +182,25 @@ pub enum UnaryOp {
     LogicalNot,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Literal {
+    Bool(bool),
+    Byte(i8),
+    Char(i8),
+    Short(i16),
     Int(i32),
     Long(i64),
-    String(String),
-    Bool(bool),
 }
 
 impl Literal {
     pub fn get_type(&self) -> Type {
         match self {
+            Literal::Bool(_) => Type::Bool,
+            Literal::Byte(_) => Type::Byte,
+            Literal::Char(_) => Type::Char,
+            Literal::Short(_) => Type::Short,
             Literal::Int(_) => Type::Int,
             Literal::Long(_) => Type::Long,
-            Literal::String(_) => Type::String,
-            Literal::Bool(_) => Type::Bool,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Type {
-    Unit,
-    Bool,
-    Int,
-    Long,
-    String,
-}
-
-impl Type {
-    pub fn size(&self) -> usize {
-        match self {
-            Type::Unit => 0,
-            Type::Bool => 1,
-            Type::Int => 4,
-            Type::Long => 8,
-            Type::String => 8,
-        }
-    }
-
-    pub fn is_integer(&self) -> bool {
-        match self {
-            Type::Int | Type::Long => true,
-            _ => false,
-        }
-    }
-
-    pub fn can_cast_to(&self, other: &Type) -> bool {
-        if self == other {
-            return true;
-        }
-        match (self, other) {
-            (Type::Int, Type::Long) => true,
-            (Type::Int, Type::Bool) => true,
-            (Type::Long, Type::Int) => true,
-            (Type::Long, Type::Bool) => true,
-            (Type::Bool, Type::Int) => true,
-            (Type::Bool, Type::Long) => true,
-            _ => false,
         }
     }
 }

@@ -304,7 +304,8 @@ fn write_stdout(pc: usize, memory: &mut Memory) {
     std::io::stdout().write_all(&buffer).unwrap();
     memory.registers[constants::PC] += 2;
 
-    println!("Wrote {} bytes to stdout from address {}", write_bytes, address);
+    let str = std::str::from_utf8(&buffer).unwrap();
+    println!("Wrote '{}' ({} bytes) to stdout from address {}", str, write_bytes, address);
 }
 
 fn move_registers(pc: usize, memory: &mut Memory) {

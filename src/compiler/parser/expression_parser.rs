@@ -3,7 +3,7 @@ use crate::compiler::lexer::token::{StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::parser_error::{ParseResult, LocationError};
 use crate::compiler::parser::{parse_statement, parse_type, pop_or_err};
-use crate::compiler::parser::syntax_tree::{BinaryOp, Expression, Literal, SrcExpression, UnaryOp, ASSIGN_OP_MAP};
+use crate::compiler::parser::syntax_tree::{BinaryOp, Expression, SrcExpression, UnaryOp, ASSIGN_OP_MAP};
 
 pub fn parse_expression(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
     let offset = tokens.offset;
@@ -163,25 +163,13 @@ fn parse_primary(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
             Ok(expr)
         }
         Token::Static(StaticToken::OpenBrace) => parse_block_expr(tokens),
-        Token::Integer(int) => {
-            let expr = SrcExpression::new(Expression::Literal(Literal::Int(*int)), &location);
+        Token::Literal(c) => {
+            let expr = SrcExpression::new(Expression::Literal(c.clone()), &location);
             tokens.pop();
             Ok(expr)
         }
-        Token::Long(long) => {
-            let expr = SrcExpression::new(Expression::Literal(Literal::Long(*long)), &location);
-            tokens.pop();
-            Ok(expr)
-        }
-        Token::String(string) => {
-            let expr = SrcExpression::new(Expression::Literal(Literal::String(string.to_string())), &location);
-            tokens.pop();
-            Ok(expr)
-        }
-        Token::Boolean(boolean) => {
-            let expr = SrcExpression::new(Expression::Literal(Literal::Bool(*boolean)), &location);
-            tokens.pop();
-            Ok(expr)
+        Token::String(_) => {
+            unimplemented!("String literals are not yet supported")
         }
         Token::Identifier(name) => {
             let expr = SrcExpression::new(Expression::Variable(name.to_string()), &location);

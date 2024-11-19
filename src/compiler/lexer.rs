@@ -5,6 +5,7 @@ use crate::compiler::lexer::token::{StaticToken, Token, STATIC_TOKEN_MAP};
 use std::fmt::Display;
 use std::path::PathBuf;
 use std::string::String;
+use crate::compiler::parser::syntax_tree::Literal;
 
 #[derive(Debug, Clone)]
 pub struct Location {
@@ -57,6 +58,8 @@ pub fn lex(input_path: &PathBuf) -> Vec<SrcToken> {
         }
         let (token, new_offset) = if input[offset] == '"' {
             read_string(&input, offset)
+        } else if input[offset] == '\'' {
+            read_char(&input, offset)
         } else {
             read_token(&input, offset)
         };
@@ -102,6 +105,19 @@ fn read_string(input: &Vec<char>, offset: usize) -> (Token, usize) {
     }
 
     panic!("Unterminated string");
+}
+
+fn read_char(input: &Vec<char>, offset: usize) -> (Token, usize) {
+    let c = input[offset + 1];
+    if input[offset + 2] != '\'' {
+        panic!("Invalid character");
+    }
+    if c.len_utf8() != 1 {
+        panic!("Invalid character");
+    }
+    let mut buffer = [0; 1];
+    c.encode_utf8(&mut buffer);
+    (Token::Literal(Literal::Char(buffer[0] as i8)), offset + 3)
 }
 
 fn read_token(input: &Vec<char>, offset: usize) -> (Token, usize) {

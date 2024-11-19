@@ -2,7 +2,8 @@ use crate::compiler::lexer::token::{Keyword, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::expression_parser::{parse_block_expr, parse_expression};
 use crate::compiler::parser::parser_error::{LocationError, ParseResult};
-use crate::compiler::parser::syntax_tree::{Function, Program, SrcFunction, SrcStatement, Statement, Type};
+use crate::compiler::parser::syntax_tree::{Function, Program, SrcFunction, SrcStatement, Statement};
+use crate::compiler::parser::types::Type;
 
 pub mod syntax_tree;
 mod parser_error;
@@ -10,6 +11,7 @@ mod expression_parser;
 pub(crate) mod pretty_print;
 pub mod type_analyzer;
 pub mod analyzed_syntax_tree;
+pub mod types;
 
 fn pop_or_err(tokens: &mut TokenStack, expected: Token) -> Result<(), LocationError> {
     let token = tokens.pop();
@@ -143,10 +145,12 @@ fn parse_type(tokens: &mut TokenStack) -> ParseResult<Option<Type>> {
     let token = tokens.pop();
     if let Token::Identifier(str) = &token.token {
         match str.as_str() {
+            "bool" => Ok(Some(Type::Bool)),
+            "byte" => Ok(Some(Type::Byte)),
+            "char" => Ok(Some(Type::Char)),
+            "short" => Ok(Some(Type::Short)),
             "int" => Ok(Some(Type::Int)),
             "long" => Ok(Some(Type::Long)),
-            "bool" => Ok(Some(Type::Bool)),
-            "string" => Ok(Some(Type::String)),
             _ => Err(LocationError {
                 message: format!("Unknown type: {}", str),
                 location: token.location.clone(),

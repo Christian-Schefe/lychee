@@ -1,19 +1,7 @@
 int main() {
-    int amount = 12;
-    int result = euclid(amount, 40);
-    return (int)((bool)test() && (bool)result);
+    char a = readchar();
+    writechar((char)((byte)a + 127b));
+    (int)(byte)a
 }
 
-long test() {
-    5000000000l
-}
-
-int euclid(int n, int b) {
-    int c;
-    if (n == 0) {
-        c = b;
-    } else {
-        return euclid(b % n, n);
-    }
-    return c;
-}
+void readchara() {}

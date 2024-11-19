@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use crate::compiler::parser::syntax_tree::{SrcExpression, Type};
+use crate::compiler::parser::syntax_tree::SrcExpression;
+use crate::compiler::parser::types::Type;
 
 pub struct AnalyzedProgram {
     pub functions: HashMap<String, AnalyzedFunction>,

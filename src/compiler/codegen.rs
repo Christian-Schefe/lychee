@@ -1,7 +1,11 @@
+mod builtin_functions;
+
 use std::collections::HashMap;
 use std::path::PathBuf;
+use crate::compiler::codegen::builtin_functions::add_builtin_fn_code;
 use crate::compiler::parser::analyzed_syntax_tree::{AnalyzedFunction, AnalyzedProgram};
-use crate::compiler::parser::syntax_tree::{BinaryOp, Expression, Literal, SrcExpression, SrcStatement, Statement, Type, UnaryOp};
+use crate::compiler::parser::syntax_tree::{BinaryOp, Expression, Literal, SrcExpression, SrcStatement, Statement, UnaryOp};
+use crate::compiler::parser::types::Type;
 
 struct Context {
     output: Vec<String>,
@@ -59,10 +63,13 @@ pub fn generate_code(program: AnalyzedProgram, output: &PathBuf) {
     }
 
     context.push(&format!("call {}", context.function_labels[&program.main_function]));
+
     if program.functions[&program.main_function].return_type.is_none() {
         context.push("set r0 0");
     }
     context.push("exit");
+
+    add_builtin_fn_code(&mut context);
 
     for (_, function) in program.functions {
         generate_function_code(&mut context, function)
@@ -157,7 +164,15 @@ fn generate_expression_code(context: &mut Context, expr: SrcExpression) {
                 Literal::Bool(boolean) => {
                     context.push(&format!("set r0 {}", if boolean { 1 } else { 0 }));
                 }
-                _ => unimplemented!()
+                Literal::Byte(byte) => {
+                    context.push(&format!("set r0 {}", byte));
+                }
+                Literal::Char(char) => {
+                    context.push(&format!("set r0 {}", char));
+                }
+                Literal::Short(short) => {
+                    context.push(&format!("set r0 {}", short));
+                }
             }
         }
         Expression::Variable(name) => {
