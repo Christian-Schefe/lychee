@@ -1,5 +1,3 @@
-use std::io::Read;
-use std::iter::repeat;
 use crate::constants;
 
 #[derive(Debug)]
@@ -9,7 +7,6 @@ pub struct Flags {
 }
 
 pub struct Memory {
-    size: usize,
     pub(crate) data: Vec<u8>,
     pub(crate) registers: [u64; 16],
     pub(crate) flags: Flags,
@@ -18,7 +15,6 @@ pub struct Memory {
 impl Memory {
     pub fn new(size: usize, program: Vec<u8>) -> Memory {
         let mut memory = Memory {
-            size,
             data: vec![0; size],
             registers: [0; 16],
             flags: Flags {
@@ -38,8 +34,22 @@ impl Memory {
         match data_size {
             1 => self.data[address] as u64,
             2 => u16::from_le_bytes([self.data[address], self.data[address + 1]]) as u64,
-            4 => u32::from_le_bytes([self.data[address], self.data[address + 1], self.data[address + 2], self.data[address + 3]]) as u64,
-            8 => u64::from_le_bytes([self.data[address], self.data[address + 1], self.data[address + 2], self.data[address + 3], self.data[address + 4], self.data[address + 5], self.data[address + 6], self.data[address + 7]]),
+            4 => u32::from_le_bytes([
+                self.data[address],
+                self.data[address + 1],
+                self.data[address + 2],
+                self.data[address + 3],
+            ]) as u64,
+            8 => u64::from_le_bytes([
+                self.data[address],
+                self.data[address + 1],
+                self.data[address + 2],
+                self.data[address + 3],
+                self.data[address + 4],
+                self.data[address + 5],
+                self.data[address + 6],
+                self.data[address + 7],
+            ]),
             _ => panic!("Invalid data size: {}", data_size),
         }
     }
@@ -48,8 +58,22 @@ impl Memory {
         match data_size {
             1 => self.data[address] as i8 as i64,
             2 => i16::from_le_bytes([self.data[address], self.data[address + 1]]) as i64,
-            4 => i32::from_le_bytes([self.data[address], self.data[address + 1], self.data[address + 2], self.data[address + 3]]) as i64,
-            8 => i64::from_le_bytes([self.data[address], self.data[address + 1], self.data[address + 2], self.data[address + 3], self.data[address + 4], self.data[address + 5], self.data[address + 6], self.data[address + 7]]),
+            4 => i32::from_le_bytes([
+                self.data[address],
+                self.data[address + 1],
+                self.data[address + 2],
+                self.data[address + 3],
+            ]) as i64,
+            8 => i64::from_le_bytes([
+                self.data[address],
+                self.data[address + 1],
+                self.data[address + 2],
+                self.data[address + 3],
+                self.data[address + 4],
+                self.data[address + 5],
+                self.data[address + 6],
+                self.data[address + 7],
+            ]),
             _ => panic!("Invalid data size: {}", data_size),
         }
     }

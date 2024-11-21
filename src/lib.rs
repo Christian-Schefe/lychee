@@ -1,60 +1,82 @@
-#[derive(Debug)]
+#[derive(Clone, Debug)]
+pub enum OpCode {
+    Nop,
+    Load,
+    Store,
+    Push,
+    Pop,
+    Binop(BinopType),
+    BinopImmediate(BinopType),
+    Jump(FlagConditionType),
+    Set(FlagConditionType),
+    Unop(UnopType),
+    Call,
+    Ret,
+    ReadStdin,
+    WriteStdout,
+    Exit,
+    SignExtend
+}
+
+impl OpCode {
+    pub fn byte_code(&self) -> u8 {
+        match self {
+            OpCode::Nop => 0x00,
+            OpCode::Load => 0x01,
+            OpCode::Store => 0x02,
+            OpCode::Push => 0x03,
+            OpCode::Pop => 0x04,
+            OpCode::Binop(op_type) => 0x05 + op_type.clone() as u8,
+            OpCode::BinopImmediate(op_type) => 0x11 + op_type.clone() as u8,
+            OpCode::Jump(flag_cond) => 0x1D + flag_cond.clone() as u8,
+            OpCode::Set(flag_cond) => 0x24 + flag_cond.clone() as u8,
+            OpCode::Unop(op_type) => 0x2B + op_type.clone() as u8,
+            OpCode::Call => 0x2F,
+            OpCode::Ret => 0x30,
+            OpCode::ReadStdin => 0x31,
+            OpCode::WriteStdout => 0x32,
+            OpCode::Exit => 0x33,
+            OpCode::SignExtend => 0x34
+        }
+    }
+}
+
+#[repr(u8)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BinopType {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Mod,
-    And,
-    Or,
-    Xor,
-    Shl,
-    Shr,
+    Mov = 0x00,
+    Add = 0x01,
+    Sub = 0x02,
+    Mul = 0x03,
+    Div = 0x04,
+    Mod = 0x05,
+    And = 0x06,
+    Or = 0x07,
+    Xor = 0x08,
+    Shl = 0x09,
+    Shr = 0x0A,
+    Cmp = 0x0B,
 }
 
 #[repr(u8)]
 #[derive(Clone, Debug)]
-pub enum OpCode {
-    Nop = 0x00,
-    Load = 0x01,
-    Store = 0x02,
-    Set = 0x03,
-    Push = 0x04,
-    Pop = 0x05,
-    Add = 0x06,
-    Sub = 0x07,
-    Mul = 0x08,
-    Div = 0x09,
-    Mod = 0x0A,
-    And = 0x0B,
-    Or = 0x0C,
-    Xor = 0x0D,
-    Not = 0x0E,
-    Shl = 0x0F,
-    Shr = 0x10,
-    Cmp = 0x11,
-    Jmp = 0x12,
-    Jz = 0x13,
-    Jnz = 0x14,
-    Jg = 0x15,
-    Jge = 0x16,
-    Jl = 0x17,
-    Jle = 0x18,
-    Call = 0x19,
-    Ret = 0x1A,
-    Inc = 0x1B,
-    Dec = 0x1C,
-    ReadStdin = 0x1D,
-    WriteStdout = 0x1E,
-    Move = 0x1F,
-    Neg = 0x20,
-    SetZ = 0x21,
-    SetNz = 0x22,
-    SetG = 0x23,
-    SetGe = 0x24,
-    SetL = 0x25,
-    SetLe = 0x26,
-    Exit = 0xFF,
+pub enum UnopType {
+    Not = 0x00,
+    Neg = 0x01,
+    Inc = 0x02,
+    Dec = 0x03,
+}
+
+#[repr(u8)]
+#[derive(Clone, Debug)]
+pub enum FlagConditionType {
+    Always = 0x00,
+    Zero = 0x01,
+    NotZero = 0x02,
+    Greater = 0x03,
+    GreaterEquals = 0x04,
+    Less = 0x05,
+    LessEquals = 0x06,
 }
 
 #[repr(u8)]

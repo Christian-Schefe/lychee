@@ -1,8 +1,8 @@
+use crate::assembler::instruction_type::InstructionType;
+use lazy_static::lazy_static;
+use lychee_compiler::{BinopType, FlagConditionType, OpCode, RegisterCode, UnopType};
 use std::collections::HashMap;
 use std::iter::Iterator;
-use lazy_static::lazy_static;
-use lychee_compiler::{OpCode, RegisterCode};
-use crate::assembler::instruction_type::InstructionType;
 
 #[derive(Debug)]
 pub enum Instruction {
@@ -23,15 +23,17 @@ pub(crate) fn convert_line(line: &str) -> Instruction {
         None => panic!("Invalid opcode: {}", parts[0]),
     };
 
-    let instruction = match opcode {
+    let instruction = match &opcode {
         OpCode::Nop | OpCode::Ret | OpCode::Exit => InstructionType::parse_simple(opcode),
         OpCode::Store | OpCode::Load => InstructionType::parse_register_size_address(opcode, parts),
-        OpCode::Push | OpCode::Pop => InstructionType::parse_size_register(opcode, parts),
-        OpCode::Add | OpCode::Sub | OpCode::Mul | OpCode::Div | OpCode::Mod | OpCode::And | OpCode::Or | OpCode::Xor | OpCode::Shl | OpCode::Shr | OpCode::Cmp | OpCode::Move => InstructionType::parse_two_registers(opcode, parts),
-        OpCode::Call | OpCode::Jmp | OpCode::Jz | OpCode::Jnz | OpCode::Jg | OpCode::Jge | OpCode::Jl | OpCode::Jle => InstructionType::parse_label(opcode, parts),
-        OpCode::Set => InstructionType::parse_register_immediate(opcode, parts),
-        OpCode::Not | OpCode::Inc | OpCode::Dec | OpCode::Neg | OpCode::SetZ | OpCode::SetNz | OpCode::SetG | OpCode::SetGe | OpCode::SetL | OpCode::SetLe => InstructionType::parse_register(opcode, parts),
-        OpCode::ReadStdin | OpCode::WriteStdout => InstructionType::parse_register_address(opcode, parts),
+        OpCode::Push | OpCode::Pop | OpCode::SignExtend => InstructionType::parse_size_register(opcode, parts),
+        OpCode::Binop(_) => InstructionType::parse_two_registers(opcode, parts),
+        OpCode::BinopImmediate(_) => InstructionType::parse_register_immediate(opcode, parts),
+        OpCode::Call | OpCode::Jump(_) => InstructionType::parse_label(opcode, parts),
+        OpCode::Unop(_) | OpCode::Set(_) => InstructionType::parse_register(opcode, parts),
+        OpCode::ReadStdin | OpCode::WriteStdout => {
+            InstructionType::parse_register_address(opcode, parts)
+        }
     };
 
     Instruction::Instr(instruction)
@@ -74,46 +76,70 @@ lazy_static! {
             ("nop".to_string(), OpCode::Nop),
             ("load".to_string(), OpCode::Load),
             ("store".to_string(), OpCode::Store),
-            ("set".to_string(), OpCode::Set),
             ("push".to_string(), OpCode::Push),
             ("pop".to_string(), OpCode::Pop),
-            ("add".to_string(), OpCode::Add),
-            ("sub".to_string(), OpCode::Sub),
-            ("mul".to_string(), OpCode::Mul),
-            ("div".to_string(), OpCode::Div),
-            ("mod".to_string(), OpCode::Mod),
-            ("and".to_string(), OpCode::And),
-            ("or".to_string(), OpCode::Or),
-            ("xor".to_string(), OpCode::Xor),
-            ("not".to_string(), OpCode::Not),
-            ("shl".to_string(), OpCode::Shl),
-            ("shr".to_string(), OpCode::Shr),
-            ("cmp".to_string(), OpCode::Cmp),
-            ("jmp".to_string(), OpCode::Jmp),
-            ("jz".to_string(), OpCode::Jz),
-            ("jnz".to_string(), OpCode::Jnz),
-            ("jg".to_string(), OpCode::Jg),
-            ("jge".to_string(), OpCode::Jge),
-            ("jl".to_string(), OpCode::Jl),
-            ("jle".to_string(), OpCode::Jle),
+            ("mov".to_string(), OpCode::Binop(BinopType::Mov)),
+            ("add".to_string(), OpCode::Binop(BinopType::Add)),
+            ("sub".to_string(), OpCode::Binop(BinopType::Sub)),
+            ("mul".to_string(), OpCode::Binop(BinopType::Mul)),
+            ("div".to_string(), OpCode::Binop(BinopType::Div)),
+            ("mod".to_string(), OpCode::Binop(BinopType::Mod)),
+            ("and".to_string(), OpCode::Binop(BinopType::And)),
+            ("or".to_string(), OpCode::Binop(BinopType::Or)),
+            ("xor".to_string(), OpCode::Binop(BinopType::Xor)),
+            ("shl".to_string(), OpCode::Binop(BinopType::Shl)),
+            ("shr".to_string(), OpCode::Binop(BinopType::Shr)),
+            ("cmp".to_string(), OpCode::Binop(BinopType::Cmp)),
+            ("movi".to_string(), OpCode::BinopImmediate(BinopType::Mov)),
+            ("addi".to_string(), OpCode::BinopImmediate(BinopType::Add)),
+            ("subi".to_string(), OpCode::BinopImmediate(BinopType::Sub)),
+            ("muli".to_string(), OpCode::BinopImmediate(BinopType::Mul)),
+            ("divi".to_string(), OpCode::BinopImmediate(BinopType::Div)),
+            ("modi".to_string(), OpCode::BinopImmediate(BinopType::Mod)),
+            ("andi".to_string(), OpCode::BinopImmediate(BinopType::And)),
+            ("ori".to_string(), OpCode::BinopImmediate(BinopType::Or)),
+            ("xori".to_string(), OpCode::BinopImmediate(BinopType::Xor)),
+            ("shli".to_string(), OpCode::BinopImmediate(BinopType::Shl)),
+            ("shri".to_string(), OpCode::BinopImmediate(BinopType::Shr)),
+            ("cmpi".to_string(), OpCode::BinopImmediate(BinopType::Cmp)),
+            ("jmp".to_string(), OpCode::Jump(FlagConditionType::Always)),
+            ("jz".to_string(), OpCode::Jump(FlagConditionType::Zero)),
+            ("jnz".to_string(), OpCode::Jump(FlagConditionType::NotZero)),
+            ("jg".to_string(), OpCode::Jump(FlagConditionType::Greater)),
+            (
+                "jge".to_string(),
+                OpCode::Jump(FlagConditionType::GreaterEquals),
+            ),
+            ("jl".to_string(), OpCode::Jump(FlagConditionType::Less)),
+            (
+                "jle".to_string(),
+                OpCode::Jump(FlagConditionType::LessEquals),
+            ),
+            ("set".to_string(), OpCode::Set(FlagConditionType::Always)),
+            ("setz".to_string(), OpCode::Set(FlagConditionType::Zero)),
+            ("setnz".to_string(), OpCode::Set(FlagConditionType::NotZero)),
+            ("setg".to_string(), OpCode::Set(FlagConditionType::Greater)),
+            (
+                "setge".to_string(),
+                OpCode::Set(FlagConditionType::GreaterEquals),
+            ),
+            ("setl".to_string(), OpCode::Set(FlagConditionType::Less)),
+            (
+                "setle".to_string(),
+                OpCode::Set(FlagConditionType::LessEquals),
+            ),
+            ("not".to_string(), OpCode::Unop(UnopType::Not)),
+            ("neg".to_string(), OpCode::Unop(UnopType::Neg)),
+            ("inc".to_string(), OpCode::Unop(UnopType::Inc)),
+            ("dec".to_string(), OpCode::Unop(UnopType::Dec)),
             ("call".to_string(), OpCode::Call),
             ("ret".to_string(), OpCode::Ret),
-            ("inc".to_string(), OpCode::Inc),
-            ("dec".to_string(), OpCode::Dec),
             ("read".to_string(), OpCode::ReadStdin),
             ("write".to_string(), OpCode::WriteStdout),
-            ("mov".to_string(), OpCode::Move),
-            ("neg".to_string(), OpCode::Neg),
-            ("setz".to_string(), OpCode::SetZ),
-            ("setnz".to_string(), OpCode::SetNz),
-            ("setg".to_string(), OpCode::SetG),
-            ("setge".to_string(), OpCode::SetGe),
-            ("setl".to_string(), OpCode::SetL),
-            ("setle".to_string(), OpCode::SetLe),
             ("exit".to_string(), OpCode::Exit),
+            ("signext".to_string(), OpCode::SignExtend),
         ])
     };
-
     pub static ref REGISTER_MAP: HashMap<String, RegisterCode> = {
         HashMap::from([
             ("r0".to_string(), RegisterCode::R0),
@@ -134,7 +160,6 @@ lazy_static! {
             ("pc".to_string(), RegisterCode::PC),
         ])
     };
-
     pub static ref SIZE_MAP: HashMap<String, u8> = {
         HashMap::from([
             ("#8".to_string(), 0b00),

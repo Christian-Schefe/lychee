@@ -1,9 +1,7 @@
-use std::env::args;
+use std::path::PathBuf;
 
-pub fn read_obj_file() -> Vec<u8> {
-    let args = args().collect::<Vec<String>>();
-    let path = &args[1];
-    println!("Reading file: {}", path);
-    let bytes = std::fs::read(path).unwrap();
+pub fn read_obj_file(input: &PathBuf) -> Vec<u8> {
+    println!("Reading file: {}", input.to_str().unwrap());
+    let bytes = std::fs::read(input).unwrap();
     bytes
 }

@@ -1,8 +1,10 @@
 int main() {
-    char a = readchar();
-    5 + (int)!true;
-    writechar((char)((byte)a + 1b));
-    (int)(byte)a
+    fib(30)
 }
 
-void readchara() {}
+int fib(int n) {
+    if (n <= 1) {
+        return n;
+    }
+    fib(n - 1) + fib(n - 2)
+}

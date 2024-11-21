@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-use lychee_compiler::OpCode;
 use crate::assembler::core::{REGISTER_MAP, SIZE_MAP};
+use lychee_compiler::OpCode;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub enum MemoryAddress {
@@ -25,7 +25,6 @@ fn parse_u64(str: &str) -> u64 {
         u64::from_str_radix(str, 10).unwrap()
     }
 }
-
 
 impl MemoryAddress {
     pub fn from_str(str: &str) -> Self {
@@ -118,51 +117,85 @@ pub enum InstructionType {
 
 impl InstructionType {
     pub fn parse_simple(opcode: OpCode) -> Self {
-        InstructionType::Simple { opcode: opcode as u8 }
+        InstructionType::Simple {
+            opcode: opcode.byte_code(),
+        }
     }
 
     pub fn parse_register(opcode: OpCode, parts: Vec<&str>) -> Self {
         let register = REGISTER_MAP.get(parts[1]).cloned().unwrap();
-        InstructionType::Register { opcode: opcode as u8, register: register as u8 }
+        InstructionType::Register {
+            opcode: opcode.byte_code(),
+            register: register as u8,
+        }
     }
 
     pub fn parse_size_register(opcode: OpCode, parts: Vec<&str>) -> Self {
         let size = SIZE_MAP.get(parts[1]).cloned().unwrap();
         let register = REGISTER_MAP.get(parts[2]).cloned().unwrap();
-        InstructionType::SizeRegister { opcode: opcode as u8, size, register: register as u8 }
+        InstructionType::SizeRegister {
+            opcode: opcode.byte_code(),
+            size,
+            register: register as u8,
+        }
     }
 
     pub fn parse_label(opcode: OpCode, parts: Vec<&str>) -> Self {
         let address_str = parts[1];
-        InstructionType::Label { opcode: opcode as u8, label: address_str.to_string() }
+        InstructionType::Label {
+            opcode: opcode.byte_code(),
+            label: address_str.to_string(),
+        }
     }
 
     pub fn parse_register_address(opcode: OpCode, parts: Vec<&str>) -> Self {
         let register = REGISTER_MAP.get(parts[1]).cloned().unwrap();
         let address = MemoryAddress::from_str(parts[2]);
-        InstructionType::RegisterAddress { opcode: opcode as u8, register: register as u8, address }
+        InstructionType::RegisterAddress {
+            opcode: opcode.byte_code(),
+            register: register as u8,
+            address,
+        }
     }
 
     pub fn parse_register_size_address(opcode: OpCode, parts: Vec<&str>) -> Self {
         let size = SIZE_MAP.get(parts[1]).cloned().unwrap();
         let register = REGISTER_MAP.get(parts[2]).cloned().unwrap();
         let address = MemoryAddress::from_str(parts[3]);
-        InstructionType::SizeRegisterAddress { opcode: opcode as u8, register: register as u8, size, address }
+        InstructionType::SizeRegisterAddress {
+            opcode: opcode.byte_code(),
+            register: register as u8,
+            size,
+            address,
+        }
     }
 
     pub fn parse_register_immediate(opcode: OpCode, parts: Vec<&str>) -> Self {
         let register = REGISTER_MAP.get(parts[1]).cloned().unwrap();
         let immediate = parse_i64(parts[2]);
-        InstructionType::RegisterImmediate { opcode: opcode as u8, register: register as u8, immediate }
+        InstructionType::RegisterImmediate {
+            opcode: opcode.byte_code(),
+            register: register as u8,
+            immediate,
+        }
     }
 
     pub fn parse_two_registers(opcode: OpCode, parts: Vec<&str>) -> Self {
         let dest_register = REGISTER_MAP.get(parts[1]).cloned().unwrap();
         let src_register = REGISTER_MAP.get(parts[2]).cloned().unwrap();
-        InstructionType::TwoRegisters { opcode: opcode as u8, source_register: src_register as u8, dest_register: dest_register as u8 }
+        InstructionType::TwoRegisters {
+            opcode: opcode.byte_code(),
+            source_register: src_register as u8,
+            dest_register: dest_register as u8,
+        }
     }
 
-    pub fn add_bytes(&self, bytes: &mut Vec<u8>, labels: &HashMap<String, u64>, label_placeholders: &mut HashMap<String, Vec<u64>>) {
+    pub fn add_bytes(
+        &self,
+        bytes: &mut Vec<u8>,
+        labels: &HashMap<String, u64>,
+        label_placeholders: &mut HashMap<String, Vec<u64>>,
+    ) {
         let bytes_to_add = match self {
             InstructionType::Simple { opcode } => vec![*opcode],
             InstructionType::Register { opcode, register } => vec![*opcode, *register],
@@ -175,7 +208,10 @@ impl InstructionType {
             }
             InstructionType::Label { opcode, label } => {
                 let address = labels.get(label).cloned().unwrap_or_else(|| {
-                    label_placeholders.entry(label.clone()).or_insert_with(Vec::new).push((bytes.len() + 1) as u64);
+                    label_placeholders
+                        .entry(label.clone())
+                        .or_insert_with(Vec::new)
+                        .push((bytes.len() + 1) as u64);
                     0
                 });
                 let mut new_bytes = vec![*opcode];
@@ -206,7 +242,7 @@ impl InstructionType {
                 register,
                 immediate,
             } => {
-                let mut new_bytes = vec![*opcode, *register];
+                let mut new_bytes = vec![*opcode, register << 4];
                 new_bytes.extend(&immediate.to_le_bytes());
                 new_bytes
             }

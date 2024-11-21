@@ -216,9 +216,8 @@ fn analyze_expr(
                 } else {
                     Err(LocationError::msg(
                         &format!(
-                            "Expected type '{:?}', found type '{:?}'.",
-                            expected_type,
-                            Type::Unit
+                            "Expected type '{:?}', but block doesn't return anything.",
+                            expected_type.unwrap()
                         ),
                         &expr.location,
                     ))
@@ -232,14 +231,17 @@ fn analyze_expr(
                 Err(LocationError::msg(
                     &format!(
                         "Expected type '{:?}', found type '{:?}'.",
-                        expected_type,
+                        expected_type.unwrap(),
                         literal.get_type()
                     ),
                     &expr.location,
                 ))
             }
         }
-        Expression::Unary { op, expr: inner_expr } => match op {
+        Expression::Unary {
+            op,
+            expr: inner_expr,
+        } => match op {
             UnaryOp::Positive | UnaryOp::Negate | UnaryOp::Not => {
                 if expected_type.is_none_or(|x| x.is_integer()) {
                     let expr_type = analyze_expr(context, inner_expr, expected_type)?;

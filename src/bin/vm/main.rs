@@ -1,76 +1,132 @@
-use std::io::{Read, Write};
-use std::process::ExitCode;
-use lychee_compiler::DATA_SIZE_64;
-use crate::constants::BinopType;
 use crate::memory::Memory;
+use clap::Parser;
+use lychee_compiler::{BinopType, UnopType, DATA_SIZE_64};
+use std::io::{Read, Write};
+use std::path::PathBuf;
 
+mod constants;
 mod input;
 mod memory;
-mod constants;
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    input: PathBuf,
+    #[arg(short, long, default_value("false"))]
+    debug_print: bool,
+}
 
 fn main() {
-    let program = input::read_obj_file();
+    let args = Args::parse();
+    let program = input::read_obj_file(&args.input);
 
     let size = 0x100000;
     let mut memory = Memory::new(size, program);
-    let exit_code = run(&mut memory);
+    let start_instant = std::time::Instant::now();
+    let exit_code = run(&mut memory, args.debug_print);
+    let elapsed = start_instant.elapsed();
+    println!("Elapsed: {:?}", elapsed);
     println!("Main return value: {}", exit_code);
 }
 
-pub fn run(memory: &mut Memory) -> i64 {
+pub fn run(memory: &mut Memory, debug_print: bool) -> i64 {
     let mut exit_code = 0;
     loop {
         let pc = memory.registers[constants::PC] as usize;
         let opcode = memory.data[pc];
-        println!("PC: {}, Opcode: {:X}", pc, opcode);
+        if debug_print {
+            println!("PC: {}, Opcode: {:X}", pc, opcode);
+        }
         match opcode {
             0x00 => memory.registers[constants::PC] += 1,
-            0x01 => load(pc, memory),
-            0x02 => store(pc, memory),
-            0x03 => set(pc, memory),
-            0x04 => push(pc, memory),
-            0x05 => pop(pc, memory),
-            0x06 => binop(pc, memory, BinopType::Add),
-            0x07 => binop(pc, memory, BinopType::Sub),
-            0x08 => binop(pc, memory, BinopType::Mul),
-            0x09 => binop(pc, memory, BinopType::Div),
-            0x0A => binop(pc, memory, BinopType::Mod),
-            0x0B => binop(pc, memory, BinopType::And),
-            0x0C => binop(pc, memory, BinopType::Or),
-            0x0D => binop(pc, memory, BinopType::Xor),
-            0x0F => binop(pc, memory, BinopType::Shl),
-            0x10 => binop(pc, memory, BinopType::Shr),
-            0x11 => compare(pc, memory),
-            0x12 => jump(pc, memory, true),
-            0x13 => jump(pc, memory, memory.flags.zero),
-            0x14 => jump(pc, memory, !memory.flags.zero),
-            0x15 => jump(pc, memory, memory.flags.positive),
-            0x16 => jump(pc, memory, memory.flags.positive || memory.flags.zero),
-            0x17 => jump(pc, memory, !memory.flags.positive && !memory.flags.zero),
-            0x18 => jump(pc, memory, !memory.flags.positive),
-            0x19 => call(pc, memory),
-            0x1A => ret(memory),
-            0x1B => inc_or_dec(pc, memory, 1),
-            0x1C => inc_or_dec(pc, memory, -1),
-            0x1D => read_stdin(pc, memory),
-            0x1E => write_stdout(pc, memory),
-            0x1F => move_registers(pc, memory),
-            0x20 => negate(pc, memory),
-            0x21 => set_from_flags(pc, memory, memory.flags.zero),
-            0x22 => set_from_flags(pc, memory, !memory.flags.zero),
-            0x23 => set_from_flags(pc, memory, memory.flags.positive),
-            0x24 => set_from_flags(pc, memory, memory.flags.positive || memory.flags.zero),
-            0x25 => set_from_flags(pc, memory, !memory.flags.positive && !memory.flags.zero),
-            0x26 => set_from_flags(pc, memory, !memory.flags.positive),
-            0xFF => {
-                exit(&mut exit_code, memory);
+            0x01 => load(pc, memory, debug_print),
+            0x02 => store(pc, memory, debug_print),
+            0x03 => push(pc, memory, debug_print),
+            0x04 => pop(pc, memory, debug_print),
+
+            0x05 => binop(pc, memory, BinopType::Mov, false, debug_print),
+            0x06 => binop(pc, memory, BinopType::Add, false, debug_print),
+            0x07 => binop(pc, memory, BinopType::Sub, false, debug_print),
+            0x08 => binop(pc, memory, BinopType::Mul, false, debug_print),
+            0x09 => binop(pc, memory, BinopType::Div, false, debug_print),
+            0x0A => binop(pc, memory, BinopType::Mod, false, debug_print),
+            0x0B => binop(pc, memory, BinopType::And, false, debug_print),
+            0x0C => binop(pc, memory, BinopType::Or, false, debug_print),
+            0x0D => binop(pc, memory, BinopType::Xor, false, debug_print),
+            0x0E => binop(pc, memory, BinopType::Shl, false, debug_print),
+            0x0F => binop(pc, memory, BinopType::Shr, false, debug_print),
+            0x10 => binop(pc, memory, BinopType::Cmp, false, debug_print),
+
+            0x11 => binop(pc, memory, BinopType::Mov, true, debug_print),
+            0x12 => binop(pc, memory, BinopType::Add, true, debug_print),
+            0x13 => binop(pc, memory, BinopType::Sub, true, debug_print),
+            0x14 => binop(pc, memory, BinopType::Mul, true, debug_print),
+            0x15 => binop(pc, memory, BinopType::Div, true, debug_print),
+            0x16 => binop(pc, memory, BinopType::Mod, true, debug_print),
+            0x17 => binop(pc, memory, BinopType::And, true, debug_print),
+            0x18 => binop(pc, memory, BinopType::Or, true, debug_print),
+            0x19 => binop(pc, memory, BinopType::Xor, true, debug_print),
+            0x1A => binop(pc, memory, BinopType::Shl, true, debug_print),
+            0x1B => binop(pc, memory, BinopType::Shr, true, debug_print),
+            0x1C => binop(pc, memory, BinopType::Cmp, true, debug_print),
+
+            0x1D => jump(pc, memory, true, debug_print),
+            0x1E => jump(pc, memory, memory.flags.zero, debug_print),
+            0x1F => jump(pc, memory, !memory.flags.zero, debug_print),
+            0x20 => jump(pc, memory, memory.flags.positive, debug_print),
+            0x21 => jump(
+                pc,
+                memory,
+                memory.flags.positive || memory.flags.zero,
+                debug_print,
+            ),
+            0x22 => jump(
+                pc,
+                memory,
+                !memory.flags.positive && !memory.flags.zero,
+                debug_print,
+            ),
+            0x23 => jump(pc, memory, !memory.flags.positive, debug_print),
+
+            0x24 => set(pc, memory, true, debug_print),
+            0x25 => set(pc, memory, memory.flags.zero, debug_print),
+            0x26 => set(pc, memory, !memory.flags.zero, debug_print),
+            0x27 => set(pc, memory, memory.flags.positive, debug_print),
+            0x28 => set(
+                pc,
+                memory,
+                memory.flags.positive || memory.flags.zero,
+                debug_print,
+            ),
+            0x29 => set(
+                pc,
+                memory,
+                !memory.flags.positive && !memory.flags.zero,
+                debug_print,
+            ),
+            0x2A => set(pc, memory, !memory.flags.positive, debug_print),
+
+            0x2B => unop(pc, memory, UnopType::Not, debug_print),
+            0x2C => unop(pc, memory, UnopType::Neg, debug_print),
+            0x2D => unop(pc, memory, UnopType::Inc, debug_print),
+            0x2E => unop(pc, memory, UnopType::Dec, debug_print),
+
+            0x2F => call(pc, memory, debug_print),
+            0x30 => ret(memory, debug_print),
+            0x31 => read_stdin(pc, memory, debug_print),
+            0x32 => write_stdout(pc, memory, debug_print),
+            0x33 => {
+                exit(&mut exit_code, memory, debug_print);
                 break;
             }
+            0x34 => sign_extend(pc, memory, debug_print),
             _ => panic!("Unknown opcode: {}", opcode),
         };
-        memory.print_registers();
-        memory.print_stack();
-        println!();
+        if debug_print {
+            memory.print_registers();
+            memory.print_stack();
+            println!();
+        }
     }
     exit_code
 }
@@ -116,7 +172,7 @@ fn read_address(pc: usize, memory: &mut Memory) -> u64 {
     address
 }
 
-fn load(pc: usize, memory: &mut Memory) {
+fn load(pc: usize, memory: &mut Memory, debug_print: bool) {
     let byte1 = memory.data[pc + 1];
 
     let data_size = 1 << (byte1 & 0b00000011);
@@ -128,13 +184,15 @@ fn load(pc: usize, memory: &mut Memory) {
     memory.registers[register as usize] = value as u64;
     memory.registers[constants::PC] += 2;
 
-    println!(
-        "Loaded {} ({} bytes) from {} into register {}",
-        value, data_size, address, register
-    );
+    if debug_print {
+        println!(
+            "Loaded {} ({} bytes) from {} into register {}",
+            value, data_size, address, register
+        );
+    }
 }
 
-fn store(pc: usize, memory: &mut Memory) {
+fn store(pc: usize, memory: &mut Memory, debug_print: bool) {
     let byte1 = memory.data[pc + 1];
 
     let byte_count = 1 << (byte1 & 0b00000011);
@@ -146,24 +204,15 @@ fn store(pc: usize, memory: &mut Memory) {
     memory.write_i64_le(address as usize, value, byte_count);
     memory.registers[constants::PC] += 2;
 
-    println!(
-        "Stored {} ({} bytes) from register {} into {}",
-        value, byte_count, register, address
-    );
+    if debug_print {
+        println!(
+            "Stored {} ({} bytes) from register {} into {}",
+            value, byte_count, register, address
+        );
+    }
 }
 
-fn set(pc: usize, memory: &mut Memory) {
-    let byte1 = memory.data[pc + 1];
-    let register = byte1;
-    let value = memory.read_i64_le(pc + 2, DATA_SIZE_64);
-
-    memory.registers[register as usize] = value as u64;
-    memory.registers[constants::PC] += 10;
-
-    println!("Set register {} to {}", register, value);
-}
-
-fn push(pc: usize, memory: &mut Memory) {
+fn push(pc: usize, memory: &mut Memory, debug_print: bool) {
     let byte1 = memory.data[pc + 1];
     let data_size = 1 << (byte1 & 0b00000011);
     let register = (byte1 & 0b11110000) >> 4;
@@ -175,10 +224,15 @@ fn push(pc: usize, memory: &mut Memory) {
     memory.write_i64_le(address as usize, value, data_size as u8);
     memory.registers[constants::PC] += 2;
 
-    println!("Pushed register {} with value {} ({} bytes) onto the stack", register, value, data_size, );
+    if debug_print {
+        println!(
+            "Pushed register {} with value {} ({} bytes) onto the stack",
+            register, value, data_size,
+        );
+    }
 }
 
-fn pop(pc: usize, memory: &mut Memory) {
+fn pop(pc: usize, memory: &mut Memory, debug_print: bool) {
     let byte1 = memory.data[pc + 1];
     let data_size = 1 << (byte1 & 0b00000011);
     let register = (byte1 & 0b11110000) >> 4;
@@ -190,18 +244,28 @@ fn pop(pc: usize, memory: &mut Memory) {
     memory.registers[constants::SP] += data_size as u64;
     memory.registers[constants::PC] += 2;
 
-    println!("Popped {} bytes from the stack into register {} with value {}", data_size, register, value);
+    if debug_print {
+        println!(
+            "Popped {} bytes from the stack into register {} with value {}",
+            data_size, register, value
+        );
+    }
 }
 
-fn binop(pc: usize, memory: &mut Memory, op_type: BinopType) {
+fn binop(pc: usize, memory: &mut Memory, op_type: BinopType, immediate: bool, debug_print: bool) {
     let byte1 = memory.data[pc + 1];
-    let source_register = (byte1 & 0x0F) as usize;
     let dest_register = ((byte1 & 0xF0) >> 4) as usize;
-
     let left_value = memory.registers[dest_register] as i64;
-    let right_value = memory.registers[source_register] as i64;
+
+    let right_value = if immediate {
+        memory.read_i64_le(pc + 2, DATA_SIZE_64)
+    } else {
+        let source_register = (byte1 & 0x0F) as usize;
+        memory.registers[source_register] as i64
+    };
 
     let result = match op_type {
+        BinopType::Mov => right_value,
         BinopType::Add => left_value + right_value,
         BinopType::Sub => left_value - right_value,
         BinopType::Mul => left_value * right_value,
@@ -212,77 +276,113 @@ fn binop(pc: usize, memory: &mut Memory, op_type: BinopType) {
         BinopType::Xor => left_value ^ right_value,
         BinopType::Shl => left_value << right_value,
         BinopType::Shr => left_value >> right_value,
+        BinopType::Cmp => left_value - right_value,
     };
 
     set_flags(memory, result);
 
-    memory.registers[dest_register] = result as u64;
-    memory.registers[constants::PC] += 2;
+    if op_type != BinopType::Cmp {
+        memory.registers[dest_register] = result as u64;
+    }
 
-    println!(
-        "Performed {:?} on registers {} and {} ({} and {}), Result: {}, Flags: {:?}",
-        op_type, dest_register, source_register, left_value, right_value, result, memory.flags
-    );
+    memory.registers[constants::PC] += if immediate { 10 } else { 2 };
+
+    if debug_print {
+        if immediate {
+            println!(
+            "Performed {:?} operation with register {} and immediate value {}, Result: {}, Flags: {:?}",
+            op_type, dest_register, right_value, result, memory.flags
+        );
+        } else {
+            println!(
+            "Performed {:?} operation with register {} and register {}, Result: {}, Flags: {:?}",
+            op_type,
+            dest_register,
+            byte1 & 0x0F,
+            result,
+            memory.flags
+        );
+        }
+    }
 }
 
-fn compare(pc: usize, memory: &mut Memory) {
-    let byte1 = memory.data[pc + 1];
-    let source_register = (byte1 & 0x0F) as usize;
-    let dest_register = ((byte1 & 0xF0) >> 4) as usize;
-
-    let left_value = memory.registers[dest_register];
-    let right_value = memory.registers[source_register];
-
-    memory.flags.zero = left_value == right_value;
-    memory.flags.positive = left_value > right_value;
-
-    memory.registers[constants::PC] += 2;
-
-    println!("Compared {} and {} ({} and {}), Flags: {:?}", left_value, right_value, dest_register, source_register, memory.flags);
-}
-
-fn jump(pc: usize, memory: &mut Memory, should_jump: bool) {
+fn jump(pc: usize, memory: &mut Memory, should_jump: bool, debug_print: bool) {
     let address = memory.read_u64_le(pc + 1, DATA_SIZE_64);
 
     if should_jump {
         memory.registers[constants::PC] = address;
-        println!("Jumped to address {}", address);
+        if debug_print {
+            println!("Jumped to address {}", address);
+        }
     } else {
         memory.registers[constants::PC] += 9;
-        println!("Did not jump to address {}", address);
+        if debug_print {
+            println!("Did not jump to address {}", address);
+        }
     }
 }
 
-fn call(pc: usize, memory: &mut Memory) {
+fn set(pc: usize, memory: &mut Memory, flag: bool, debug_print: bool) {
+    let byte1 = memory.data[pc + 1];
+    let register = (byte1 & 0x0F) as usize;
+    memory.registers[register] = flag as u64;
+    memory.registers[constants::PC] += 2;
+
+    if debug_print {
+        println!("Set register {} to {}", register, flag as u64);
+    }
+}
+
+fn unop(pc: usize, memory: &mut Memory, op_type: UnopType, debug_print: bool) {
+    let byte1 = memory.data[pc + 1];
+    let register = (byte1 & 0x0F) as usize;
+    let value = memory.registers[register] as i64;
+    let result = match op_type {
+        UnopType::Not => !value,
+        UnopType::Neg => -value,
+        UnopType::Inc => value + 1,
+        UnopType::Dec => value - 1,
+    };
+    set_flags(memory, result);
+
+    memory.registers[register] = result as u64;
+    memory.registers[constants::PC] += 2;
+
+    if debug_print {
+        println!(
+            "Performed {:?} operation on register {}, Result: {}, Flags: {:?}",
+            op_type, register, result, memory.flags
+        );
+    }
+}
+
+fn call(pc: usize, memory: &mut Memory, debug_print: bool) {
     let address = memory.read_u64_le(pc + 1, DATA_SIZE_64);
     memory.registers[constants::SP] -= 8;
     let return_pc = (pc + 9) as u64;
-    memory.write_u64_le(memory.registers[constants::SP] as usize, return_pc, DATA_SIZE_64);
+    memory.write_u64_le(
+        memory.registers[constants::SP] as usize,
+        return_pc,
+        DATA_SIZE_64,
+    );
     memory.registers[constants::PC] = address;
 
-    println!("Called Address {}, Return PC: {}", address, return_pc);
+    if debug_print {
+        println!("Called Address {}, Return PC: {}", address, return_pc);
+    }
 }
 
-fn ret(memory: &mut Memory) {
+fn ret(memory: &mut Memory, debug_print: bool) {
     let address = memory.read_u64_le(memory.registers[constants::SP] as usize, DATA_SIZE_64);
     memory.registers[constants::SP] += 8;
     memory.registers[constants::PC] = address;
 
-    println!("Returned to Address {}", address);
+    if debug_print {
+        println!("Returned to Address {}", address);
+    }
 }
 
-fn inc_or_dec(pc: usize, memory: &mut Memory, amount: i64) {
-    let byte1 = memory.data[pc + 1];
-    let register = (byte1 & 0x0F) as usize;
-    let value = memory.registers[register] as i64 + amount;
-    memory.registers[register] = value as u64;
-    set_flags(memory, value);
-    memory.registers[constants::PC] += 2;
-
-    println!("Incremented register {} by {}, Result: {}, Flags: {:?}", register, amount, value, memory.flags);
-}
-
-fn read_stdin(pc: usize, memory: &mut Memory) {
+fn read_stdin(pc: usize, memory: &mut Memory, debug_print: bool) {
     let register = memory.data[pc + 1];
     let read_bytes = memory.registers[register as usize] as usize;
     let address = read_address(pc + 2, memory) as usize;
@@ -292,10 +392,15 @@ fn read_stdin(pc: usize, memory: &mut Memory) {
     memory.write_bytes(address, &buffer);
     memory.registers[constants::PC] += 2;
 
-    println!("Read {} bytes from stdin into address {}", read_bytes, address);
+    if debug_print {
+        println!(
+            "Read {} bytes from stdin into address {}",
+            read_bytes, address
+        );
+    }
 }
 
-fn write_stdout(pc: usize, memory: &mut Memory) {
+fn write_stdout(pc: usize, memory: &mut Memory, debug_print: bool) {
     let register = memory.data[pc + 1];
     let write_bytes = memory.registers[register as usize] as usize;
     let address = read_address(pc + 2, memory) as usize;
@@ -305,46 +410,51 @@ fn write_stdout(pc: usize, memory: &mut Memory) {
     memory.registers[constants::PC] += 2;
 
     let str = std::str::from_utf8(&buffer).unwrap();
-    println!("Wrote '{}' ({} bytes) to stdout from address {}", str, write_bytes, address);
+
+    if debug_print {
+        println!(
+            "Wrote '{}' ({} bytes) to stdout from address {}",
+            str, write_bytes, address
+        );
+    }
 }
 
-fn move_registers(pc: usize, memory: &mut Memory) {
-    let byte1 = memory.data[pc + 1];
-    let source_register = (byte1 & 0x0F) as usize;
-    let dest_register = (byte1 & 0xF0) >> 4;
-    memory.registers[dest_register as usize] = memory.registers[source_register];
-    memory.registers[constants::PC] += 2;
-
-    println!("Moved register {} to register {}", source_register, dest_register);
-}
-
-fn negate(pc: usize, memory: &mut Memory) {
-    let byte1 = memory.data[pc + 1];
-    let register = (byte1 & 0x0F) as usize;
-    let value = memory.registers[register] as i64;
-    let result = -value;
-    set_flags(memory, result);
-    memory.registers[register] = result as u64;
-    memory.registers[constants::PC] += 2;
-
-    println!("Negated register {}, Result: {}, Flags: {:?}", register, result, memory.flags);
-}
-
-fn set_from_flags(pc: usize, memory: &mut Memory, flag: bool) {
-    let byte1 = memory.data[pc + 1];
-    let register = (byte1 & 0x0F) as usize;
-    memory.registers[register] = flag as u64;
-    memory.registers[constants::PC] += 2;
-
-    println!("Set register {} to {}", register, flag as u64);
-}
-
-fn exit(exit_code: &mut i64, memory: &mut Memory) {
+fn exit(exit_code: &mut i64, memory: &mut Memory, debug_print: bool) {
     *exit_code = memory.registers[0] as i64;
-    memory.registers[constants::PC] += 1
+    memory.registers[constants::PC] += 1;
+
+    if debug_print {
+        println!("Exiting with code {}", exit_code);
+    }
 }
 
 fn set_flags(memory: &mut Memory, value: i64) {
     memory.flags.zero = value == 0;
     memory.flags.positive = value > 0;
+}
+
+fn sign_extend(pc: usize, memory: &mut Memory, debug_print: bool) {
+    let byte1 = memory.data[pc + 1];
+    let data_size = 1 << (byte1 & 0b00000011);
+    let register = (byte1 & 0b11110000) >> 4;
+
+    let value = memory.registers[register as usize] as i64;
+
+    let extended_value = match data_size {
+        1 => value as i8 as i64,
+        2 => value as i16 as i64,
+        4 => value as i32 as i64,
+        8 => value,
+        _ => panic!("Invalid data size: {}", data_size),
+    };
+
+    memory.registers[register as usize] = extended_value as u64;
+    memory.registers[constants::PC] += 2;
+
+    if debug_print {
+        println!(
+            "Sign extended register {} with value {} ({} bytes)",
+            data_size, register, value
+        );
+    }
 }

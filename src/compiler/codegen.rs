@@ -1,11 +1,13 @@
 mod builtin_functions;
 
-use std::collections::HashMap;
-use std::path::PathBuf;
 use crate::compiler::codegen::builtin_functions::add_builtin_fn_code;
 use crate::compiler::parser::analyzed_syntax_tree::{AnalyzedFunction, AnalyzedProgram};
-use crate::compiler::parser::syntax_tree::{BinaryOp, Expression, Literal, SrcExpression, SrcStatement, Statement, UnaryOp};
+use crate::compiler::parser::syntax_tree::{
+    BinaryOp, Expression, Literal, SrcExpression, SrcStatement, Statement, UnaryOp,
+};
 use crate::compiler::parser::types::Type;
+use std::collections::HashMap;
+use std::path::PathBuf;
 
 struct Context {
     output: Vec<String>,
@@ -54,7 +56,9 @@ pub fn generate_code(program: AnalyzedProgram, output: &PathBuf) {
         label_counter: 0,
     };
     for (name, func) in &program.functions {
-        context.function_labels.insert(name.clone(), format!("_{}", name));
+        context
+            .function_labels
+            .insert(name.clone(), format!("_func_{}", name));
         let mut arg_sizes = Vec::new();
         for (_, ty) in &func.args {
             arg_sizes.push(ty.size());
@@ -62,10 +66,16 @@ pub fn generate_code(program: AnalyzedProgram, output: &PathBuf) {
         context.function_arg_sizes.insert(name.clone(), arg_sizes);
     }
 
-    context.push(&format!("call {}", context.function_labels[&program.main_function]));
+    context.push(&format!(
+        "call {}",
+        context.function_labels[&program.main_function]
+    ));
 
-    if program.functions[&program.main_function].return_type.is_none() {
-        context.push("set r0 0");
+    if program.functions[&program.main_function]
+        .return_type
+        .is_none()
+    {
+        context.push("movi r0 0");
     }
     context.push("exit");
 
@@ -81,7 +91,7 @@ pub fn generate_code(program: AnalyzedProgram, output: &PathBuf) {
 
 fn generate_function_code(context: &mut Context, function: AnalyzedFunction) {
     context.fn_context = FunctionContext {
-        return_label: format!("_{}_return", function.name),
+        return_label: format!("_return_{}", function.name),
         name: function.name,
         var_stack_offsets: HashMap::new(),
         var_type_sizes: HashMap::new(),
@@ -94,13 +104,18 @@ fn generate_function_code(context: &mut Context, function: AnalyzedFunction) {
     let mut argument_offset = 16;
     for (name, ty) in function.args.iter().rev() {
         let offset = argument_offset;
-        context.fn_context.var_stack_offsets.insert(name.clone(), offset);
-        context.fn_context.var_type_sizes.insert(name.clone(), ty.size());
+        context
+            .fn_context
+            .var_stack_offsets
+            .insert(name.clone(), offset);
+        context
+            .fn_context
+            .var_type_sizes
+            .insert(name.clone(), ty.size());
         argument_offset += ty.size() as isize;
     }
 
-    context.push(&format!("set r0 {}", function.local_var_stack_size + 8));
-    context.push("sub sp r0");
+    context.push(&format!("subi sp {}", function.local_var_stack_size + 8));
 
     generate_expression_code(context, function.expr);
 
@@ -118,12 +133,22 @@ fn generate_statement_code(context: &mut Context, statement: SrcStatement) {
             }
             context.push(&format!("jmp {}", context.fn_context.return_label));
         }
-        Statement::Declaration { var_type, name, value } => {
+        Statement::Declaration {
+            var_type,
+            name,
+            value,
+        } => {
             let offset = context.fn_context.current_stack_offset;
             context.fn_context.current_stack_offset -= var_type.size() as isize;
             let size = var_type.size() * 8;
-            context.fn_context.var_stack_offsets.insert(name.clone(), offset);
-            context.fn_context.var_type_sizes.insert(name.clone(), var_type.size());
+            context
+                .fn_context
+                .var_stack_offsets
+                .insert(name.clone(), offset);
+            context
+                .fn_context
+                .var_type_sizes
+                .insert(name.clone(), var_type.size());
 
             generate_expression_code(context, value);
             context.push(&format!("store #{} r0 [bp;{}]", size, offset));
@@ -131,12 +156,15 @@ fn generate_statement_code(context: &mut Context, statement: SrcStatement) {
         Statement::Expr(expr) => {
             generate_expression_code(context, expr);
         }
-        Statement::If { condition, true_expr, false_expr } => {
+        Statement::If {
+            condition,
+            true_expr,
+            false_expr,
+        } => {
             let false_label = context.get_new_label();
             let end_label = context.get_new_label();
             generate_expression_code(context, condition);
-            context.push("set r1 0");
-            context.push("cmp r0 r1");
+            context.push("cmpi r0 0");
             context.push(&format!("jz {}", false_label));
             generate_expression_code(context, true_expr);
             context.push(&format!("jmp {}", end_label));
@@ -151,28 +179,26 @@ fn generate_statement_code(context: &mut Context, statement: SrcStatement) {
 
 fn generate_expression_code(context: &mut Context, expr: SrcExpression) {
     match expr.expr {
-        Expression::Literal(literal) => {
-            match literal {
-                Literal::Int(int) => {
-                    context.push(&format!("set r0 {}", int));
-                }
-                Literal::Long(long) => {
-                    context.push(&format!("set r0 {}", long));
-                }
-                Literal::Bool(boolean) => {
-                    context.push(&format!("set r0 {}", if boolean { 1 } else { 0 }));
-                }
-                Literal::Byte(byte) => {
-                    context.push(&format!("set r0 {}", byte));
-                }
-                Literal::Char(char) => {
-                    context.push(&format!("set r0 {}", char));
-                }
-                Literal::Short(short) => {
-                    context.push(&format!("set r0 {}", short));
-                }
+        Expression::Literal(literal) => match literal {
+            Literal::Int(int) => {
+                context.push(&format!("movi r0 {}", int));
             }
-        }
+            Literal::Long(long) => {
+                context.push(&format!("movi r0 {}", long));
+            }
+            Literal::Bool(boolean) => {
+                context.push(&format!("movi r0 {}", if boolean { 1 } else { 0 }));
+            }
+            Literal::Byte(byte) => {
+                context.push(&format!("movi r0 {}", byte));
+            }
+            Literal::Char(char) => {
+                context.push(&format!("movi r0 {}", char));
+            }
+            Literal::Short(short) => {
+                context.push(&format!("movi r0 {}", short));
+            }
+        },
         Expression::Variable(name) => {
             let offset = context.fn_context.var_stack_offsets[&name];
             let size = context.fn_context.var_type_sizes[&name] * 8;
@@ -187,8 +213,7 @@ fn generate_expression_code(context: &mut Context, expr: SrcExpression) {
                 total_size += arg_bytes;
             }
             context.push(&format!("call {}", context.function_labels[&function]));
-            context.push(&format!("set r1 {}", total_size));
-            context.push("add sp r1");
+            context.push(&format!("addi sp {}", total_size));
         }
         Expression::Block(statements, final_expr) => {
             for statement in statements {
@@ -209,18 +234,20 @@ fn generate_expression_code(context: &mut Context, expr: SrcExpression) {
                     context.push("not r0");
                 }
                 UnaryOp::LogicalNot => {
-                    context.push("set r1 0");
-                    context.push("cmp r0 r1");
+                    context.push("cmpi r0 0");
                     context.push("setz r0");
                 }
             }
         }
-        Expression::Ternary { condition, true_expr, false_expr } => {
+        Expression::Ternary {
+            condition,
+            true_expr,
+            false_expr,
+        } => {
             let false_label = context.get_new_label();
             let end_label = context.get_new_label();
             generate_expression_code(context, *condition);
-            context.push("set r1 0");
-            context.push("cmp r0 r1");
+            context.push("cmpi r0 0");
             context.push(&format!("jz {}", false_label));
             generate_expression_code(context, *true_expr);
             context.push(&format!("jmp {}", end_label));
@@ -228,38 +255,63 @@ fn generate_expression_code(context: &mut Context, expr: SrcExpression) {
             generate_expression_code(context, *false_expr);
             context.push_label(end_label);
         }
-        Expression::Binary { op, left, right } => {
-            match op {
-                BinaryOp::LogicalOr | BinaryOp::LogicalAnd => generate_logic_binop(context, op, *left, *right),
-                BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::And | BinaryOp::Or | BinaryOp::Xor | BinaryOp::Mod | BinaryOp::Shl | BinaryOp::Shr => generate_math_binop(context, op, *left, *right),
-                BinaryOp::Less | BinaryOp::LessEquals | BinaryOp::Greater | BinaryOp::GreaterEquals | BinaryOp::Equals | BinaryOp::NotEquals => generate_relational_binop(context, op, *left, *right),
-                BinaryOp::Assign | BinaryOp::AddAssign | BinaryOp::SubAssign | BinaryOp::MulAssign | BinaryOp::DivAssign | BinaryOp::AndAssign | BinaryOp::OrAssign | BinaryOp::XorAssign | BinaryOp::ModAssign | BinaryOp::ShlAssign | BinaryOp::ShrAssign => {
-                    generate_assignment_binop(context, op, *left, *right);
-                }
+        Expression::Binary { op, left, right } => match op {
+            BinaryOp::LogicalOr | BinaryOp::LogicalAnd => {
+                generate_logic_binop(context, op, *left, *right)
             }
-        }
+            BinaryOp::Add
+            | BinaryOp::Sub
+            | BinaryOp::Mul
+            | BinaryOp::Div
+            | BinaryOp::And
+            | BinaryOp::Or
+            | BinaryOp::Xor
+            | BinaryOp::Mod
+            | BinaryOp::Shl
+            | BinaryOp::Shr => generate_math_binop(context, op, *left, *right),
+            BinaryOp::Less
+            | BinaryOp::LessEquals
+            | BinaryOp::Greater
+            | BinaryOp::GreaterEquals
+            | BinaryOp::Equals
+            | BinaryOp::NotEquals => generate_relational_binop(context, op, *left, *right),
+            BinaryOp::Assign
+            | BinaryOp::AddAssign
+            | BinaryOp::SubAssign
+            | BinaryOp::MulAssign
+            | BinaryOp::DivAssign
+            | BinaryOp::AndAssign
+            | BinaryOp::OrAssign
+            | BinaryOp::XorAssign
+            | BinaryOp::ModAssign
+            | BinaryOp::ShlAssign
+            | BinaryOp::ShrAssign => {
+                generate_assignment_binop(context, op, *left, *right);
+            }
+        },
         Expression::Cast { var_type, expr } => {
             generate_expression_code(context, *expr);
             let bit_size = var_type.size() * 8;
             if var_type == Type::Bool {
-                context.push("set r1 0");
-                context.push("cmp r0 r1");
+                context.push("cmpi r0 0");
                 context.push("setnz r0");
             } else if bit_size < 64 {
-                let mask = (1u64 << bit_size) - 1;
-                context.push(&format!("set r1 {}", mask));
-                context.push("and r0 r1");
+                context.push(&format!("signext #{} r0", bit_size));
             }
         }
     }
 }
 
-fn generate_logic_binop(context: &mut Context, op: BinaryOp, left: SrcExpression, right: SrcExpression) {
+fn generate_logic_binop(
+    context: &mut Context,
+    op: BinaryOp,
+    left: SrcExpression,
+    right: SrcExpression,
+) {
     let false_label = context.get_new_label();
     let end_label = context.get_new_label();
     generate_expression_code(context, left);
-    context.push("set r1 0");
-    context.push("cmp r0 r1");
+    context.push("cmpi r0 0");
     match op {
         BinaryOp::LogicalOr => {
             context.push(&format!("jnz {}", end_label));
@@ -267,16 +319,21 @@ fn generate_logic_binop(context: &mut Context, op: BinaryOp, left: SrcExpression
         BinaryOp::LogicalAnd => {
             context.push(&format!("jz {}", false_label));
         }
-        _ => unreachable!()
+        _ => unreachable!(),
     }
     generate_expression_code(context, right);
     context.push(&format!("jmp {}", end_label));
     context.push_label(false_label);
-    context.push("set r0 0");
+    context.push("movi r0 0");
     context.push_label(end_label);
 }
 
-fn generate_math_binop(context: &mut Context, op: BinaryOp, left: SrcExpression, right: SrcExpression) {
+fn generate_math_binop(
+    context: &mut Context,
+    op: BinaryOp,
+    left: SrcExpression,
+    right: SrcExpression,
+) {
     generate_expression_code(context, left);
     context.push("push #64 r0");
     generate_expression_code(context, right);
@@ -293,11 +350,16 @@ fn generate_math_binop(context: &mut Context, op: BinaryOp, left: SrcExpression,
         BinaryOp::Xor => context.push("xor r0 r1"),
         BinaryOp::Shl => context.push("shl r0 r1"),
         BinaryOp::Shr => context.push("shr r0 r1"),
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }
 
-fn generate_relational_binop(context: &mut Context, op: BinaryOp, left: SrcExpression, right: SrcExpression) {
+fn generate_relational_binop(
+    context: &mut Context,
+    op: BinaryOp,
+    left: SrcExpression,
+    right: SrcExpression,
+) {
     generate_expression_code(context, left);
     context.push("push #64 r0");
     generate_expression_code(context, right);
@@ -311,15 +373,20 @@ fn generate_relational_binop(context: &mut Context, op: BinaryOp, left: SrcExpre
         BinaryOp::GreaterEquals => context.push("setge r0"),
         BinaryOp::Equals => context.push("setz r0"),
         BinaryOp::NotEquals => context.push("setnz r0"),
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }
 
-fn generate_assignment_binop(context: &mut Context, op: BinaryOp, left: SrcExpression, right: SrcExpression) {
+fn generate_assignment_binop(
+    context: &mut Context,
+    op: BinaryOp,
+    left: SrcExpression,
+    right: SrcExpression,
+) {
     generate_expression_code(context, right);
     let name = match left.expr {
         Expression::Variable(name) => name,
-        _ => unreachable!()
+        _ => unreachable!(),
     };
     let offset = context.fn_context.var_stack_offsets[&name];
     let size = context.fn_context.var_type_sizes[&name] * 8;
@@ -337,7 +404,7 @@ fn generate_assignment_binop(context: &mut Context, op: BinaryOp, left: SrcExpre
             BinaryOp::XorAssign => context.push("xor r0 r1"),
             BinaryOp::ShlAssign => context.push("shl r0 r1"),
             BinaryOp::ShrAssign => context.push("shr r0 r1"),
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
     context.push(&format!("store #{} r0 [bp;{}]", size, offset));
