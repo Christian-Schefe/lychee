@@ -2,15 +2,17 @@ use crate::compiler::lexer::token::{Keyword, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::expression_parser::{parse_block_expr, parse_expression};
 use crate::compiler::parser::parser_error::{LocationError, ParseResult};
-use crate::compiler::parser::syntax_tree::{Function, Program, SrcFunction, SrcStatement, Statement};
+use crate::compiler::parser::syntax_tree::{
+    Function, Program, SrcFunction, SrcStatement, Statement,
+};
 use crate::compiler::parser::types::Type;
 
-pub mod syntax_tree;
-mod parser_error;
-mod expression_parser;
-pub(crate) mod pretty_print;
-pub mod type_analyzer;
 pub mod analyzed_syntax_tree;
+mod expression_parser;
+mod parser_error;
+pub(crate) mod pretty_print;
+pub mod syntax_tree;
+pub mod type_analyzer;
 pub mod types;
 
 fn pop_or_err(tokens: &mut TokenStack, expected: Token) -> Result<(), LocationError> {
@@ -42,7 +44,8 @@ fn parse_function(tokens: &mut TokenStack) -> ParseResult<SrcFunction> {
     let name = match &token.token {
         Token::Identifier(name) => Ok(name),
         _ => Err(LocationError::expect("Identifier", token)),
-    }?.to_string();
+    }?
+    .to_string();
 
     pop_or_err(tokens, Token::Static(StaticToken::OpenParen))?;
 
@@ -57,7 +60,8 @@ fn parse_function(tokens: &mut TokenStack) -> ParseResult<SrcFunction> {
             let arg_name = match &tokens.pop().token {
                 Token::Identifier(name) => Ok(name),
                 _ => Err(LocationError::expect("Identifier", tokens.peek())),
-            }?.to_string();
+            }?
+            .to_string();
             args.push((arg_name, arg_type.unwrap()));
 
             if tokens.peek().token != Token::Static(StaticToken::Comma) {
@@ -70,12 +74,15 @@ fn parse_function(tokens: &mut TokenStack) -> ParseResult<SrcFunction> {
 
     let expr = parse_block_expr(tokens)?;
 
-    Ok(SrcFunction::new(Function {
-        return_type,
-        args,
-        name,
-        expr,
-    }, &location))
+    Ok(SrcFunction::new(
+        Function {
+            return_type,
+            args,
+            name,
+            expr,
+        },
+        &location,
+    ))
 }
 
 fn parse_statement(tokens: &mut TokenStack) -> ParseResult<SrcStatement> {
@@ -102,7 +109,14 @@ fn parse_statement(tokens: &mut TokenStack) -> ParseResult<SrcStatement> {
             } else {
                 None
             };
-            Ok(SrcStatement::new(Statement::If { condition, true_expr, false_expr }, &location))
+            Ok(SrcStatement::new(
+                Statement::If {
+                    condition,
+                    true_expr,
+                    false_expr,
+                },
+                &location,
+            ))
         }
         _ => {
             let offset = tokens.offset;
@@ -128,17 +142,18 @@ fn parse_declaration_statement(tokens: &mut TokenStack) -> ParseResult<Statement
     let name = match &token.token {
         Token::Identifier(name) => Ok(name),
         _ => Err(LocationError::expect("Identifier", token)),
-    }?.to_string();
+    }?
+    .to_string();
 
-    let token = tokens.peek();
-    if token.token != Token::Static(StaticToken::Assign) {
-        return Ok(Statement::Declaration { var_type, name, value: None });
-    }
-    tokens.pop();
+    pop_or_err(tokens, Token::Static(StaticToken::Assign))?;
 
-    let value = Some(parse_expression(tokens)?);
+    let value = parse_expression(tokens)?;
 
-    Ok(Statement::Declaration { var_type, name, value })
+    Ok(Statement::Declaration {
+        var_type,
+        name,
+        value,
+    })
 }
 
 fn parse_type(tokens: &mut TokenStack) -> ParseResult<Option<Type>> {

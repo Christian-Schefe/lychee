@@ -50,19 +50,25 @@ impl PrettyPrint for Statement {
                 }
                 result.push_str(";\n");
             }
-            Statement::Declaration { var_type, name, value } => {
+            Statement::Declaration {
+                var_type,
+                name,
+                value,
+            } => {
                 result.push_str(&format!("{:?} {}", var_type, name));
-                if let Some(value) = value {
-                    result.push_str(" = ");
-                    result.push_str(&value.expr.pretty_print(indent));
-                }
+                result.push_str(" = ");
+                result.push_str(&value.expr.pretty_print(indent));
                 result.push_str(";\n");
             }
             Statement::Expr(expr) => {
                 result.push_str(&expr.expr.pretty_print(indent));
                 result.push_str(";\n");
             }
-            Statement::If { condition, true_expr, false_expr } => {
+            Statement::If {
+                condition,
+                true_expr,
+                false_expr,
+            } => {
                 result.push_str("if ");
                 result.push_str(&condition.expr.pretty_print(indent));
                 result.push_str(" ");
@@ -101,15 +107,29 @@ impl PrettyPrint for Expression {
                 result
             }
             Expression::Binary { op, left, right } => {
-                format!("({} {:?} {})", left.expr.pretty_print(indent), op, right.expr.pretty_print(indent))
+                format!(
+                    "({} {:?} {})",
+                    left.expr.pretty_print(indent),
+                    op,
+                    right.expr.pretty_print(indent)
+                )
             }
             Expression::Unary { op, expr } => {
                 format!("{:?} {}", op, expr.expr.pretty_print(indent))
             }
             Expression::Literal(lit) => format!("{:?}", lit),
             Expression::Variable(name) => name.clone(),
-            Expression::Ternary { condition, true_expr, false_expr } => {
-                format!("{} ? {} : {}", condition.expr.pretty_print(indent), true_expr.expr.pretty_print(indent), false_expr.expr.pretty_print(indent))
+            Expression::Ternary {
+                condition,
+                true_expr,
+                false_expr,
+            } => {
+                format!(
+                    "{} ? {} : {}",
+                    condition.expr.pretty_print(indent),
+                    true_expr.expr.pretty_print(indent),
+                    false_expr.expr.pretty_print(indent)
+                )
             }
             Expression::FunctionCall { function, args } => {
                 let mut result = format!("{}(", function);

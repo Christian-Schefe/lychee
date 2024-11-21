@@ -125,10 +125,8 @@ fn generate_statement_code(context: &mut Context, statement: SrcStatement) {
             context.fn_context.var_stack_offsets.insert(name.clone(), offset);
             context.fn_context.var_type_sizes.insert(name.clone(), var_type.size());
 
-            if let Some(value) = value {
-                generate_expression_code(context, value);
-                context.push(&format!("store #{} r0 [bp;{}]", size, offset));
-            }
+            generate_expression_code(context, value);
+            context.push(&format!("store #{} r0 [bp;{}]", size, offset));
         }
         Statement::Expr(expr) => {
             generate_expression_code(context, expr);

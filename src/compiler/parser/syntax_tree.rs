@@ -65,7 +65,7 @@ pub enum Statement {
     Declaration {
         var_type: Type,
         name: String,
-        value: Option<SrcExpression>,
+        value: SrcExpression,
     },
     If {
         condition: SrcExpression,

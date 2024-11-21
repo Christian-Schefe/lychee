@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use clap::Parser;
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::pretty_print::PrettyPrint;
 
