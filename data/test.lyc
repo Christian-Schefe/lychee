@@ -1,10 +1,15 @@
 int main() {
-    fib(30)
+    bool c = true;
+    c &&= {
+        writechar('a');
+        false
+    };
+    int k = test({}, 5b, {});
+    (int)k
 }
 
-int fib(int n) {
-    if (n <= 1) {
-        return n;
-    }
-    fib(n - 1) + fib(n - 2)
+int test(unit a, byte b, unit c) {
+    byte offset_char = (byte)'a' + b;
+    writechar((char)offset_char);
+    (int)(a == c) - 5 - 10 - 100
 }

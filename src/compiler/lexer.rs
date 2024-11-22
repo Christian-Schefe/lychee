@@ -57,7 +57,7 @@ pub fn lex(input_path: &PathBuf) -> Vec<SrcToken> {
             continue;
         }
         let (token, new_offset) = if input[offset] == '"' {
-            read_string(&input, offset)
+            read_string(&input, offset, '"')
         } else if input[offset] == '\'' {
             read_char(&input, offset)
         } else {
@@ -78,12 +78,12 @@ pub fn lex(input_path: &PathBuf) -> Vec<SrcToken> {
     tokens
 }
 
-fn read_string(input: &Vec<char>, offset: usize) -> (Token, usize) {
+fn read_string(input: &Vec<char>, offset: usize, quote_char: char) -> (Token, usize) {
     let mut string = String::new();
     let mut i = offset + 1;
 
     while i < input.len() {
-        if input[i] == '"' {
+        if input[i] == quote_char {
             return (Token::String(string), i + 1);
         } else if input[i] == '\\' {
             i += 1;
@@ -96,6 +96,7 @@ fn read_string(input: &Vec<char>, offset: usize) -> (Token, usize) {
                 't' => string.push('\t'),
                 '\\' => string.push('\\'),
                 '"' => string.push('"'),
+                '\'' => string.push('\''),
                 _ => panic!("Invalid escape sequence"),
             }
         } else {
@@ -108,16 +109,21 @@ fn read_string(input: &Vec<char>, offset: usize) -> (Token, usize) {
 }
 
 fn read_char(input: &Vec<char>, offset: usize) -> (Token, usize) {
-    let c = input[offset + 1];
-    if input[offset + 2] != '\'' {
-        panic!("Invalid character");
-    }
-    if c.len_utf8() != 1 {
-        panic!("Invalid character");
-    }
+    let (c, new_offset) = read_string(input, offset, '\'');
     let mut buffer = [0; 1];
-    c.encode_utf8(&mut buffer);
-    (Token::Literal(Literal::Char(buffer[0] as i8)), offset + 3)
+    let str = match c {
+        Token::String(s) => s,
+        _ => panic!("Expected string"),
+    };
+    if str.len() != 1 {
+        panic!("Invalid char literal: {}", str);
+    }
+    let char = str.chars().next().unwrap();
+    if char.len_utf8() != 1 {
+        panic!("Invalid char literal: {}", char);
+    }
+    char.encode_utf8(&mut buffer);
+    (Token::Literal(Literal::Char(buffer[0] as i8)), new_offset)
 }
 
 fn read_token(input: &Vec<char>, offset: usize) -> (Token, usize) {

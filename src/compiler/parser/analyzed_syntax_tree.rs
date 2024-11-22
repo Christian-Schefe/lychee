@@ -10,7 +10,7 @@ pub struct AnalyzedProgram {
 pub struct AnalyzedFunction {
     pub name: String,
     pub args: Vec<(String, Type)>,
-    pub return_type: Option<Type>,
+    pub return_type: Type,
     pub local_var_stack_size: usize,
     pub expr: SrcExpression,
 }

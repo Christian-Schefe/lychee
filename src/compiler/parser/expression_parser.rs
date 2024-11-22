@@ -3,7 +3,7 @@ use crate::compiler::lexer::token::{StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::parser_error::{ParseResult, LocationError};
 use crate::compiler::parser::{parse_statement, parse_type, pop_or_err};
-use crate::compiler::parser::syntax_tree::{BinaryOp, Expression, SrcExpression, UnaryOp, ASSIGN_OP_MAP};
+use crate::compiler::parser::syntax_tree::{BinaryMathOp, BinaryOp, BinaryComparisonOp, Expression, SrcExpression, UnaryOp, ASSIGN_OP_MAP, BinaryLogicOp};
 
 pub fn parse_expression(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
     let offset = tokens.offset;
@@ -76,43 +76,43 @@ where
 }
 
 fn parse_logical_or_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
-    parse_left_associative(tokens, &[(StaticToken::LogicalOr, BinaryOp::LogicalOr)], parse_logical_and_or_lower)
+    parse_left_associative(tokens, &[(StaticToken::LogicalOr, BinaryOp::Logical(BinaryLogicOp::Or))], parse_logical_and_or_lower)
 }
 
 fn parse_logical_and_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
-    parse_left_associative(tokens, &[(StaticToken::LogicalAnd, BinaryOp::LogicalAnd)], parse_bitwise_or_or_lower)
+    parse_left_associative(tokens, &[(StaticToken::LogicalAnd, BinaryOp::Logical(BinaryLogicOp::And))], parse_bitwise_or_or_lower)
 }
 
 fn parse_bitwise_or_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
-    parse_left_associative(tokens, &[(StaticToken::Pipe, BinaryOp::Or)], parse_bitwise_xor_or_lower)
+    parse_left_associative(tokens, &[(StaticToken::Pipe, BinaryOp::Math(BinaryMathOp::Or))], parse_bitwise_xor_or_lower)
 }
 
 fn parse_bitwise_xor_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
-    parse_left_associative(tokens, &[(StaticToken::Caret, BinaryOp::Xor)], parse_bitwise_and_or_lower)
+    parse_left_associative(tokens, &[(StaticToken::Caret, BinaryOp::Math(BinaryMathOp::Xor))], parse_bitwise_and_or_lower)
 }
 
 fn parse_bitwise_and_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
-    parse_left_associative(tokens, &[(StaticToken::Ampersand, BinaryOp::And)], parse_equality_or_lower)
+    parse_left_associative(tokens, &[(StaticToken::Ampersand, BinaryOp::Math(BinaryMathOp::And))], parse_equality_or_lower)
 }
 
 fn parse_equality_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
-    parse_left_associative(tokens, &[(StaticToken::Equals, BinaryOp::Equals), (StaticToken::NotEquals, BinaryOp::NotEquals)], parse_relational_or_lower)
+    parse_left_associative(tokens, &[(StaticToken::Equals, BinaryOp::Comparison(BinaryComparisonOp::Equals)), (StaticToken::NotEquals, BinaryOp::Comparison(BinaryComparisonOp::NotEquals))], parse_relational_or_lower)
 }
 
 fn parse_relational_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
-    parse_left_associative(tokens, &[(StaticToken::LessThan, BinaryOp::Less), (StaticToken::GreaterThan, BinaryOp::Greater), (StaticToken::LessThanOrEqual, BinaryOp::LessEquals), (StaticToken::GreaterThanOrEqual, BinaryOp::GreaterEquals)], parse_shift_or_lower)
+    parse_left_associative(tokens, &[(StaticToken::LessThan, BinaryOp::Comparison(BinaryComparisonOp::Less)), (StaticToken::GreaterThan, BinaryOp::Comparison(BinaryComparisonOp::Greater)), (StaticToken::LessThanOrEqual, BinaryOp::Comparison(BinaryComparisonOp::LessEquals)), (StaticToken::GreaterThanOrEqual, BinaryOp::Comparison(BinaryComparisonOp::GreaterEquals))], parse_shift_or_lower)
 }
 
 fn parse_shift_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
-    parse_left_associative(tokens, &[(StaticToken::ShiftLeft, BinaryOp::Shl), (StaticToken::ShiftRight, BinaryOp::Shr)], parse_add_or_lower)
+    parse_left_associative(tokens, &[(StaticToken::ShiftLeft, BinaryOp::Math(BinaryMathOp::Shl)), (StaticToken::ShiftRight, BinaryOp::Math(BinaryMathOp::Shr))], parse_add_or_lower)
 }
 
 fn parse_add_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
-    parse_left_associative(tokens, &[(StaticToken::Plus, BinaryOp::Add), (StaticToken::Minus, BinaryOp::Sub)], parse_mul_or_lower)
+    parse_left_associative(tokens, &[(StaticToken::Plus, BinaryOp::Math(BinaryMathOp::Add)), (StaticToken::Minus, BinaryOp::Math(BinaryMathOp::Sub))], parse_mul_or_lower)
 }
 
 fn parse_mul_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
-    parse_left_associative(tokens, &[(StaticToken::Asterisk, BinaryOp::Mul), (StaticToken::Slash, BinaryOp::Div), (StaticToken::Percent, BinaryOp::Mod)], parse_unary_or_lower)
+    parse_left_associative(tokens, &[(StaticToken::Asterisk, BinaryOp::Math(BinaryMathOp::Mul)), (StaticToken::Slash, BinaryOp::Math(BinaryMathOp::Div)), (StaticToken::Percent, BinaryOp::Math(BinaryMathOp::Mod))], parse_unary_or_lower)
 }
 
 fn parse_unary_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
@@ -124,6 +124,8 @@ fn parse_unary_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
             StaticToken::Minus => Some(UnaryOp::Negate),
             StaticToken::ExclamationMark => Some(UnaryOp::LogicalNot),
             StaticToken::Tilde => Some(UnaryOp::Not),
+            StaticToken::Increment => Some(UnaryOp::Increment),
+            StaticToken::Decrement => Some(UnaryOp::Decrement),
             _ => None
         };
         if let Some(op) = bin_op {
@@ -226,11 +228,7 @@ pub fn parse_block_expr(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
 fn parse_cast(location: &Location, tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
     pop_or_err(tokens, Token::Static(StaticToken::OpenParen))?;
     let var_type = parse_type(tokens)?;
-    if let Some(var_type) = var_type {
-        pop_or_err(tokens, Token::Static(StaticToken::CloseParen))?;
-        let expr = parse_unary_or_lower(tokens)?;
-        Ok(SrcExpression::new(Expression::Cast { var_type, expr: Box::new(expr) }, location))
-    } else {
-        Err(LocationError::expect("Type", tokens.peek()))
-    }
+    pop_or_err(tokens, Token::Static(StaticToken::CloseParen))?;
+    let expr = parse_unary_or_lower(tokens)?;
+    Ok(SrcExpression::new(Expression::Cast { var_type, expr: Box::new(expr) }, location))
 }

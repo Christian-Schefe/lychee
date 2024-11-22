@@ -48,6 +48,8 @@ pub enum StaticToken {
     OrAssign,
     ShiftLeftAssign,
     ShiftRightAssign,
+    LogicalAndAssign,
+    LogicalOrAssign,
 }
 
 impl StaticToken {
@@ -97,10 +99,12 @@ impl StaticToken {
             StaticToken::OrAssign => "|=".to_string(),
             StaticToken::ShiftLeftAssign => "<<=".to_string(),
             StaticToken::ShiftRightAssign => ">>=".to_string(),
+            StaticToken::LogicalAndAssign => "&&=".to_string(),
+            StaticToken::LogicalOrAssign => "||=".to_string(),
         }
     }
 
-    pub const VALUES: [StaticToken; 44] = [
+    pub const VALUES: [StaticToken; 46] = [
         StaticToken::Semicolon,
         StaticToken::OpenParen,
         StaticToken::CloseParen,
@@ -145,6 +149,8 @@ impl StaticToken {
         StaticToken::OrAssign,
         StaticToken::ShiftLeftAssign,
         StaticToken::ShiftRightAssign,
+        StaticToken::LogicalAndAssign,
+        StaticToken::LogicalOrAssign,
     ];
 
     pub const MAX_LENGTH: usize = 3;
@@ -170,18 +176,22 @@ pub enum Token {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Keyword {
     Return,
-    Void,
     If,
     Else,
+    For,
+    While,
+    Do,
 }
 
 impl Keyword {
     pub fn from_str(str: &str) -> Option<Self> {
         match str {
             "return" => Some(Keyword::Return),
-            "void" => Some(Keyword::Void),
             "if" => Some(Keyword::If),
             "else" => Some(Keyword::Else),
+            "for" => Some(Keyword::For),
+            "while" => Some(Keyword::While),
+            "do" => Some(Keyword::Do),
             _ => None,
         }
     }

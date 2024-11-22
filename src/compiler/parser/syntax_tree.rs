@@ -34,7 +34,7 @@ impl SrcFunction {
 pub struct Function {
     pub name: String,
     pub args: Vec<(String, Type)>,
-    pub return_type: Option<Type>,
+    pub return_type: Type,
     pub expr: SrcExpression,
 }
 
@@ -71,6 +71,17 @@ pub enum Statement {
         condition: SrcExpression,
         true_expr: SrcExpression,
         false_expr: Option<SrcExpression>,
+    },
+    For {
+        init: Box<SrcStatement>,
+        condition: SrcExpression,
+        update: SrcExpression,
+        body: SrcExpression,
+    },
+    While {
+        condition: SrcExpression,
+        body: SrcExpression,
+        is_do_while: bool,
     },
     Expr(SrcExpression),
 }
@@ -127,6 +138,16 @@ pub enum Expression {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BinaryOp {
+    Math(BinaryMathOp),
+    Logical(BinaryLogicOp),
+    Comparison(BinaryComparisonOp),
+    Assign,
+    MathAssign(BinaryMathOp),
+    LogicAssign(BinaryLogicOp),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BinaryMathOp {
     Add,
     Sub,
     Mul,
@@ -135,51 +156,52 @@ pub enum BinaryOp {
     And,
     Or,
     Xor,
-    LogicalAnd,
-    LogicalOr,
     Shl,
     Shr,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BinaryLogicOp {
+    And,
+    Or,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BinaryComparisonOp {
     Equals,
     NotEquals,
     Less,
     LessEquals,
     Greater,
     GreaterEquals,
-    Assign,
-    AddAssign,
-    SubAssign,
-    MulAssign,
-    DivAssign,
-    ModAssign,
-    AndAssign,
-    OrAssign,
-    XorAssign,
-    ShlAssign,
-    ShrAssign,
 }
 
 lazy_static! {
     pub static ref ASSIGN_OP_MAP: HashMap<StaticToken, BinaryOp> = HashMap::from([
         (StaticToken::Assign, BinaryOp::Assign),
-        (StaticToken::AddAssign, BinaryOp::AddAssign),
-        (StaticToken::SubAssign, BinaryOp::SubAssign),
-        (StaticToken::MulAssign, BinaryOp::MulAssign),
-        (StaticToken::DivAssign, BinaryOp::DivAssign),
-        (StaticToken::ModAssign, BinaryOp::ModAssign),
-        (StaticToken::AndAssign, BinaryOp::AndAssign),
-        (StaticToken::OrAssign, BinaryOp::OrAssign),
-        (StaticToken::XorAssign, BinaryOp::XorAssign),
-        (StaticToken::ShiftLeftAssign, BinaryOp::ShlAssign),
-        (StaticToken::ShiftRightAssign, BinaryOp::ShrAssign),
+        (StaticToken::AddAssign, BinaryOp::MathAssign(BinaryMathOp::Add)),
+        (StaticToken::SubAssign, BinaryOp::MathAssign(BinaryMathOp::Sub)),
+        (StaticToken::MulAssign, BinaryOp::MathAssign(BinaryMathOp::Mul)),
+        (StaticToken::DivAssign, BinaryOp::MathAssign(BinaryMathOp::Div)),
+        (StaticToken::ModAssign, BinaryOp::MathAssign(BinaryMathOp::Mod)),
+        (StaticToken::AndAssign, BinaryOp::MathAssign(BinaryMathOp::And)),
+        (StaticToken::OrAssign, BinaryOp::MathAssign(BinaryMathOp::Or)),
+        (StaticToken::XorAssign, BinaryOp::MathAssign(BinaryMathOp::Xor)),
+        (StaticToken::ShiftLeftAssign, BinaryOp::MathAssign(BinaryMathOp::Shl)),
+        (StaticToken::ShiftRightAssign, BinaryOp::MathAssign(BinaryMathOp::Shr)),
+        (StaticToken::LogicalAndAssign, BinaryOp::LogicAssign(BinaryLogicOp::And)),
+        (StaticToken::LogicalOrAssign, BinaryOp::LogicAssign(BinaryLogicOp::Or)),
     ]);
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UnaryOp {
     Positive,
     Negate,
     Not,
     LogicalNot,
+    Increment,
+    Decrement,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

@@ -2,9 +2,7 @@ mod builtin_functions;
 
 use crate::compiler::codegen::builtin_functions::add_builtin_fn_code;
 use crate::compiler::parser::analyzed_syntax_tree::{AnalyzedFunction, AnalyzedProgram};
-use crate::compiler::parser::syntax_tree::{
-    BinaryOp, Expression, Literal, SrcExpression, SrcStatement, Statement, UnaryOp,
-};
+use crate::compiler::parser::syntax_tree::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, BinaryOp, Expression, Literal, SrcExpression, SrcStatement, Statement, UnaryOp};
 use crate::compiler::parser::types::Type;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -71,9 +69,7 @@ pub fn generate_code(program: AnalyzedProgram, output: &PathBuf) {
         context.function_labels[&program.main_function]
     ));
 
-    if program.functions[&program.main_function]
-        .return_type
-        .is_none()
+    if program.functions[&program.main_function].return_type == Type::Unit
     {
         context.push("movi r0 0");
     }
@@ -151,7 +147,9 @@ fn generate_statement_code(context: &mut Context, statement: SrcStatement) {
                 .insert(name.clone(), var_type.size());
 
             generate_expression_code(context, value);
-            context.push(&format!("store #{} r0 [bp;{}]", size, offset));
+            if size > 0 {
+                context.push(&format!("store #{} r0 [bp;{}]", size, offset));
+            }
         }
         Statement::Expr(expr) => {
             generate_expression_code(context, expr);
@@ -173,6 +171,46 @@ fn generate_statement_code(context: &mut Context, statement: SrcStatement) {
                 generate_expression_code(context, false_expr);
             }
             context.push_label(end_label);
+        }
+        Statement::For {
+            init,
+            condition,
+            update,
+            body,
+        } => {
+            generate_statement_code(context, *init);
+            let loop_label = context.get_new_label();
+            let end_label = context.get_new_label();
+            context.push_label(loop_label.clone());
+            generate_expression_code(context, condition);
+            context.push("cmpi r0 0");
+            context.push(&format!("jz {}", end_label));
+            generate_expression_code(context, body);
+            generate_expression_code(context, update);
+            context.push(&format!("jmp {}", loop_label));
+            context.push_label(end_label);
+        }
+        Statement::While {
+            condition,
+            body,
+            is_do_while,
+        } => {
+            let loop_label = context.get_new_label();
+            context.push_label(loop_label.clone());
+            if !is_do_while {
+                let end_label = context.get_new_label();
+                generate_expression_code(context, condition);
+                context.push("cmpi r0 0");
+                context.push(&format!("jz {}", end_label));
+                generate_expression_code(context, body);
+                context.push(&format!("jmp {}", loop_label));
+                context.push_label(end_label);
+            } else {
+                generate_expression_code(context, body);
+                generate_expression_code(context, condition);
+                context.push("cmpi r0 0");
+                context.push(&format!("jnz {}", loop_label));
+            }
         }
     }
 }
@@ -202,15 +240,19 @@ fn generate_expression_code(context: &mut Context, expr: SrcExpression) {
         Expression::Variable(name) => {
             let offset = context.fn_context.var_stack_offsets[&name];
             let size = context.fn_context.var_type_sizes[&name] * 8;
-            context.push(&format!("load #{} r0 [bp;{}]", size, offset));
+            if size > 0 {
+                context.push(&format!("load #{} r0 [bp;{}]", size, offset));
+            }
         }
         Expression::FunctionCall { function, args } => {
             let mut total_size = 0;
             for (i, arg) in args.into_iter().enumerate() {
                 let arg_bytes = context.function_arg_sizes[&function][i];
                 generate_expression_code(context, arg);
-                context.push(&format!("push #{} r0", arg_bytes * 8));
-                total_size += arg_bytes;
+                if arg_bytes > 0 {
+                    context.push(&format!("push #{} r0", arg_bytes * 8));
+                    total_size += arg_bytes;
+                }
             }
             context.push(&format!("call {}", context.function_labels[&function]));
             context.push(&format!("addi sp {}", total_size));
@@ -224,18 +266,32 @@ fn generate_expression_code(context: &mut Context, expr: SrcExpression) {
             }
         }
         Expression::Unary { op, expr } => {
-            generate_expression_code(context, *expr);
             match op {
                 UnaryOp::Negate => {
+                    generate_expression_code(context, *expr);
                     context.push("neg r0");
                 }
-                UnaryOp::Positive => {}
+                UnaryOp::Positive => {
+                    generate_expression_code(context, *expr);
+                }
                 UnaryOp::Not => {
+                    generate_expression_code(context, *expr);
                     context.push("not r0");
                 }
                 UnaryOp::LogicalNot => {
+                    generate_expression_code(context, *expr);
                     context.push("cmpi r0 0");
                     context.push("setz r0");
+                }
+                UnaryOp::Increment | UnaryOp::Decrement => {
+                    let (offset, size) = get_var_data(context, expr.expr);
+                    context.push(&format!("load #{} r0 [bp;{}]", size, offset));
+                    if op == UnaryOp::Increment {
+                        context.push("addi r0 1");
+                    } else {
+                        context.push("subi r0 1");
+                    }
+                    context.push(&format!("store #{} r0 [bp;{}]", size, offset));
                 }
             }
         }
@@ -256,38 +312,12 @@ fn generate_expression_code(context: &mut Context, expr: SrcExpression) {
             context.push_label(end_label);
         }
         Expression::Binary { op, left, right } => match op {
-            BinaryOp::LogicalOr | BinaryOp::LogicalAnd => {
-                generate_logic_binop(context, op, *left, *right)
-            }
-            BinaryOp::Add
-            | BinaryOp::Sub
-            | BinaryOp::Mul
-            | BinaryOp::Div
-            | BinaryOp::And
-            | BinaryOp::Or
-            | BinaryOp::Xor
-            | BinaryOp::Mod
-            | BinaryOp::Shl
-            | BinaryOp::Shr => generate_math_binop(context, op, *left, *right),
-            BinaryOp::Less
-            | BinaryOp::LessEquals
-            | BinaryOp::Greater
-            | BinaryOp::GreaterEquals
-            | BinaryOp::Equals
-            | BinaryOp::NotEquals => generate_relational_binop(context, op, *left, *right),
-            BinaryOp::Assign
-            | BinaryOp::AddAssign
-            | BinaryOp::SubAssign
-            | BinaryOp::MulAssign
-            | BinaryOp::DivAssign
-            | BinaryOp::AndAssign
-            | BinaryOp::OrAssign
-            | BinaryOp::XorAssign
-            | BinaryOp::ModAssign
-            | BinaryOp::ShlAssign
-            | BinaryOp::ShrAssign => {
-                generate_assignment_binop(context, op, *left, *right);
-            }
+            BinaryOp::Logical(logic_op) => generate_logic_binop(context, logic_op, *left, *right),
+            BinaryOp::Math(math_op) => generate_math_binop(context, math_op, *left, *right),
+            BinaryOp::Comparison(comp_op) => generate_comparison_binop(context, comp_op, *left, *right),
+            BinaryOp::Assign => generate_assignment_binop(context, None, *left, *right),
+            BinaryOp::MathAssign(math_op) => generate_assignment_binop(context, Some(math_op), *left, *right),
+            BinaryOp::LogicAssign(logic_op) => generate_logic_assignment_binop(context, logic_op, *left, *right),
         },
         Expression::Cast { var_type, expr } => {
             generate_expression_code(context, *expr);
@@ -304,33 +334,24 @@ fn generate_expression_code(context: &mut Context, expr: SrcExpression) {
 
 fn generate_logic_binop(
     context: &mut Context,
-    op: BinaryOp,
+    op: BinaryLogicOp,
     left: SrcExpression,
     right: SrcExpression,
 ) {
-    let false_label = context.get_new_label();
     let end_label = context.get_new_label();
     generate_expression_code(context, left);
     context.push("cmpi r0 0");
     match op {
-        BinaryOp::LogicalOr => {
-            context.push(&format!("jnz {}", end_label));
-        }
-        BinaryOp::LogicalAnd => {
-            context.push(&format!("jz {}", false_label));
-        }
-        _ => unreachable!(),
+        BinaryLogicOp::Or => context.push(&format!("jnz {}", end_label)),
+        BinaryLogicOp::And => context.push(&format!("jz {}", end_label)),
     }
     generate_expression_code(context, right);
-    context.push(&format!("jmp {}", end_label));
-    context.push_label(false_label);
-    context.push("movi r0 0");
     context.push_label(end_label);
 }
 
 fn generate_math_binop(
     context: &mut Context,
-    op: BinaryOp,
+    op: BinaryMathOp,
     left: SrcExpression,
     right: SrcExpression,
 ) {
@@ -339,24 +360,12 @@ fn generate_math_binop(
     generate_expression_code(context, right);
     context.push("mov r1 r0");
     context.push("pop #64 r0");
-    match op {
-        BinaryOp::Add => context.push("add r0 r1"),
-        BinaryOp::Sub => context.push("sub r0 r1"),
-        BinaryOp::Mul => context.push("mul r0 r1"),
-        BinaryOp::Div => context.push("div r0 r1"),
-        BinaryOp::Mod => context.push("mod r0 r1"),
-        BinaryOp::And => context.push("and r0 r1"),
-        BinaryOp::Or => context.push("or r0 r1"),
-        BinaryOp::Xor => context.push("xor r0 r1"),
-        BinaryOp::Shl => context.push("shl r0 r1"),
-        BinaryOp::Shr => context.push("shr r0 r1"),
-        _ => unreachable!(),
-    }
+    add_math_op_instruction(context, op);
 }
 
-fn generate_relational_binop(
+fn generate_comparison_binop(
     context: &mut Context,
-    op: BinaryOp,
+    op: BinaryComparisonOp,
     left: SrcExpression,
     right: SrcExpression,
 ) {
@@ -367,45 +376,71 @@ fn generate_relational_binop(
     context.push("pop #64 r0");
     context.push("cmp r0 r1");
     match op {
-        BinaryOp::Less => context.push("setl r0"),
-        BinaryOp::LessEquals => context.push("setle r0"),
-        BinaryOp::Greater => context.push("setg r0"),
-        BinaryOp::GreaterEquals => context.push("setge r0"),
-        BinaryOp::Equals => context.push("setz r0"),
-        BinaryOp::NotEquals => context.push("setnz r0"),
-        _ => unreachable!(),
+        BinaryComparisonOp::Equals => context.push("setz r0"),
+        BinaryComparisonOp::NotEquals => context.push("setnz r0"),
+        BinaryComparisonOp::Less => context.push("setl r0"),
+        BinaryComparisonOp::LessEquals => context.push("setle r0"),
+        BinaryComparisonOp::Greater => context.push("setg r0"),
+        BinaryComparisonOp::GreaterEquals => context.push("setge r0"),
     }
 }
 
 fn generate_assignment_binop(
     context: &mut Context,
-    op: BinaryOp,
+    op: Option<BinaryMathOp>,
     left: SrcExpression,
     right: SrcExpression,
 ) {
     generate_expression_code(context, right);
-    let name = match left.expr {
+    let (offset, size) = get_var_data(context, left.expr);
+    if let Some(math_op) = op {
+        context.push("mov r1 r0");
+        context.push(&format!("load #{} r0 [bp;{}]", size, offset));
+        add_math_op_instruction(context, math_op);
+    }
+    context.push(&format!("store #{} r0 [bp;{}]", size, offset));
+}
+
+fn generate_logic_assignment_binop(
+    context: &mut Context,
+    op: BinaryLogicOp,
+    left: SrcExpression,
+    right: SrcExpression,
+) {
+    let end_label = context.get_new_label();
+    let (offset, size) = get_var_data(context, left.expr);
+    context.push(&format!("load #{} r0 [bp;{}]", size, offset));
+    context.push("cmpi r0 0");
+    match op {
+        BinaryLogicOp::Or => context.push(&format!("jnz {}", end_label)),
+        BinaryLogicOp::And => context.push(&format!("jz {}", end_label)),
+    }
+    generate_expression_code(context, right);
+    context.push_label(end_label);
+    context.push(&format!("store #{} r0 [bp;{}]", size, offset));
+}
+
+fn add_math_op_instruction(context: &mut Context, op: BinaryMathOp) {
+    match op {
+        BinaryMathOp::Add => context.push("add r0 r1"),
+        BinaryMathOp::Sub => context.push("sub r0 r1"),
+        BinaryMathOp::Mul => context.push("mul r0 r1"),
+        BinaryMathOp::Div => context.push("div r0 r1"),
+        BinaryMathOp::Mod => context.push("mod r0 r1"),
+        BinaryMathOp::And => context.push("and r0 r1"),
+        BinaryMathOp::Or => context.push("or r0 r1"),
+        BinaryMathOp::Xor => context.push("xor r0 r1"),
+        BinaryMathOp::Shl => context.push("shl r0 r1"),
+        BinaryMathOp::Shr => context.push("shr r0 r1"),
+    }
+}
+
+fn get_var_data(context: &mut Context, expr: Expression) -> (isize, usize) {
+    let name = match expr {
         Expression::Variable(name) => name,
         _ => unreachable!(),
     };
     let offset = context.fn_context.var_stack_offsets[&name];
     let size = context.fn_context.var_type_sizes[&name] * 8;
-    if op != BinaryOp::Assign {
-        context.push("mov r1 r0");
-        context.push(&format!("load #{} r0 [bp;{}]", size, offset));
-        match op {
-            BinaryOp::AddAssign => context.push("add r0 r1"),
-            BinaryOp::SubAssign => context.push("sub r0 r1"),
-            BinaryOp::MulAssign => context.push("mul r0 r1"),
-            BinaryOp::DivAssign => context.push("div r0 r1"),
-            BinaryOp::ModAssign => context.push("mod r0 r1"),
-            BinaryOp::AndAssign => context.push("and r0 r1"),
-            BinaryOp::OrAssign => context.push("or r0 r1"),
-            BinaryOp::XorAssign => context.push("xor r0 r1"),
-            BinaryOp::ShlAssign => context.push("shl r0 r1"),
-            BinaryOp::ShrAssign => context.push("shr r0 r1"),
-            _ => unreachable!(),
-        }
-    }
-    context.push(&format!("store #{} r0 [bp;{}]", size, offset));
+    (offset, size)
 }

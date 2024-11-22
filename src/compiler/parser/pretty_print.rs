@@ -24,11 +24,8 @@ impl PrettyPrint for Function {
             }
         }
         result.push_str(") -> ");
-        if let Some(ty) = &self.return_type {
-            result.push_str(&format!("{:?}", ty));
-        } else {
-            result.push_str("()");
-        }
+        result.push_str(&format!("{:?}", self.return_type));
+
         result.push_str("\n");
         result.push_str(&self.expr.expr.pretty_print(indent));
         result.push_str("\n\n");
@@ -76,6 +73,39 @@ impl PrettyPrint for Statement {
                 if let Some(false_expr) = false_expr {
                     result.push_str(" else ");
                     result.push_str(&false_expr.expr.pretty_print(indent));
+                }
+                result.push_str("\n");
+            }
+            Statement::For {
+                init,
+                condition,
+                update,
+                body,
+            } => {
+                result.push_str("for ");
+                result.push_str(&init.statement.pretty_print(indent));
+                result.push_str(&condition.expr.pretty_print(indent));
+                result.push_str("; ");
+                result.push_str(&update.expr.pretty_print(indent));
+                result.push_str(" ");
+                result.push_str(&body.expr.pretty_print(indent));
+                result.push_str("\n");
+            }
+            Statement::While {
+                condition,
+                body,
+                is_do_while,
+            } => {
+                if *is_do_while {
+                    result.push_str("do ");
+                    result.push_str(&body.expr.pretty_print(indent));
+                    result.push_str(" while ");
+                    result.push_str(&condition.expr.pretty_print(indent));
+                } else {
+                    result.push_str("while ");
+                    result.push_str(&condition.expr.pretty_print(indent));
+                    result.push_str(" ");
+                    result.push_str(&body.expr.pretty_print(indent));
                 }
                 result.push_str("\n");
             }

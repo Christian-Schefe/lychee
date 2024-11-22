@@ -1,9 +1,7 @@
 use crate::compiler::lexer::Location;
 use crate::compiler::parser::analyzed_syntax_tree::{AnalyzedFunction, AnalyzedProgram};
 use crate::compiler::parser::parser_error::LocationError;
-use crate::compiler::parser::syntax_tree::{
-    BinaryOp, Expression, Program, SrcExpression, SrcFunction, SrcStatement, Statement, UnaryOp,
-};
+use crate::compiler::parser::syntax_tree::{BinaryOp, BinaryComparisonOp, Expression, Program, SrcExpression, SrcFunction, SrcStatement, Statement, UnaryOp};
 use crate::compiler::parser::types::Type;
 use std::collections::HashMap;
 
@@ -17,17 +15,17 @@ struct ValidationContext {
 
 #[derive(Clone)]
 struct FunctionDeclaration {
-    return_type: Option<Type>,
+    return_type: Type,
     args: Vec<Type>,
 }
 
 fn add_builtin_function_declarations(context: &mut ValidationContext) {
     let write_declaration = FunctionDeclaration {
-        return_type: Some(Type::Unit),
+        return_type: Type::Unit,
         args: vec![Type::Char],
     };
     let read_declaration = FunctionDeclaration {
-        return_type: Type::Char.into(),
+        return_type: Type::Char,
         args: vec![],
     };
     context
@@ -53,14 +51,9 @@ pub fn analyze_program(program: &Program) -> ValidationResult<AnalyzedProgram> {
             "Program requires a main function.",
             &Location { line: 1, column: 1 },
         ))?;
-    if main_function
-        .function
-        .return_type
-        .as_ref()
-        .is_some_and(|x| *x != Type::Int)
-    {
+    if main_function.function.return_type != Type::Unit && main_function.function.return_type != Type::Int {
         return Err(LocationError::msg(
-            "Main function must return void or an integer.",
+            "Main function must return unit or an integer.",
             &main_function.location,
         ));
     }
@@ -110,14 +103,23 @@ fn analyze_function(
     for (name, ty) in &function.function.args {
         context.variable_types.insert(name.clone(), ty.clone());
     }
-    let return_type = function.function.return_type.clone().unwrap_or(Type::Unit);
-    analyze_expr(context, &function.function.expr, Some(&return_type))?;
+    let return_type = &function.function.return_type;
+    let block_type = analyze_expr(context, &function.function.expr, None)?;
+    if !always_returns_expr(&function.function.expr) && block_type != *return_type {
+        return Err(LocationError::msg(
+            &format!(
+                "Function must return a value of type '{:?}'.",
+                return_type
+            ),
+            &function.location,
+        ));
+    }
 
     let stack_space = calc_local_var_stack_space_expr(&function.function.expr);
     Ok(AnalyzedFunction {
         name: function.function.name.clone(),
         args: function.function.args.clone(),
-        return_type: function.function.return_type.clone(),
+        return_type: return_type.clone(),
         local_var_stack_size: stack_space,
         expr: function.function.expr.clone(),
     })
@@ -133,11 +135,12 @@ fn analyze_statement(
                 .function_declarations
                 .get(context.current_function.as_ref().unwrap())
                 .unwrap();
-            if let Some(return_type) = function.return_type.clone() {
+            let return_type = function.return_type.clone();
+            if return_type != Type::Unit {
                 let expr = expr.as_ref().ok_or(LocationError::msg(
                     &format!(
                         "Return statement needs to return a value of type '{:?}'.",
-                        &return_type
+                        &function.return_type
                     ),
                     &statement.location,
                 ))?;
@@ -180,6 +183,25 @@ fn analyze_statement(
             if let Some(false_expr) = false_expr {
                 analyze_expr(context, false_expr, None)?;
             }
+        }
+        Statement::For {
+            init,
+            condition,
+            update,
+            body,
+        } => {
+            analyze_statement(context, init)?;
+            analyze_expr(context, condition, Some(&Type::Bool))?;
+            analyze_expr(context, update, None)?;
+            analyze_expr(context, body, None)?;
+        }
+        Statement::While {
+            condition,
+            body,
+            is_do_while: _,
+        } => {
+            analyze_expr(context, condition, Some(&Type::Bool))?;
+            analyze_expr(context, body, None)?;
         }
     }
     Ok(())
@@ -279,19 +301,54 @@ fn analyze_expr(
                     ))
                 }
             }
+            UnaryOp::Increment | UnaryOp::Decrement => {
+                if expected_type.is_none_or(|x| x.is_integer()) {
+                    if !is_assignable(&inner_expr.expr) {
+                        return Err(LocationError::msg(
+                            "Expected assignable expression",
+                            &inner_expr.location,
+                        ));
+                    }
+                    let expr_type = analyze_expr(context, inner_expr, expected_type)?;
+                    if expr_type.is_integer() {
+                        Ok(expr_type)
+                    } else {
+                        Err(LocationError::msg(
+                            &format!(
+                                "Unary operation requires an integer type. Found type '{:?}'.",
+                                &expr_type
+                            ),
+                            &inner_expr.location,
+                        ))
+                    }
+                } else {
+                    Err(LocationError::msg(
+                        &format!(
+                            "Unary operation yields an integer type. Found type '{:?}'.",
+                            expected_type
+                        ),
+                        &expr.location,
+                    ))
+                }
+            }
         },
         Expression::Binary { op, left, right } => {
             match op {
-                BinaryOp::Add
-                | BinaryOp::Sub
-                | BinaryOp::Mul
-                | BinaryOp::Div
-                | BinaryOp::Mod
-                | BinaryOp::And
-                | BinaryOp::Or
-                | BinaryOp::Xor
-                | BinaryOp::Shl
-                | BinaryOp::Shr => {
+                BinaryOp::Logical(_) => {
+                    if expected_type.is_none_or(|x| *x == Type::Bool) {
+                        analyze_expr(context, left, Some(&Type::Bool))?;
+                        analyze_expr(context, right, Some(&Type::Bool))
+                    } else {
+                        Err(LocationError::msg(
+                            &format!(
+                                "Binary operation yields a boolean type. Found type '{:?}'.",
+                                expected_type
+                            ),
+                            &expr.location,
+                        ))
+                    }
+                }
+                BinaryOp::Math(_) => {
                     if expected_type.is_none_or(|x| x.is_integer()) {
                         let left_type = analyze_expr(context, left, expected_type)?;
                         if !left_type.is_integer() {
@@ -314,13 +371,10 @@ fn analyze_expr(
                         ))
                     }
                 }
-                BinaryOp::Less
-                | BinaryOp::LessEquals
-                | BinaryOp::Greater
-                | BinaryOp::GreaterEquals => {
+                BinaryOp::Comparison(op) => {
                     if expected_type.is_none_or(|x| *x == Type::Bool) {
                         let left_type = analyze_expr(context, left, None)?;
-                        if !left_type.is_integer() {
+                        if *op != BinaryComparisonOp::Equals && *op != BinaryComparisonOp::NotEquals && !left_type.is_integer() {
                             return Err(LocationError::msg(&format!("Comparison operation requires an integer type. Found type '{:?}'.", &left_type), &left.location));
                         }
                         analyze_expr(context, right, Some(&left_type))?;
@@ -329,35 +383,6 @@ fn analyze_expr(
                         Err(LocationError::msg(
                             &format!(
                                 "Comparison operation yields a boolean type. Found type '{:?}'.",
-                                expected_type
-                            ),
-                            &expr.location,
-                        ))
-                    }
-                }
-                BinaryOp::Equals | BinaryOp::NotEquals => {
-                    if expected_type.is_none_or(|x| *x == Type::Bool) {
-                        let left_type = analyze_expr(context, left, None)?;
-                        analyze_expr(context, right, Some(&left_type))?;
-                        Ok(Type::Bool)
-                    } else {
-                        Err(LocationError::msg(
-                            &format!(
-                                "Comparison operation yields a boolean type. Found type '{:?}'.",
-                                expected_type
-                            ),
-                            &expr.location,
-                        ))
-                    }
-                }
-                BinaryOp::LogicalOr | BinaryOp::LogicalAnd => {
-                    if expected_type.is_none_or(|x| *x == Type::Bool) {
-                        analyze_expr(context, left, Some(&Type::Bool))?;
-                        analyze_expr(context, right, Some(&Type::Bool))
-                    } else {
-                        Err(LocationError::msg(
-                            &format!(
-                                "Binary operation yields a boolean type. Found type '{:?}'.",
                                 expected_type
                             ),
                             &expr.location,
@@ -376,16 +401,28 @@ fn analyze_expr(
                         ))
                     }
                 }
-                BinaryOp::AddAssign
-                | BinaryOp::SubAssign
-                | BinaryOp::MulAssign
-                | BinaryOp::DivAssign
-                | BinaryOp::ModAssign
-                | BinaryOp::AndAssign
-                | BinaryOp::OrAssign
-                | BinaryOp::XorAssign
-                | BinaryOp::ShlAssign
-                | BinaryOp::ShrAssign => {
+                BinaryOp::LogicAssign(_) => {
+                    if is_assignable(&left.expr) {
+                        if expected_type.is_some_and(|x| *x != Type::Bool) {
+                            return Err(LocationError::msg(
+                                &format!(
+                                    "Binary assignment operation yields a boolean type. Found type '{:?}'.",
+                                    expected_type
+                                ),
+                                &expr.location,
+                            ));
+                        }
+                        analyze_expr(context, left, Some(&Type::Bool))?;
+                        analyze_expr(context, right, Some(&Type::Bool))?;
+                        Ok(Type::Bool)
+                    } else {
+                        Err(LocationError::msg(
+                            "Expected assignable expression",
+                            &expr.location,
+                        ))
+                    }
+                }
+                BinaryOp::MathAssign(_) => {
                     if is_assignable(&left.expr) {
                         let var_type = analyze_expr(context, left, expected_type)?;
                         if !var_type.is_integer() {
@@ -431,16 +468,14 @@ fn analyze_expr(
                     &format!("Variable '{}' has not been declared.", name),
                     &expr.location,
                 ))?;
-            if let Some(expected_type) = expected_type {
-                if var_type != *expected_type {
-                    return Err(LocationError::msg(
-                        &format!(
-                            "Expected type '{:?}', found type '{:?}'.",
-                            expected_type, var_type
-                        ),
-                        &expr.location,
-                    ));
-                }
+            if expected_type.is_some_and(|x| *x != var_type) {
+                return Err(LocationError::msg(
+                    &format!(
+                        "Expected type '{:?}', but variable is of type '{:?}'.",
+                        expected_type.unwrap(), var_type
+                    ),
+                    &expr.location,
+                ));
             }
             Ok(var_type)
         }
@@ -463,17 +498,15 @@ fn analyze_expr(
                     &expr.location,
                 ));
             }
-            let return_type = function.return_type.unwrap_or(Type::Unit);
-            if let Some(expected_type) = expected_type {
-                if return_type != *expected_type {
-                    return Err(LocationError::msg(
-                        &format!(
-                            "Expected type '{:?}', found type '{:?}'.",
-                            expected_type, return_type
-                        ),
-                        &expr.location,
-                    ));
-                }
+            let return_type = function.return_type.clone();
+            if expected_type.is_some_and(|x| *x != return_type) {
+                return Err(LocationError::msg(
+                    &format!(
+                        "Expected type '{:?}', found type '{:?}'.",
+                        expected_type, return_type
+                    ),
+                    &expr.location,
+                ));
             }
             for (arg, expected_arg_type) in args.iter().zip(function.args.iter()) {
                 analyze_expr(context, arg, Some(expected_arg_type))?;
@@ -527,7 +560,8 @@ fn always_returns_expr(expr: &SrcExpression) -> bool {
                 .unwrap_or(false)
         }
         Expression::Binary { op, left, right } => match op {
-            BinaryOp::LogicalOr | BinaryOp::LogicalAnd => always_returns_expr(left),
+            BinaryOp::Logical(_) => always_returns_expr(left),
+            BinaryOp::LogicAssign(_) => always_returns_expr(left),
             _ => always_returns_expr(left) || always_returns_expr(right),
         },
         Expression::Unary { op: _, expr } => always_returns_expr(expr),
@@ -558,9 +592,21 @@ fn always_returns_statement(statement: &SrcStatement) -> bool {
         } => {
             always_returns_expr(true_expr)
                 && false_expr
-                    .as_ref()
-                    .map(always_returns_expr)
-                    .unwrap_or(false)
+                .as_ref()
+                .map(always_returns_expr)
+                .unwrap_or(false)
+        }
+        Statement::For {
+            init,
+            condition,
+            update: _,
+            body: _,
+        } => {
+            always_returns_statement(init)
+                || always_returns_expr(condition)
+        }
+        Statement::While { condition, body, is_do_while } => {
+            always_returns_expr(condition) || (*is_do_while && always_returns_expr(body))
         }
     }
 }
@@ -615,9 +661,23 @@ fn calc_local_var_stack_space_statement(statement: &SrcStatement) -> usize {
             calc_local_var_stack_space_expr(condition)
                 + calc_local_var_stack_space_expr(true_expr)
                 + false_expr
-                    .as_ref()
-                    .map(calc_local_var_stack_space_expr)
-                    .unwrap_or(0)
+                .as_ref()
+                .map(calc_local_var_stack_space_expr)
+                .unwrap_or(0)
+        }
+        Statement::For {
+            init,
+            condition,
+            update,
+            body,
+        } => {
+            calc_local_var_stack_space_statement(init)
+                + calc_local_var_stack_space_expr(condition)
+                + calc_local_var_stack_space_expr(update)
+                + calc_local_var_stack_space_expr(body)
+        }
+        Statement::While { condition, body, .. } => {
+            calc_local_var_stack_space_expr(condition) + calc_local_var_stack_space_expr(body)
         }
     }
 }
