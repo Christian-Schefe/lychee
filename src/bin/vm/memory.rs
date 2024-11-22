@@ -114,8 +114,10 @@ impl Memory {
 
     pub fn print_stack(&self) {
         let sp = self.registers[constants::SP] as usize;
-        //let bp = self.registers[constants::BP] as usize;
-        let stack = &self.data[sp..];
+        let bp = self.registers[constants::BP] as usize;
+        let stack = self.data[sp..].iter().rev().collect::<Vec<&u8>>();
         println!("Stack: {:?}", stack);
+        let stack_frame = &self.data[sp..bp].iter().rev().collect::<Vec<&u8>>();;
+        println!("Stack frame: {:?}", stack_frame);
     }
 }

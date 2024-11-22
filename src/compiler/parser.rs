@@ -248,6 +248,10 @@ fn parse_type(tokens: &mut TokenStack) -> ParseResult<Type> {
             let inner_type = Box::new(parse_type(tokens)?);
             Ok(Type::Pointer(inner_type))
         }
+        Token::Static(StaticToken::LogicalAnd) => {
+            let inner_type = Box::new(parse_type(tokens)?);
+            Ok(Type::Pointer(Box::new(Type::Pointer(inner_type))))
+        }
         _ => Err(LocationError::expect("Type", token)),
     }
 }

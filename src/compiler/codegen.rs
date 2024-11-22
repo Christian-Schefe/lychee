@@ -91,7 +91,7 @@ fn generate_function_code(context: &mut Context, function: AnalyzedFunction) {
         name: function.name,
         var_stack_offsets: HashMap::new(),
         var_type_sizes: HashMap::new(),
-        current_stack_offset: -8,
+        current_stack_offset: 0,
     };
     context.push_label(context.function_labels[&context.fn_context.name].clone());
     context.push("push #64 bp");
@@ -111,7 +111,9 @@ fn generate_function_code(context: &mut Context, function: AnalyzedFunction) {
         argument_offset += ty.size() as isize;
     }
 
-    context.push(&format!("subi sp {}", function.local_var_stack_size + 8));
+    if function.local_var_stack_size > 0 {
+        context.push(&format!("subi sp {}", function.local_var_stack_size));
+    }
 
     generate_expression_code(context, function.expr);
 
@@ -134,22 +136,17 @@ fn generate_statement_code(context: &mut Context, statement: AnalyzedStatement) 
             name,
             value,
         } => {
+            let size = var_type.size();
+            context.fn_context.current_stack_offset -= size as isize;
             let offset = context.fn_context.current_stack_offset;
-            context.fn_context.current_stack_offset -= var_type.size() as isize;
-            let size = var_type.size() * 8;
-            context
-                .fn_context
-                .var_stack_offsets
-                .insert(name.clone(), offset);
-            context
-                .fn_context
-                .var_type_sizes
-                .insert(name.clone(), var_type.size());
+            context.fn_context.var_stack_offsets.insert(name.clone(), offset);
+            context.fn_context.var_type_sizes.insert(name.clone(), size);
 
             generate_expression_code(context, value);
             if size > 0 {
-                context.push(&format!("store #{} r0 [bp;{}]", size, offset));
+                context.push(&format!("store #{} r0 [bp;{}]", size * 8, offset));
             }
+            println!("{}: {}, size {} bytes  {}", name, offset, size, context.fn_context.current_stack_offset);
         }
         AnalyzedStatement::Expr(expr) => {
             generate_expression_code(context, expr);
@@ -257,39 +254,40 @@ fn generate_expression_code(context: &mut Context, expr: TypedAnalyzedExpression
                 generate_expression_code(context, *final_expr);
             }
         }
-        AnalyzedExpression::Unary { op, expr } => {
+        AnalyzedExpression::Unary { op, expr: inner_expr } => {
             match op {
                 UnaryOp::Negate => {
-                    generate_expression_code(context, *expr);
+                    generate_expression_code(context, *inner_expr);
                     context.push("neg r0");
                 }
                 UnaryOp::Positive => {
-                    generate_expression_code(context, *expr);
+                    generate_expression_code(context, *inner_expr);
                 }
                 UnaryOp::Not => {
-                    generate_expression_code(context, *expr);
+                    generate_expression_code(context, *inner_expr);
                     context.push("not r0");
                 }
                 UnaryOp::LogicalNot => {
-                    generate_expression_code(context, *expr);
+                    generate_expression_code(context, *inner_expr);
                     context.push("cmpi r0 0");
                     context.push("setz r0");
                 }
                 UnaryOp::Increment | UnaryOp::Decrement => {
-                    generate_expression_code(context, *expr.clone());
+                    generate_expression_code(context, *inner_expr.clone());
                     if op == UnaryOp::Increment {
                         context.push("addi r0 1");
                     } else {
                         context.push("subi r0 1");
                     }
-                    store_var(context, expr.expr);
+                    store_var(context, *inner_expr);
                 }
                 UnaryOp::Borrow => {
-                    load_var_address(context, expr.expr);
+                    load_var_address(context, inner_expr.expr);
                 }
                 UnaryOp::Deref => {
-                    generate_expression_code(context, *expr);
-                    context.push("load #64 r0 [r0]");
+                    let size = expr.expr_type.size() * 8;
+                    generate_expression_code(context, *inner_expr);
+                    context.push(&format!("load #{} r0 [r0]", size));
                 }
             }
         }
@@ -396,7 +394,7 @@ fn generate_assignment_binop(
         context.push("pop #64 r1");
         add_math_op_instruction(context, math_op);
     }
-    store_var(context, left.expr);
+    store_var(context, left);
 }
 
 fn generate_logic_assignment_binop(
@@ -414,7 +412,7 @@ fn generate_logic_assignment_binop(
     }
     generate_expression_code(context, right);
     context.push_label(end_label);
-    store_var(context, left.expr);
+    store_var(context, left);
 }
 
 fn add_math_op_instruction(context: &mut Context, op: BinaryMathOp) {
@@ -442,18 +440,19 @@ fn load_var_address(context: &mut Context, expr: AnalyzedExpression) {
     }
 }
 
-fn store_var(context: &mut Context, expr: AnalyzedExpression) {
-    match expr {
+fn store_var(context: &mut Context, expr: TypedAnalyzedExpression) {
+    match expr.expr {
         AnalyzedExpression::Variable(name) => {
             let offset = context.fn_context.var_stack_offsets[&name];
             let size = context.fn_context.var_type_sizes[&name] * 8;
             context.push(&format!("store #{} r0 [bp;{}]", size, offset));
         }
-        AnalyzedExpression::Unary { op: UnaryOp::Deref, expr } => {
+        AnalyzedExpression::Unary { op: UnaryOp::Deref, expr: inner_expr } => {
+            let size = expr.expr_type.size() * 8;
             context.push("push #64 r0");
-            generate_expression_code(context, *expr);
+            generate_expression_code(context, *inner_expr);
             context.push("pop #64 r1");
-            context.push("store #64 r1 [r0]");
+            context.push(&format!("store #{} r1 [r0]", size));
         }
         _ => unreachable!(),
     }

@@ -105,16 +105,12 @@ fn analyze_function(
         context.variable_types.insert(name.clone(), ty.clone());
     }
     let return_type = &function.function.return_type;
-    let analyzed_expr = analyze_expr(context, &function.function.expr, None)?;
-    if !always_returns_expr(&function.function.expr) && analyzed_expr.expr_type != *return_type {
-        return Err(LocationError::msg(
-            &format!(
-                "Function must return a value of type '{:?}'.",
-                return_type
-            ),
-            &function.location,
-        ));
-    }
+    let expected_type = if !always_returns_expr(&function.function.expr) {
+        Some(return_type)
+    } else {
+        None
+    };
+    let analyzed_expr = analyze_expr(context, &function.function.expr, expected_type)?;
 
     let stack_space = calc_local_var_stack_space_expr(&function.function.expr);
     Ok(AnalyzedFunction {
@@ -742,7 +738,7 @@ fn analyze_expr(
                 Err(LocationError::msg(
                     &format!(
                         "Cannot cast type '{:?}' to type '{:?}'",
-                        &analyzed_expr, &var_type
+                        &expr_type, &var_type
                     ),
                     &expr.location,
                 ))

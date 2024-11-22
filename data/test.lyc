@@ -1,34 +1,17 @@
 int main() {
-    bool c = true;
-    c &&= {
-        writechar(' ');
-        false
-    };
-    unit a = ();
-    writenum(123 + 456 * -21);
-    writechar('\n');
     int pointed = 5;
-    pointer_test(&pointed);
-    pointed
+    int test = 3;
+    &int pointer = &pointed;
+    write_alphabet(&test);
+    return (int)('a' == 'a');
 }
 
-unit writenum(int num) {
-    if num == 0 {
-        writechar('0');
-        return;
-    } else if num < 0 {
-        writechar('-');
-        num = -num;
-    }
-
-    if num >= 10 {
-        writenum(num / 10);
-    }
-    writechar((char)(num % 10 + (int)'0'));
+unit pointer_test(&int pointer) {
+    *pointer = 125;
 }
 
-unit pointer_test(&int a) {
-    *a = 123;
-    writenum(*a);
-    writechar('\n');
+unit write_alphabet(&int counter) {
+    for (*counter = 0; *counter < 26; ++*counter) {
+        writechar((char)(*counter + (int)'a'));
+    }
 }

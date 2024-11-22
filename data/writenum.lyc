@@ -1,0 +1,18 @@
+int main() {
+    writenum(123 + 456 * -21);
+}
+
+unit writenum(int num) {
+    if num == 0 {
+        writechar('0');
+        return;
+    } else if num < 0 {
+        writechar('-');
+        num = -num;
+    }
+
+    if num >= 10 {
+        writenum(num / 10);
+    }
+    writechar((char)(num % 10 + (int)'0'));
+}
