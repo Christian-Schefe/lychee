@@ -1,3 +1,4 @@
+use crate::compiler::parser::syntax_tree::Literal;
 use crate::compiler::lexer::Location;
 use crate::compiler::parser::analyzed_syntax_tree::{AnalyzedFunction, AnalyzedProgram};
 use crate::compiler::parser::parser_error::LocationError;
@@ -51,7 +52,7 @@ pub fn analyze_program(program: &Program) -> ValidationResult<AnalyzedProgram> {
             "Program requires a main function.",
             &Location { line: 1, column: 1 },
         ))?;
-    if main_function.function.return_type != Type::Unit && main_function.function.return_type != Type::Int {
+    if main_function.function.return_type != Type::Unit && !matches!(main_function.function.return_type, Type::Integer { size: _ }) {
         return Err(LocationError::msg(
             "Main function must return unit or an integer.",
             &main_function.location,
@@ -176,12 +177,12 @@ fn analyze_statement(
         Statement::If {
             condition,
             true_expr,
-            false_expr,
+            false_statement,
         } => {
             analyze_expr(context, condition, Some(&Type::Bool))?;
             analyze_expr(context, true_expr, None)?;
-            if let Some(false_expr) = false_expr {
-                analyze_expr(context, false_expr, None)?;
+            if let Some(false_statement) = false_statement {
+                analyze_statement(context, false_statement)?;
             }
         }
         Statement::For {
@@ -247,8 +248,37 @@ fn analyze_expr(
             }
         }
         Expression::Literal(literal) => {
-            if expected_type.is_none_or(|x| *x == literal.get_type()) {
-                Ok(literal.get_type())
+            let literal_type = literal.get_type();
+            if expected_type.is_none_or(|x| *x == literal_type) {
+                Ok(literal_type)
+            } else if let Literal::Integer(int) = literal {
+                let expected = expected_type.unwrap().clone();
+                match expected {
+                    Type::Integer { size: 1 } if *int >= i8::MIN as i64 && *int <= i8::MAX as i64 => {
+                        Ok(expected)
+                    }
+                    Type::Integer { size: 2 } if *int >= i16::MIN as i64 && *int <= i16::MAX as i64 => {
+                        Ok(expected)
+                    }
+                    Type::Integer { size: 4 } if *int >= i32::MIN as i64 && *int <= i32::MAX as i64 => {
+                        Ok(expected)
+                    }
+                    Type::Integer { size: _ } => Err(LocationError::msg(
+                        &format!(
+                            "Integer literal out of range for type '{:?}'.",
+                            expected
+                        ),
+                        &expr.location,
+                    )),
+                    _ => Err(LocationError::msg(
+                        &format!(
+                            "Expected type '{:?}', found type '{:?}'.",
+                            expected_type.unwrap(),
+                            literal.get_type()
+                        ),
+                        &expr.location,
+                    )),
+                }
             } else {
                 Err(LocationError::msg(
                     &format!(
@@ -391,8 +421,8 @@ fn analyze_expr(
                 }
                 BinaryOp::Assign => {
                     if is_assignable(&left.expr) {
-                        let var_type = analyze_expr(context, right, expected_type)?;
-                        analyze_expr(context, left, Some(&var_type))?;
+                        let var_type = analyze_expr(context, left, expected_type)?;
+                        analyze_expr(context, right, Some(&var_type))?;
                         Ok(var_type)
                     } else {
                         Err(LocationError::msg(
@@ -587,13 +617,13 @@ fn always_returns_statement(statement: &SrcStatement) -> bool {
         Statement::Expr(expr) => always_returns_expr(expr),
         Statement::If {
             true_expr,
-            false_expr,
+            false_statement,
             ..
         } => {
             always_returns_expr(true_expr)
-                && false_expr
+                && false_statement
                 .as_ref()
-                .map(always_returns_expr)
+                .map(|x| always_returns_statement(x))
                 .unwrap_or(false)
         }
         Statement::For {
@@ -656,13 +686,13 @@ fn calc_local_var_stack_space_statement(statement: &SrcStatement) -> usize {
         Statement::If {
             condition,
             true_expr,
-            false_expr,
+            false_statement,
         } => {
             calc_local_var_stack_space_expr(condition)
                 + calc_local_var_stack_space_expr(true_expr)
-                + false_expr
+                + false_statement
                 .as_ref()
-                .map(calc_local_var_stack_space_expr)
+                .map(|x| calc_local_var_stack_space_statement(x))
                 .unwrap_or(0)
         }
         Statement::For {

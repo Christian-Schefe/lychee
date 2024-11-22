@@ -2,11 +2,11 @@
 pub enum Type {
     Unit,
     Bool,
-    Byte,
     Char,
-    Short,
-    Int,
-    Long,
+    Integer {
+        size: usize
+    },
+    Pointer(Box<Type>),
 }
 
 impl Type {
@@ -14,32 +14,27 @@ impl Type {
         match self {
             Type::Unit => 0,
             Type::Bool => 1,
-            Type::Byte => 1,
+            Type::Integer { size } => *size,
             Type::Char => 1,
-            Type::Short => 2,
-            Type::Int => 4,
-            Type::Long => 8,
+            Type::Pointer(_) => 8,
         }
     }
 
     pub fn is_integer(&self) -> bool {
         match self {
-            Type::Byte | Type::Short | Type::Int | Type::Long => true,
+            Type::Integer { size: _ } => true,
             _ => false,
         }
     }
 
-    pub fn can_cast_to(&self, other: &Type) -> bool {
-        if self == other {
+    pub fn can_cast_to(&self, target: &Type) -> bool {
+        if self == target || self.is_integer() && target.is_integer() {
             return true;
         }
         match self {
-            Type::Bool => matches!(other, Type::Byte | Type::Short | Type::Int | Type::Long),
-            Type::Byte => matches!(other, Type::Char | Type::Bool | Type::Short | Type::Int | Type::Long),
-            Type::Char => matches!(other, Type::Byte),
-            Type::Short => matches!(other, Type::Bool | Type::Byte | Type::Int | Type::Long),
-            Type::Int => matches!(other, Type::Bool | Type::Byte | Type::Short | Type::Long),
-            Type::Long => matches!(other, Type::Bool | Type::Byte | Type::Short | Type::Int),
+            Type::Bool => matches!(target, Type::Integer { size: _ }),
+            Type::Char => matches!(target, Type::Integer { size: _ }),
+            Type::Integer { size: _ } => matches!(target, Type::Bool | Type::Char),
             _ => false,
         }
     }

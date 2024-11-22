@@ -70,7 +70,7 @@ pub enum Statement {
     If {
         condition: SrcExpression,
         true_expr: SrcExpression,
-        false_expr: Option<SrcExpression>,
+        false_statement: Option<Box<SrcStatement>>,
     },
     For {
         init: Box<SrcStatement>,
@@ -206,23 +206,19 @@ pub enum UnaryOp {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Literal {
+    Unit,
     Bool(bool),
-    Byte(i8),
     Char(i8),
-    Short(i16),
-    Int(i32),
-    Long(i64),
+    Integer(i64),
 }
 
 impl Literal {
     pub fn get_type(&self) -> Type {
         match self {
+            Literal::Unit => Type::Unit,
             Literal::Bool(_) => Type::Bool,
-            Literal::Byte(_) => Type::Byte,
             Literal::Char(_) => Type::Char,
-            Literal::Short(_) => Type::Short,
-            Literal::Int(_) => Type::Int,
-            Literal::Long(_) => Type::Long,
+            Literal::Integer(_) => Type::Integer { size: 8 },
         }
     }
 }

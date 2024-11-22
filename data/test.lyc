@@ -1,15 +1,32 @@
 int main() {
     bool c = true;
     c &&= {
-        writechar('a');
+        writechar(' ');
         false
     };
-    int k = test({}, 5b, {});
-    (int)k
+    unit a = ();
+    writenum(123 + 456 * -21);
+    writechar('\n');
+    (int)'1'
 }
 
-int test(unit a, byte b, unit c) {
-    byte offset_char = (byte)'a' + b;
-    writechar((char)offset_char);
-    (int)(a == c) - 5 - 10 - 100
+unit writenum(int num) {
+    if num == 0 {
+        writechar('0');
+        return;
+    } else if num < 0 {
+        writechar('-');
+        num = -num;
+    }
+
+    if num >= 10 {
+        writenum(num / 10);
+    }
+    writechar((char)(num % 10 + (int)'0'));
+}
+
+unit pointer_test(&int a) {
+    a = 123;
+    writenum(a);
+    writechar('\n');
 }

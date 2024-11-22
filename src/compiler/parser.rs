@@ -104,7 +104,15 @@ fn parse_statement(tokens: &mut TokenStack) -> ParseResult<SrcStatement> {
             let true_expr = parse_block_expr(tokens)?;
             let false_expr = if tokens.peek().token == Token::Keyword(Keyword::Else) {
                 tokens.pop();
-                Some(parse_block_expr(tokens)?)
+                match tokens.peek().token {
+                    Token::Keyword(Keyword::If) => {
+                        Some(Box::new(parse_statement(tokens)?))
+                    }
+                    _ => {
+                        let else_expr = parse_block_expr(tokens)?;
+                        Some(Box::new(SrcStatement::new(Statement::Expr(else_expr), &location)))
+                    }
+                }
             } else {
                 None
             };
@@ -112,7 +120,7 @@ fn parse_statement(tokens: &mut TokenStack) -> ParseResult<SrcStatement> {
                 Statement::If {
                     condition,
                     true_expr,
-                    false_expr,
+                    false_statement: false_expr,
                 },
                 &location,
             ))
@@ -122,11 +130,19 @@ fn parse_statement(tokens: &mut TokenStack) -> ParseResult<SrcStatement> {
         Token::Keyword(Keyword::Do) => parse_do_while_loop(tokens, &location),
         _ => {
             let offset = tokens.offset;
-            if let Ok(declaration) = parse_declaration_statement(tokens) {
-                pop_or_err(tokens, Token::Static(StaticToken::Semicolon))?;
-                return Ok(SrcStatement::new(declaration, &location));
+            let (decl_statement, propagate_err) = parse_declaration_statement(tokens, &location);
+
+            match decl_statement {
+                Ok(declaration) => {
+                    pop_or_err(tokens, Token::Static(StaticToken::Semicolon))?;
+                    return Ok(declaration);
+                }
+                Err(err) if propagate_err => {
+                    println!("Err {}", err);
+                    return Err(err);
+                }
+                _ => tokens.offset = offset
             }
-            tokens.offset = offset;
             let expr = parse_expression(tokens)?;
             pop_or_err(tokens, Token::Static(StaticToken::Semicolon))?;
             Ok(SrcStatement::new(Statement::Expr(expr), &location))
@@ -134,24 +150,31 @@ fn parse_statement(tokens: &mut TokenStack) -> ParseResult<SrcStatement> {
     }
 }
 
-fn parse_declaration_statement(tokens: &mut TokenStack) -> ParseResult<Statement> {
-    let var_type = parse_type(tokens)?;
+fn parse_declaration_statement(tokens: &mut TokenStack, location: &Location) -> (ParseResult<SrcStatement>, bool) {
+    let var_type = match parse_type(tokens) {
+        Ok(var_type) => var_type,
+        Err(err) => return (Err(err), false),
+    };
     let token = tokens.pop();
     let name = match &token.token {
-        Token::Identifier(name) => Ok(name),
-        _ => Err(LocationError::expect("Identifier", token)),
-    }?
-        .to_string();
+        Token::Identifier(name) => name,
+        _ => return (Err(LocationError::expect("Identifier", token)), false),
+    }.to_string();
 
-    pop_or_err(tokens, Token::Static(StaticToken::Assign))?;
+    if let Err(err) = pop_or_err(tokens, Token::Static(StaticToken::Assign)) {
+        return (Err(err), false);
+    }
 
-    let value = parse_expression(tokens)?;
+    let value = match parse_expression(tokens) {
+        Ok(value) => value,
+        Err(err) => return (Err(err), true),
+    };
 
-    Ok(Statement::Declaration {
+    (Ok(SrcStatement::new(Statement::Declaration {
         var_type,
         name,
         value,
-    })
+    }, location)), true)
 }
 
 fn parse_for_loop(tokens: &mut TokenStack, location: &Location) -> ParseResult<SrcStatement> {
@@ -206,21 +229,25 @@ fn parse_do_while_loop(tokens: &mut TokenStack, location: &Location) -> ParseRes
 
 fn parse_type(tokens: &mut TokenStack) -> ParseResult<Type> {
     let token = tokens.pop();
-    if let Token::Identifier(str) = &token.token {
-        match str.as_str() {
-            "bool" => Ok(Type::Bool),
-            "byte" => Ok(Type::Byte),
-            "char" => Ok(Type::Char),
-            "short" => Ok(Type::Short),
-            "int" => Ok(Type::Int),
-            "long" => Ok(Type::Long),
-            "unit" => Ok(Type::Unit),
-            _ => Err(LocationError {
-                message: format!("Unknown type: {}", str),
-                location: token.location.clone(),
-            }),
+    match &token.token {
+        Token::Identifier(str) =>
+            match str.as_str() {
+                "bool" => Ok(Type::Bool),
+                "char" => Ok(Type::Char),
+                "byte" => Ok(Type::Integer { size: 1 }),
+                "short" => Ok(Type::Integer { size: 2 }),
+                "int" => Ok(Type::Integer { size: 4 }),
+                "long" => Ok(Type::Integer { size: 8 }),
+                "unit" => Ok(Type::Unit),
+                _ => Err(LocationError {
+                    message: format!("Unknown type: {}", str),
+                    location: token.location.clone(),
+                }),
+            }
+        Token::Static(StaticToken::Ampersand) => {
+            let inner_type = Box::new(parse_type(tokens)?);
+            Ok(Type::Pointer(inner_type))
         }
-    } else {
-        Err(LocationError::expect("Type", token))
+        _ => Err(LocationError::expect("Type", token)),
     }
 }

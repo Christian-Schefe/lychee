@@ -64,15 +64,15 @@ impl PrettyPrint for Statement {
             Statement::If {
                 condition,
                 true_expr,
-                false_expr,
+                false_statement,
             } => {
                 result.push_str("if ");
                 result.push_str(&condition.expr.pretty_print(indent));
                 result.push_str(" ");
                 result.push_str(&true_expr.expr.pretty_print(indent));
-                if let Some(false_expr) = false_expr {
+                if let Some(false_statement) = false_statement {
                     result.push_str(" else ");
-                    result.push_str(&false_expr.expr.pretty_print(indent));
+                    result.push_str(&false_statement.statement.pretty_print(indent));
                 }
                 result.push_str("\n");
             }

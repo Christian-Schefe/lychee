@@ -3,6 +3,7 @@ use std::fmt::{Debug, Display};
 
 pub type ParseResult<T> = Result<T, LocationError>;
 
+#[derive(Clone)]
 pub struct LocationError {
     pub message: String,
     pub location: Location,

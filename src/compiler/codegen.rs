@@ -157,7 +157,7 @@ fn generate_statement_code(context: &mut Context, statement: SrcStatement) {
         Statement::If {
             condition,
             true_expr,
-            false_expr,
+            false_statement,
         } => {
             let false_label = context.get_new_label();
             let end_label = context.get_new_label();
@@ -167,8 +167,8 @@ fn generate_statement_code(context: &mut Context, statement: SrcStatement) {
             generate_expression_code(context, true_expr);
             context.push(&format!("jmp {}", end_label));
             context.push_label(false_label);
-            if let Some(false_expr) = false_expr {
-                generate_expression_code(context, false_expr);
+            if let Some(false_statement) = false_statement {
+                generate_statement_code(context, *false_statement);
             }
             context.push_label(end_label);
         }
@@ -218,24 +218,16 @@ fn generate_statement_code(context: &mut Context, statement: SrcStatement) {
 fn generate_expression_code(context: &mut Context, expr: SrcExpression) {
     match expr.expr {
         Expression::Literal(literal) => match literal {
-            Literal::Int(int) => {
-                context.push(&format!("movi r0 {}", int));
-            }
-            Literal::Long(long) => {
-                context.push(&format!("movi r0 {}", long));
+            Literal::Integer(integer) => {
+                context.push(&format!("movi r0 {}", integer));
             }
             Literal::Bool(boolean) => {
                 context.push(&format!("movi r0 {}", if boolean { 1 } else { 0 }));
             }
-            Literal::Byte(byte) => {
-                context.push(&format!("movi r0 {}", byte));
-            }
             Literal::Char(char) => {
                 context.push(&format!("movi r0 {}", char));
             }
-            Literal::Short(short) => {
-                context.push(&format!("movi r0 {}", short));
-            }
+            Literal::Unit => {}
         },
         Expression::Variable(name) => {
             let offset = context.fn_context.var_stack_offsets[&name];

@@ -206,13 +206,7 @@ impl Token {
         } else if str == "false" {
             Ok(Token::Literal(Literal::Bool(false)))
         } else if str.chars().all(|c| c.is_numeric()) {
-            str.parse::<i32>().map(|x| Token::Literal(Literal::Int(x))).map_err(|_| false)
-        } else if str.len() >= 2 && str.chars().enumerate().all(|(i, c)| if i == str.len() - 1 { c == 'b' } else { c.is_numeric() }) {
-            str[..str.len() - 1].parse::<i8>().map(|x| Token::Literal(Literal::Byte(x))).map_err(|_| true)
-        } else if str.len() >= 2 && str.chars().enumerate().all(|(i, c)| if i == str.len() - 1 { c == 's' } else { c.is_numeric() }) {
-            str[..str.len() - 1].parse::<i16>().map(|x| Token::Literal(Literal::Short(x))).map_err(|_| true)
-        } else if str.len() >= 2 && str.chars().enumerate().all(|(i, c)| if i == str.len() - 1 { c == 'l' } else { c.is_numeric() }) {
-            str[..str.len() - 1].parse::<i64>().map(|x| Token::Literal(Literal::Long(x))).map_err(|_| true)
+            str.parse::<i64>().map(|x| Token::Literal(Literal::Integer(x))).map_err(|_| true)
         } else if str.chars().enumerate().all(|(i, c)| if i == 0 { c.is_alphabetic() } else { c.is_alphanumeric() } || c == '_') {
             Ok(Token::Identifier(str.to_string()))
         } else {
