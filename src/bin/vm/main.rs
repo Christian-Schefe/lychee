@@ -120,6 +120,7 @@ pub fn run(memory: &mut Memory, debug_print: bool) -> i64 {
                 break;
             }
             0x34 => sign_extend(pc, memory, debug_print),
+            0x35 => lea(pc, memory, debug_print),
             _ => panic!("Unknown opcode: {}", opcode),
         };
         if debug_print {
@@ -290,18 +291,18 @@ fn binop(pc: usize, memory: &mut Memory, op_type: BinopType, immediate: bool, de
     if debug_print {
         if immediate {
             println!(
-            "Performed {:?} operation with register {} and immediate value {}, Result: {}, Flags: {:?}",
-            op_type, dest_register, right_value, result, memory.flags
-        );
+                "Performed {:?} operation with register {} and immediate value {}, Result: {}, Flags: {:?}",
+                op_type, dest_register, right_value, result, memory.flags
+            );
         } else {
             println!(
-            "Performed {:?} operation with register {} and register {}, Result: {}, Flags: {:?}",
-            op_type,
-            dest_register,
-            byte1 & 0x0F,
-            result,
-            memory.flags
-        );
+                "Performed {:?} operation with register {} and register {}, Result: {}, Flags: {:?}",
+                op_type,
+                dest_register,
+                byte1 & 0x0F,
+                result,
+                memory.flags
+            );
         }
     }
 }
@@ -456,5 +457,17 @@ fn sign_extend(pc: usize, memory: &mut Memory, debug_print: bool) {
             "Sign extended register {} with value {} ({} bytes)",
             data_size, register, value
         );
+    }
+}
+
+fn lea(pc: usize, memory: &mut Memory, debug_print: bool) {
+    let register = memory.data[pc + 1];
+    let address = read_address(pc + 2, memory);
+
+    memory.registers[register as usize] = address;
+    memory.registers[constants::PC] += 2;
+
+    if debug_print {
+        println!("Loaded address {} into register {}", address, register);
     }
 }

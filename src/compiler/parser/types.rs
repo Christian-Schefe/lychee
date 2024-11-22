@@ -27,6 +27,13 @@ impl Type {
         }
     }
 
+    pub fn is_pointer(&self) -> bool {
+        match self {
+            Type::Pointer(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn can_cast_to(&self, target: &Type) -> bool {
         if self == target || self.is_integer() && target.is_integer() {
             return true;

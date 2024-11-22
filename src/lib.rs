@@ -15,7 +15,8 @@ pub enum OpCode {
     ReadStdin,
     WriteStdout,
     Exit,
-    SignExtend
+    SignExtend,
+    Lea,
 }
 
 impl OpCode {
@@ -36,7 +37,8 @@ impl OpCode {
             OpCode::ReadStdin => 0x31,
             OpCode::WriteStdout => 0x32,
             OpCode::Exit => 0x33,
-            OpCode::SignExtend => 0x34
+            OpCode::SignExtend => 0x34,
+            OpCode::Lea => 0x35,
         }
     }
 }

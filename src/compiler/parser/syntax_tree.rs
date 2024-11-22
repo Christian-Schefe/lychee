@@ -1,7 +1,4 @@
-use std::collections::HashMap;
-use lazy_static::lazy_static;
 use crate::compiler::lexer::{HasLocation, Location};
-use crate::compiler::lexer::token::StaticToken;
 use crate::compiler::parser::types::Type;
 
 #[derive(Debug)]
@@ -176,24 +173,6 @@ pub enum BinaryComparisonOp {
     GreaterEquals,
 }
 
-lazy_static! {
-    pub static ref ASSIGN_OP_MAP: HashMap<StaticToken, BinaryOp> = HashMap::from([
-        (StaticToken::Assign, BinaryOp::Assign),
-        (StaticToken::AddAssign, BinaryOp::MathAssign(BinaryMathOp::Add)),
-        (StaticToken::SubAssign, BinaryOp::MathAssign(BinaryMathOp::Sub)),
-        (StaticToken::MulAssign, BinaryOp::MathAssign(BinaryMathOp::Mul)),
-        (StaticToken::DivAssign, BinaryOp::MathAssign(BinaryMathOp::Div)),
-        (StaticToken::ModAssign, BinaryOp::MathAssign(BinaryMathOp::Mod)),
-        (StaticToken::AndAssign, BinaryOp::MathAssign(BinaryMathOp::And)),
-        (StaticToken::OrAssign, BinaryOp::MathAssign(BinaryMathOp::Or)),
-        (StaticToken::XorAssign, BinaryOp::MathAssign(BinaryMathOp::Xor)),
-        (StaticToken::ShiftLeftAssign, BinaryOp::MathAssign(BinaryMathOp::Shl)),
-        (StaticToken::ShiftRightAssign, BinaryOp::MathAssign(BinaryMathOp::Shr)),
-        (StaticToken::LogicalAndAssign, BinaryOp::LogicAssign(BinaryLogicOp::And)),
-        (StaticToken::LogicalOrAssign, BinaryOp::LogicAssign(BinaryLogicOp::Or)),
-    ]);
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UnaryOp {
     Positive,
@@ -202,6 +181,8 @@ pub enum UnaryOp {
     LogicalNot,
     Increment,
     Decrement,
+    Borrow,
+    Deref,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

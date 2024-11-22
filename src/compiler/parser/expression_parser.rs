@@ -3,59 +3,7 @@ use crate::compiler::lexer::token::{StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::parser_error::{ParseResult, LocationError};
 use crate::compiler::parser::{parse_statement, parse_type, pop_or_err};
-use crate::compiler::parser::syntax_tree::{BinaryMathOp, BinaryOp, BinaryComparisonOp, Expression, SrcExpression, UnaryOp, ASSIGN_OP_MAP, BinaryLogicOp, Literal};
-
-pub fn parse_expression(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
-    let offset = tokens.offset;
-    if let Ok(result) = parse_assignment(tokens) {
-        return Ok(result);
-    }
-    tokens.offset = offset;
-    parse_ternary_or_lower(tokens)
-}
-
-fn parse_assignment(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
-    let id_token = tokens.pop();
-    let id = match &id_token.token {
-        Token::Identifier(name) => name,
-        _ => return Err(LocationError::expect("Identifier", id_token))
-    }.to_string();
-
-    let token = tokens.peek();
-    let location = token.location.clone();
-    if let Token::Static(static_token) = &token.token {
-        if let Some(op) = ASSIGN_OP_MAP.get(static_token) {
-            tokens.pop();
-            let right = parse_expression(tokens)?;
-            Ok(SrcExpression::new(Expression::Binary {
-                left: Box::new(SrcExpression::new(Expression::Variable(id), &location)),
-                op: op.clone(),
-                right: Box::new(right),
-            }, &location))
-        } else {
-            Err(LocationError::expect("Assignment operator", tokens.peek()))
-        }
-    } else {
-        Err(LocationError::expect("Assignment operator", tokens.peek()))
-    }
-}
-
-fn parse_ternary_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
-    let expr = parse_logical_or_or_lower(tokens)?;
-    let location = expr.location.clone();
-    if let Token::Static(StaticToken::QuestionMark) = tokens.peek().token {
-        tokens.pop();
-        let true_expr = parse_expression(tokens)?;
-        pop_or_err(tokens, Token::Static(StaticToken::Colon))?;
-        let false_expr = parse_ternary_or_lower(tokens)?;
-        return Ok(SrcExpression::new(Expression::Ternary {
-            condition: Box::new(expr),
-            true_expr: Box::new(true_expr),
-            false_expr: Box::new(false_expr),
-        }, &location));
-    }
-    Ok(expr)
-}
+use crate::compiler::parser::syntax_tree::{BinaryMathOp, BinaryOp, BinaryComparisonOp, Expression, SrcExpression, UnaryOp, BinaryLogicOp, Literal};
 
 fn parse_left_associative<F>(tokens: &mut TokenStack, op_tokens: &[(StaticToken, BinaryOp)], parse_lower: F) -> ParseResult<SrcExpression>
 where
@@ -71,6 +19,64 @@ where
             op: op.clone(),
             right: Box::new(right),
         }, &location);
+    }
+    Ok(expr)
+}
+
+fn parse_right_associative<F>(tokens: &mut TokenStack, op_tokens: &[(StaticToken, BinaryOp)], parse_lower: F) -> ParseResult<SrcExpression>
+where
+    F: Fn(&mut TokenStack) -> ParseResult<SrcExpression>,
+{
+    let mut expr = parse_lower(tokens)?;
+    let location = expr.location.clone();
+    let token = &tokens.peek().token;
+    if let Some((_, op)) = op_tokens.iter().find(|t| if let Token::Static(tkn) = token { *tkn == t.0 } else { false }) {
+        tokens.pop();
+        let right = parse_right_associative(tokens, op_tokens, parse_lower)?;
+        expr = SrcExpression::new(Expression::Binary {
+            left: Box::new(expr),
+            op: op.clone(),
+            right: Box::new(right),
+        }, &location);
+    }
+    Ok(expr)
+}
+
+pub fn parse_expression(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
+    parse_assignment_or_lower(tokens)
+}
+
+fn parse_assignment_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
+    parse_right_associative(tokens, &[
+        (StaticToken::Assign, BinaryOp::Assign),
+        (StaticToken::AddAssign, BinaryOp::MathAssign(BinaryMathOp::Add)),
+        (StaticToken::SubAssign, BinaryOp::MathAssign(BinaryMathOp::Sub)),
+        (StaticToken::MulAssign, BinaryOp::MathAssign(BinaryMathOp::Mul)),
+        (StaticToken::DivAssign, BinaryOp::MathAssign(BinaryMathOp::Div)),
+        (StaticToken::ModAssign, BinaryOp::MathAssign(BinaryMathOp::Mod)),
+        (StaticToken::AndAssign, BinaryOp::MathAssign(BinaryMathOp::And)),
+        (StaticToken::OrAssign, BinaryOp::MathAssign(BinaryMathOp::Or)),
+        (StaticToken::XorAssign, BinaryOp::MathAssign(BinaryMathOp::Xor)),
+        (StaticToken::ShiftLeftAssign, BinaryOp::MathAssign(BinaryMathOp::Shl)),
+        (StaticToken::ShiftRightAssign, BinaryOp::MathAssign(BinaryMathOp::Shr)),
+        (StaticToken::LogicalAndAssign, BinaryOp::LogicAssign(BinaryLogicOp::And)),
+        (StaticToken::LogicalOrAssign, BinaryOp::LogicAssign(BinaryLogicOp::Or)),
+    ], parse_ternary_or_lower)
+}
+
+fn parse_ternary_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
+    let expr = parse_logical_or_or_lower(tokens)?;
+    let location = expr.location.clone();
+    if let Token::Static(StaticToken::QuestionMark) = tokens.peek().token {
+        tokens.pop();
+        let true_expr = parse_expression(tokens)?;
+        pop_or_err(tokens, Token::Static(StaticToken::Colon))?;
+        let false_expr = parse_ternary_or_lower(tokens)?;
+        return Ok(SrcExpression::new(Expression::Ternary {
+            condition: Box::new(expr),
+            true_expr: Box::new(true_expr),
+            false_expr: Box::new(false_expr),
+        }, &location));
     }
     Ok(expr)
 }
@@ -126,6 +132,8 @@ fn parse_unary_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
             StaticToken::Tilde => Some(UnaryOp::Not),
             StaticToken::Increment => Some(UnaryOp::Increment),
             StaticToken::Decrement => Some(UnaryOp::Decrement),
+            StaticToken::Ampersand => Some(UnaryOp::Borrow),
+            StaticToken::Asterisk => Some(UnaryOp::Deref),
             _ => None
         };
         if let Some(op) = bin_op {

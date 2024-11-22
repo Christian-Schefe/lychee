@@ -7,7 +7,9 @@ int main() {
     unit a = ();
     writenum(123 + 456 * -21);
     writechar('\n');
-    (int)'1'
+    int pointed = 5;
+    pointer_test(&pointed);
+    pointed
 }
 
 unit writenum(int num) {
@@ -26,7 +28,7 @@ unit writenum(int num) {
 }
 
 unit pointer_test(&int a) {
-    a = 123;
-    writenum(a);
+    *a = 123;
+    writenum(*a);
     writechar('\n');
 }
