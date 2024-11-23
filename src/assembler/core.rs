@@ -31,7 +31,7 @@ pub(crate) fn convert_line(line: &str) -> Instruction {
         OpCode::BinopImmediate(_) => InstructionType::parse_register_immediate(opcode, parts),
         OpCode::Call | OpCode::Jump(_) => InstructionType::parse_label(opcode, parts),
         OpCode::Unop(_) | OpCode::Set(_) => InstructionType::parse_register(opcode, parts),
-        OpCode::ReadStdin | OpCode::WriteStdout | OpCode::Lea => {
+        OpCode::ReadStdin | OpCode::WriteStdout | OpCode::Lea | OpCode::PushMem | OpCode::PopMem => {
             InstructionType::parse_register_address(opcode, parts)
         }
     };
@@ -139,6 +139,8 @@ lazy_static! {
             ("exit".to_string(), OpCode::Exit),
             ("signext".to_string(), OpCode::SignExtend),
             ("lea".to_string(), OpCode::Lea),
+            ("pushmem".to_string(), OpCode::PushMem),
+            ("popmem".to_string(), OpCode::PopMem),
         ])
     };
     pub static ref REGISTER_MAP: HashMap<String, RegisterCode> = {

@@ -1,7 +1,7 @@
 mod builtin_functions;
 
 use crate::compiler::codegen::builtin_functions::add_builtin_fn_code;
-use crate::compiler::parser::analyzed_syntax_tree::{AnalyzedExpression, AnalyzedFunction, AnalyzedProgram, AnalyzedStatement, TypedAnalyzedExpression};
+use crate::compiler::parser::analyzed_syntax_tree::{AnalyzedAddressableExpression, AnalyzedExpression, AnalyzedFunction, AnalyzedProgram, AnalyzedStatement, TypedAnalyzedAddressableExpression, TypedAnalyzedExpression};
 use crate::compiler::parser::syntax_tree::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, BinaryOp, Literal, UnaryOp};
 use crate::compiler::parser::types::Type;
 use std::collections::HashMap;
@@ -9,10 +9,33 @@ use std::path::PathBuf;
 
 struct Context {
     output: Vec<String>,
-    function_labels: HashMap<String, String>,
-    function_arg_sizes: HashMap<String, Vec<usize>>,
-    fn_context: FunctionContext,
+    function_data: HashMap<String, FunctionData>,
+    struct_data: HashMap<String, StructData>,
     label_counter: usize,
+    current_data: CurrentData,
+}
+
+struct FunctionData {
+    label: String,
+    args: HashMap<String, VarData>,
+    return_location: ExprResultLocation,
+}
+
+struct StructData {
+    fields: HashMap<String, VarData>,
+}
+
+#[derive(Debug, Clone)]
+struct VarData {
+    offset: isize,
+    byte_size: usize,
+}
+
+struct CurrentData {
+    function_name: String,
+    local_variables: HashMap<String, VarData>,
+    stack_offset: isize,
+    return_label: String,
 }
 
 impl Context {
@@ -31,47 +54,80 @@ impl Context {
     }
 }
 
-struct FunctionContext {
-    name: String,
-    var_stack_offsets: HashMap<String, isize>,
-    var_type_sizes: HashMap<String, usize>,
-    current_stack_offset: isize,
-    return_label: String,
+#[derive(Debug, Clone, Eq, PartialEq)]
+enum ExprResultLocation {
+    Register(usize),
+    Stack,
+    Discard,
 }
 
 pub fn generate_code(program: AnalyzedProgram, output: &PathBuf) {
     let mut context = Context {
         output: Vec::new(),
-        function_labels: HashMap::new(),
-        function_arg_sizes: HashMap::new(),
-        fn_context: FunctionContext {
-            name: String::new(),
-            var_stack_offsets: HashMap::new(),
-            var_type_sizes: HashMap::new(),
-            current_stack_offset: 0,
+        function_data: HashMap::new(),
+        struct_data: HashMap::new(),
+        current_data: CurrentData {
+            function_name: String::new(),
+            local_variables: HashMap::new(),
+            stack_offset: 0,
             return_label: String::new(),
         },
         label_counter: 0,
     };
-    for (name, func) in &program.functions {
-        context
-            .function_labels
-            .insert(name.clone(), format!("_func_{}", name));
-        let mut arg_sizes = Vec::new();
-        for (_, ty) in &func.args {
-            arg_sizes.push(ty.size());
+
+    for (struct_name, struct_def) in &program.struct_definitions {
+        let mut fields = HashMap::new();
+        let mut offset = 0;
+        for (field_name, ty) in &struct_def.fields {
+            let field_size = ty.size();
+            fields.insert(field_name.clone(), VarData {
+                offset: offset as isize,
+                byte_size: field_size,
+            });
+            offset += field_size;
         }
-        context.function_arg_sizes.insert(name.clone(), arg_sizes);
+        let struct_data = StructData { fields };
+        context.struct_data.insert(struct_name.clone(), struct_data);
+    }
+
+    for (name, func) in &program.functions {
+        let fun_label = context.get_new_label();
+        let return_type = &func.return_type;
+        let return_location = match return_type {
+            Type::Struct { .. } => ExprResultLocation::Stack,
+            ty if ty.size() > 0 => ExprResultLocation::Register(0),
+            _ => ExprResultLocation::Discard,
+        };
+
+        let mut function_data = FunctionData {
+            label: fun_label,
+            args: HashMap::new(),
+            return_location,
+        };
+        let mut offset = 16;
+        for (arg_name, ty) in func.args.iter().rev() {
+            let arg_size = ty.size();
+            function_data.args.insert(arg_name.clone(), VarData {
+                offset: offset as isize,
+                byte_size: arg_size,
+            });
+            offset += arg_size;
+        }
+        context.function_data.insert(name.clone(), function_data);
     }
 
     context.push(&format!(
         "call {}",
-        context.function_labels[&program.main_function]
+        context.function_data[&program.main_function].label
     ));
 
-    if program.functions[&program.main_function].return_type == Type::Unit
+    match &context.function_data[&program.main_function].return_location
     {
-        context.push("movi r0 0");
+        ExprResultLocation::Discard => context.push("movi r0 0"),
+        ExprResultLocation::Register(reg) => if *reg != 0 {
+            context.push(&format!("mov r0 r{}", reg))
+        },
+        ExprResultLocation::Stack => unreachable!("Main function cannot return a struct"),
     }
     context.push("exit");
 
@@ -86,70 +142,71 @@ pub fn generate_code(program: AnalyzedProgram, output: &PathBuf) {
 }
 
 fn generate_function_code(context: &mut Context, function: AnalyzedFunction) {
-    context.fn_context = FunctionContext {
-        return_label: format!("_return_{}", function.name),
-        name: function.name,
-        var_stack_offsets: HashMap::new(),
-        var_type_sizes: HashMap::new(),
-        current_stack_offset: 0,
-    };
-    context.push_label(context.function_labels[&context.fn_context.name].clone());
+    context.current_data.function_name = function.name.clone();
+    context.current_data.local_variables.clear();
+    context.current_data.stack_offset = 0;
+
+    let return_label = context.get_new_label();
+    context.current_data.return_label = return_label.clone();
+
+    context.push_label(context.function_data[&function.name].label.clone());
     context.push("push #64 bp");
     context.push("mov bp sp");
-
-    let mut argument_offset = 16;
-    for (name, ty) in function.args.iter().rev() {
-        let offset = argument_offset;
-        context
-            .fn_context
-            .var_stack_offsets
-            .insert(name.clone(), offset);
-        context
-            .fn_context
-            .var_type_sizes
-            .insert(name.clone(), ty.size());
-        argument_offset += ty.size() as isize;
-    }
 
     if function.local_var_stack_size > 0 {
         context.push(&format!("subi sp {}", function.local_var_stack_size));
     }
 
-    generate_expression_code(context, function.expr);
+    for (arg_name, _) in function.args.iter().rev() {
+        let arg_data = &context.function_data[&function.name].args[arg_name];
+        context.current_data.local_variables.insert(arg_name.clone(), arg_data.clone());
+    }
 
-    context.push_label(context.fn_context.return_label.clone());
+    generate_expression_code(context, function.expr, context.function_data[&function.name].return_location.clone());
+
+    context.push_label(return_label);
     context.push("mov sp bp");
     context.push("pop #64 bp");
     context.push("ret");
 }
 
 fn generate_statement_code(context: &mut Context, statement: AnalyzedStatement) {
+    let fn_data = &context.function_data[&context.current_data.function_name];
     match statement {
         AnalyzedStatement::Return(expr) => {
+            let return_label = context.current_data.return_label.clone();
             if let Some(return_expr) = expr {
-                generate_expression_code(context, return_expr);
+                let function_return_location = fn_data.return_location.clone();
+                generate_expression_code(context, return_expr, function_return_location);
             }
-            context.push(&format!("jmp {}", context.fn_context.return_label));
+            context.push(&format!("jmp {}", return_label));
         }
         AnalyzedStatement::Declaration {
             var_type,
             name,
             value,
         } => {
-            let size = var_type.size();
-            context.fn_context.current_stack_offset -= size as isize;
-            let offset = context.fn_context.current_stack_offset;
-            context.fn_context.var_stack_offsets.insert(name.clone(), offset);
-            context.fn_context.var_type_sizes.insert(name.clone(), size);
+            let byte_size = var_type.size();
+            context.current_data.stack_offset -= byte_size as isize;
+            let offset = context.current_data.stack_offset;
+            context.current_data.local_variables.insert(name.clone(), VarData {
+                offset,
+                byte_size,
+            });
 
-            generate_expression_code(context, value);
-            if size > 0 {
-                context.push(&format!("store #{} r0 [bp;{}]", size * 8, offset));
+            if let Type::Struct { .. } = var_type {
+                generate_expression_code(context, value, ExprResultLocation::Stack);
+                context.push(&format!("movi r0 {}", byte_size));
+                context.push(&format!("popmem r0 [bp;{}]", offset));
+            } else {
+                generate_expression_code(context, value, ExprResultLocation::Register(0));
+                if byte_size > 0 {
+                    context.push(&format!("store #{} r0 [bp;{}]", byte_size * 8, offset));
+                }
             }
-            println!("{}: {}, size {} bytes  {}", name, offset, size, context.fn_context.current_stack_offset);
         }
         AnalyzedStatement::Expr(expr) => {
-            generate_expression_code(context, expr);
+            generate_expression_code(context, expr, ExprResultLocation::Discard);
         }
         AnalyzedStatement::If {
             condition,
@@ -158,10 +215,10 @@ fn generate_statement_code(context: &mut Context, statement: AnalyzedStatement) 
         } => {
             let false_label = context.get_new_label();
             let end_label = context.get_new_label();
-            generate_expression_code(context, condition);
+            generate_expression_code(context, condition, ExprResultLocation::Register(0));
             context.push("cmpi r0 0");
             context.push(&format!("jz {}", false_label));
-            generate_expression_code(context, true_expr);
+            generate_expression_code(context, true_expr, ExprResultLocation::Discard);
             context.push(&format!("jmp {}", end_label));
             context.push_label(false_label);
             if let Some(false_statement) = false_statement {
@@ -179,11 +236,11 @@ fn generate_statement_code(context: &mut Context, statement: AnalyzedStatement) 
             let loop_label = context.get_new_label();
             let end_label = context.get_new_label();
             context.push_label(loop_label.clone());
-            generate_expression_code(context, condition);
+            generate_expression_code(context, condition, ExprResultLocation::Register(0));
             context.push("cmpi r0 0");
             context.push(&format!("jz {}", end_label));
-            generate_expression_code(context, body);
-            generate_expression_code(context, update);
+            generate_expression_code(context, body, ExprResultLocation::Discard);
+            generate_expression_code(context, update, ExprResultLocation::Discard);
             context.push(&format!("jmp {}", loop_label));
             context.push_label(end_label);
         }
@@ -196,15 +253,15 @@ fn generate_statement_code(context: &mut Context, statement: AnalyzedStatement) 
             context.push_label(loop_label.clone());
             if !is_do_while {
                 let end_label = context.get_new_label();
-                generate_expression_code(context, condition);
+                generate_expression_code(context, condition, ExprResultLocation::Register(0));
                 context.push("cmpi r0 0");
                 context.push(&format!("jz {}", end_label));
-                generate_expression_code(context, body);
+                generate_expression_code(context, body, ExprResultLocation::Discard);
                 context.push(&format!("jmp {}", loop_label));
                 context.push_label(end_label);
             } else {
-                generate_expression_code(context, body);
-                generate_expression_code(context, condition);
+                generate_expression_code(context, body, ExprResultLocation::Discard);
+                generate_expression_code(context, condition, ExprResultLocation::Register(0));
                 context.push("cmpi r0 0");
                 context.push(&format!("jnz {}", loop_label));
             }
@@ -212,84 +269,140 @@ fn generate_statement_code(context: &mut Context, statement: AnalyzedStatement) 
     }
 }
 
-fn generate_expression_code(context: &mut Context, expr: TypedAnalyzedExpression) {
-    match expr.expr {
-        AnalyzedExpression::Literal(literal) => match literal {
-            Literal::Integer(integer) => {
-                context.push(&format!("movi r0 {}", integer));
+fn generate_expression_code(context: &mut Context, expr: TypedAnalyzedExpression, result_location: ExprResultLocation) {
+    match expr.value {
+        AnalyzedExpression::Literal(literal) => match result_location {
+            ExprResultLocation::Register(reg) => match literal {
+                Literal::Integer(integer) => {
+                    context.push(&format!("movi r{} {}", reg, integer));
+                }
+                Literal::Bool(boolean) => {
+                    context.push(&format!("movi r{} {}", reg, if boolean { 1 } else { 0 }));
+                }
+                Literal::Char(char) => {
+                    context.push(&format!("movi r{} {}", reg, char));
+                }
+                Literal::Unit => {}
             }
-            Literal::Bool(boolean) => {
-                context.push(&format!("movi r0 {}", if boolean { 1 } else { 0 }));
+            ExprResultLocation::Stack => match literal {
+                Literal::Integer(integer) => {
+                    context.push(&format!("movi r0 {}", integer));
+                    let size = expr.ty.size() * 8;
+                    context.push(&format!("push #{} r0", size));
+                }
+                Literal::Bool(boolean) => {
+                    context.push(&format!("movi r0 {}", if boolean { 1 } else { 0 }));
+                    let size = expr.ty.size() * 8;
+                    context.push(&format!("push #{} r0", size));
+                }
+                Literal::Char(char) => {
+                    context.push(&format!("movi r0 {}", char));
+                    let size = expr.ty.size() * 8;
+                    context.push(&format!("push #{} r0", size));
+                }
+                Literal::Unit => {}
             }
-            Literal::Char(char) => {
-                context.push(&format!("movi r0 {}", char));
-            }
-            Literal::Unit => {}
-        },
-        AnalyzedExpression::Variable(name) => {
-            let offset = context.fn_context.var_stack_offsets[&name];
-            let size = context.fn_context.var_type_sizes[&name] * 8;
-            if size > 0 {
-                context.push(&format!("load #{} r0 [bp;{}]", size, offset));
+            ExprResultLocation::Discard => {}
+        }
+        AnalyzedExpression::Sizeof(ty) => {
+            match result_location {
+                ExprResultLocation::Register(reg) => {
+                    context.push(&format!("movi r{} {}", reg, ty.size()));
+                }
+                ExprResultLocation::Stack => {
+                    context.push(&format!("movi r0 {}", ty.size()));
+                    context.push(&format!("push #{} r0", expr.ty.size() * 8));
+                }
+                ExprResultLocation::Discard => {}
             }
         }
         AnalyzedExpression::FunctionCall { function, args } => {
             let mut total_size = 0;
-            for (i, arg) in args.into_iter().enumerate() {
-                let arg_bytes = context.function_arg_sizes[&function][i];
-                generate_expression_code(context, arg);
-                if arg_bytes > 0 {
-                    context.push(&format!("push #{} r0", arg_bytes * 8));
-                    total_size += arg_bytes;
-                }
+            let function_return_location = context.function_data[&function].return_location.clone();
+            for (arg_name, arg_expr) in args {
+                let arg_bytes = context.function_data[&function].args[&arg_name].byte_size;
+                let arg_location = if arg_bytes > 0 {
+                    ExprResultLocation::Stack
+                } else {
+                    ExprResultLocation::Discard
+                };
+                generate_expression_code(context, arg_expr, arg_location);
+                total_size += arg_bytes;
             }
-            context.push(&format!("call {}", context.function_labels[&function]));
+            context.push(&format!("call {}", context.function_data[&function].label));
             context.push(&format!("addi sp {}", total_size));
+            if result_location == function_return_location {
+                return;
+            }
+            match (result_location, function_return_location) {
+                (ExprResultLocation::Register(reg), ExprResultLocation::Register(func_reg)) => {
+                    context.push(&format!("mov r{} r{}", reg, func_reg));
+                }
+                (ExprResultLocation::Stack, ExprResultLocation::Register(func_reg)) => {
+                    let return_size = expr.ty.size() * 8;
+                    context.push(&format!("push #{} r{}", return_size, func_reg));
+                }
+                _ => panic!("Invalid function call result location"),
+            }
         }
         AnalyzedExpression::Block(statements, final_expr) => {
             for statement in statements {
                 generate_statement_code(context, statement);
             }
             if let Some(final_expr) = final_expr {
-                generate_expression_code(context, *final_expr);
+                generate_expression_code(context, *final_expr, result_location);
             }
         }
         AnalyzedExpression::Unary { op, expr: inner_expr } => {
             match op {
                 UnaryOp::Negate => {
-                    generate_expression_code(context, *inner_expr);
+                    generate_expression_code(context, *inner_expr, ExprResultLocation::Register(0));
                     context.push("neg r0");
+                    let size = expr.ty.size() * 8;
+                    move_register_to_location(context, 0, size, result_location);
                 }
                 UnaryOp::Positive => {
-                    generate_expression_code(context, *inner_expr);
+                    generate_expression_code(context, *inner_expr, result_location);
                 }
                 UnaryOp::Not => {
-                    generate_expression_code(context, *inner_expr);
+                    generate_expression_code(context, *inner_expr, ExprResultLocation::Register(0));
                     context.push("not r0");
+                    let size = expr.ty.size() * 8;
+                    move_register_to_location(context, 0, size, result_location);
                 }
                 UnaryOp::LogicalNot => {
-                    generate_expression_code(context, *inner_expr);
+                    generate_expression_code(context, *inner_expr, ExprResultLocation::Register(0));
                     context.push("cmpi r0 0");
                     context.push("setz r0");
-                }
-                UnaryOp::Increment | UnaryOp::Decrement => {
-                    generate_expression_code(context, *inner_expr.clone());
-                    if op == UnaryOp::Increment {
-                        context.push("addi r0 1");
-                    } else {
-                        context.push("subi r0 1");
-                    }
-                    store_var(context, *inner_expr);
-                }
-                UnaryOp::Borrow => {
-                    load_var_address(context, inner_expr.expr);
-                }
-                UnaryOp::Deref => {
-                    let size = expr.expr_type.size() * 8;
-                    generate_expression_code(context, *inner_expr);
-                    context.push(&format!("load #{} r0 [r0]", size));
+                    let size = expr.ty.size() * 8;
+                    move_register_to_location(context, 0, size, result_location);
                 }
             }
+        }
+        AnalyzedExpression::Increment { is_increment, postfix, expr } => {
+            load_var(context, *expr.clone(), ExprResultLocation::Register(0));
+            let size = expr.ty.size() * 8;
+            if is_increment {
+                if postfix {
+                    context.push("push #64 r0");
+                    context.push("addi r0 1");
+                } else {
+                    context.push("addi r0 1");
+                    context.push("push #64 r0");
+                }
+            } else {
+                if postfix {
+                    context.push("push #64 r0");
+                    context.push("subi r0 1");
+                } else {
+                    context.push("subi r0 1");
+                    context.push("push #64 r0");
+                }
+            }
+            store_reg0_in_var(context, *expr);
+            context.push("pop #64 r0");
+
+            move_register_to_location(context, 0, size, result_location);
         }
         AnalyzedExpression::Ternary {
             condition,
@@ -298,25 +411,35 @@ fn generate_expression_code(context: &mut Context, expr: TypedAnalyzedExpression
         } => {
             let false_label = context.get_new_label();
             let end_label = context.get_new_label();
-            generate_expression_code(context, *condition);
+            generate_expression_code(context, *condition, ExprResultLocation::Register(0));
             context.push("cmpi r0 0");
             context.push(&format!("jz {}", false_label));
-            generate_expression_code(context, *true_expr);
+            generate_expression_code(context, *true_expr, result_location.clone());
             context.push(&format!("jmp {}", end_label));
             context.push_label(false_label);
-            generate_expression_code(context, *false_expr);
+            generate_expression_code(context, *false_expr, result_location);
             context.push_label(end_label);
         }
-        AnalyzedExpression::Binary { op, left, right } => match op {
-            BinaryOp::Logical(logic_op) => generate_logic_binop(context, logic_op, *left, *right),
-            BinaryOp::Math(math_op) => generate_math_binop(context, math_op, *left, *right),
-            BinaryOp::Comparison(comp_op) => generate_comparison_binop(context, comp_op, *left, *right),
-            BinaryOp::Assign => generate_assignment_binop(context, None, *left, *right),
-            BinaryOp::MathAssign(math_op) => generate_assignment_binop(context, Some(math_op), *left, *right),
-            BinaryOp::LogicAssign(logic_op) => generate_logic_assignment_binop(context, logic_op, *left, *right),
-        },
+        AnalyzedExpression::Binary { op, left, right } => {
+            let size = expr.ty.size() * 8;
+            match op {
+                BinaryOp::Logical(logic_op) => generate_logic_binop(context, logic_op, size, *left, *right, result_location),
+                BinaryOp::Math(math_op) => generate_math_binop(context, math_op, size, *left, *right, result_location),
+                BinaryOp::Comparison(comp_op) => generate_comparison_binop(context, comp_op, size, *left, *right, result_location),
+                _ => unreachable!("Invalid binary operator"),
+            }
+        }
+        AnalyzedExpression::BinaryAssign { op, left, right } => {
+            let size = expr.ty.size() * 8;
+            match op {
+                BinaryOp::Assign => generate_assignment_binop(context, None, size, *left, *right, result_location),
+                BinaryOp::MathAssign(math_op) => generate_assignment_binop(context, Some(math_op), size, *left, *right, result_location),
+                BinaryOp::LogicAssign(logic_op) => generate_logic_assignment_binop(context, logic_op, size, *left, *right, result_location),
+                _ => unreachable!("Invalid binary assign operator"),
+            }
+        }
         AnalyzedExpression::Cast { var_type, expr } => {
-            generate_expression_code(context, *expr);
+            generate_expression_code(context, *expr, ExprResultLocation::Register(0));
             let bit_size = var_type.size() * 8;
             if var_type == Type::Bool {
                 context.push("cmpi r0 0");
@@ -324,50 +447,85 @@ fn generate_expression_code(context: &mut Context, expr: TypedAnalyzedExpression
             } else if bit_size < 64 {
                 context.push(&format!("signext #{} r0", bit_size));
             }
+            match result_location {
+                ExprResultLocation::Register(reg) => {
+                    if reg != 0 {
+                        context.push(&format!("mov r{} r0", reg));
+                    }
+                }
+                ExprResultLocation::Stack => {
+                    context.push(&format!("push #{} r0", bit_size));
+                }
+                ExprResultLocation::Discard => {}
+            }
         }
+        AnalyzedExpression::StructLiteral { name: _, fields } => {
+            for (_, field_expr) in fields {
+                generate_expression_code(context, field_expr, ExprResultLocation::Stack);
+            }
+            match result_location {
+                ExprResultLocation::Register(_) => {
+                    panic!("Struct literals cannot be assigned to registers");
+                }
+                ExprResultLocation::Stack => {}
+                ExprResultLocation::Discard => {}
+            }
+        }
+        AnalyzedExpression::Borrow(expr) => load_var_address(context, expr, result_location),
+        AnalyzedExpression::Addressable(adr) => load_var(context, adr, result_location),
     }
 }
 
 fn generate_logic_binop(
     context: &mut Context,
     op: BinaryLogicOp,
+    size: usize,
     left: TypedAnalyzedExpression,
     right: TypedAnalyzedExpression,
+    result_location: ExprResultLocation,
 ) {
     let end_label = context.get_new_label();
-    generate_expression_code(context, left);
+    generate_expression_code(context, left, ExprResultLocation::Register(0));
     context.push("cmpi r0 0");
     match op {
         BinaryLogicOp::Or => context.push(&format!("jnz {}", end_label)),
         BinaryLogicOp::And => context.push(&format!("jz {}", end_label)),
     }
-    generate_expression_code(context, right);
+    generate_expression_code(context, right, ExprResultLocation::Register(0));
     context.push_label(end_label);
+
+    move_register_to_location(context, 0, size, result_location);
 }
 
 fn generate_math_binop(
     context: &mut Context,
     op: BinaryMathOp,
+    size: usize,
     left: TypedAnalyzedExpression,
     right: TypedAnalyzedExpression,
+    result_location: ExprResultLocation,
 ) {
-    generate_expression_code(context, left);
+    generate_expression_code(context, left, ExprResultLocation::Register(0));
     context.push("push #64 r0");
-    generate_expression_code(context, right);
+    generate_expression_code(context, right, ExprResultLocation::Register(0));
     context.push("mov r1 r0");
     context.push("pop #64 r0");
     add_math_op_instruction(context, op);
+
+    move_register_to_location(context, 0, size, result_location);
 }
 
 fn generate_comparison_binop(
     context: &mut Context,
     op: BinaryComparisonOp,
+    size: usize,
     left: TypedAnalyzedExpression,
     right: TypedAnalyzedExpression,
+    result_location: ExprResultLocation,
 ) {
-    generate_expression_code(context, left);
+    generate_expression_code(context, left, ExprResultLocation::Register(0));
     context.push("push #64 r0");
-    generate_expression_code(context, right);
+    generate_expression_code(context, right, ExprResultLocation::Register(0));
     context.push("mov r1 r0");
     context.push("pop #64 r0");
     context.push("cmp r0 r1");
@@ -379,40 +537,53 @@ fn generate_comparison_binop(
         BinaryComparisonOp::Greater => context.push("setg r0"),
         BinaryComparisonOp::GreaterEquals => context.push("setge r0"),
     }
+    move_register_to_location(context, 0, size, result_location);
 }
 
 fn generate_assignment_binop(
     context: &mut Context,
     op: Option<BinaryMathOp>,
-    left: TypedAnalyzedExpression,
+    size: usize,
+    left: TypedAnalyzedAddressableExpression,
     right: TypedAnalyzedExpression,
+    result_location: ExprResultLocation,
 ) {
-    generate_expression_code(context, right);
+    generate_expression_code(context, right, ExprResultLocation::Register(0));
     if let Some(math_op) = op {
         context.push("push #64 r0");
-        generate_expression_code(context, left.clone());
+        load_var(context, left.clone(), ExprResultLocation::Register(0));
         context.push("pop #64 r1");
         add_math_op_instruction(context, math_op);
     }
-    store_var(context, left);
+    context.push("push #64 r0");
+    store_reg0_in_var(context, left);
+    context.push("pop #64 r0");
+
+    move_register_to_location(context, 0, size, result_location);
 }
 
 fn generate_logic_assignment_binop(
     context: &mut Context,
     op: BinaryLogicOp,
-    left: TypedAnalyzedExpression,
+    size: usize,
+    left: TypedAnalyzedAddressableExpression,
     right: TypedAnalyzedExpression,
+    result_location: ExprResultLocation,
 ) {
     let end_label = context.get_new_label();
-    generate_expression_code(context, left.clone());
+    load_var(context, left.clone(), ExprResultLocation::Register(0));
     context.push("cmpi r0 0");
     match op {
         BinaryLogicOp::Or => context.push(&format!("jnz {}", end_label)),
         BinaryLogicOp::And => context.push(&format!("jz {}", end_label)),
     }
-    generate_expression_code(context, right);
+    generate_expression_code(context, right, ExprResultLocation::Register(0));
     context.push_label(end_label);
-    store_var(context, left);
+    context.push("push #64 r0");
+    store_reg0_in_var(context, left);
+    context.push("pop #64 r0");
+
+    move_register_to_location(context, 0, size, result_location);
 }
 
 fn add_math_op_instruction(context: &mut Context, op: BinaryMathOp) {
@@ -430,30 +601,122 @@ fn add_math_op_instruction(context: &mut Context, op: BinaryMathOp) {
     }
 }
 
-fn load_var_address(context: &mut Context, expr: AnalyzedExpression) {
-    match expr {
-        AnalyzedExpression::Variable(name) => {
-            let offset = context.fn_context.var_stack_offsets[&name];
-            context.push(&format!("lea r0 [bp;{}]", offset));
+fn load_var_address(context: &mut Context, expr: TypedAnalyzedAddressableExpression, result_location: ExprResultLocation) {
+    match expr.value {
+        AnalyzedAddressableExpression::Variable(name) => {
+            let offset = context.current_data.local_variables[&name].offset;
+            match result_location {
+                ExprResultLocation::Register(reg) => {
+                    context.push(&format!("lea r{} [bp;{}]", reg, offset));
+                }
+                ExprResultLocation::Stack => {
+                    context.push(&format!("lea r0 [bp;{}]", offset));
+                    context.push("push #64 r0");
+                }
+                ExprResultLocation::Discard => {}
+            }
         }
-        _ => unreachable!(),
+        AnalyzedAddressableExpression::MemberAccess { expr, member, struct_name } => {
+            load_var_address(context, *expr, ExprResultLocation::Register(0));
+            let offset = context.struct_data[&struct_name].fields[&member].offset;
+            context.push(&format!("addi r0 {}", offset));
+            move_register_to_location(context, 0, 64, result_location);
+        }
+        AnalyzedAddressableExpression::Dereference(inner_expr) => {
+            generate_expression_code(context, *inner_expr, ExprResultLocation::Register(0));
+            move_register_to_location(context, 0, 64, result_location);
+        }
     }
 }
 
-fn store_var(context: &mut Context, expr: TypedAnalyzedExpression) {
-    match expr.expr {
-        AnalyzedExpression::Variable(name) => {
-            let offset = context.fn_context.var_stack_offsets[&name];
-            let size = context.fn_context.var_type_sizes[&name] * 8;
-            context.push(&format!("store #{} r0 [bp;{}]", size, offset));
+fn load_var(context: &mut Context, expr: TypedAnalyzedAddressableExpression, result_location: ExprResultLocation) {
+    let byte_size = expr.ty.size();
+    match expr.value {
+        AnalyzedAddressableExpression::Variable(name) => {
+            let var_data = &context.current_data.local_variables.get(&name).unwrap_or_else(|| {
+                panic!("Variable {} not found", name)
+            });
+            let offset = var_data.offset;
+
+            match result_location {
+                ExprResultLocation::Register(reg) => {
+                    context.push(&format!("load #{} r{} [bp;{}]", byte_size * 8, reg, offset));
+                }
+                ExprResultLocation::Stack => {
+                    context.push(&format!("movi r0 {}", byte_size));
+                    context.push(&format!("pushmem r0 [bp;{}]", offset));
+                }
+                ExprResultLocation::Discard => {}
+            }
         }
-        AnalyzedExpression::Unary { op: UnaryOp::Deref, expr: inner_expr } => {
-            let size = expr.expr_type.size() * 8;
+        AnalyzedAddressableExpression::MemberAccess { expr, member, struct_name } => {
+            load_var_address(context, *expr, ExprResultLocation::Register(0));
+            let var_data = &context.struct_data[&struct_name].fields[&member];
+            let offset = var_data.offset;
+
+            match result_location {
+                ExprResultLocation::Register(reg) => {
+                    context.push(&format!("load #{} r{} [r0;{}]", byte_size * 8, reg, offset));
+                }
+                ExprResultLocation::Stack => {
+                    context.push(&format!("movi r0 {}", byte_size));
+                    context.push(&format!("pushmem r0 [r0;{}]", offset));
+                }
+                ExprResultLocation::Discard => {}
+            }
+        }
+        AnalyzedAddressableExpression::Dereference(inner_expr) => {
+            generate_expression_code(context, *inner_expr, ExprResultLocation::Register(0));
+            match result_location {
+                ExprResultLocation::Register(reg) => {
+                    context.push(&format!("load #{} r{} [r0]", byte_size * 8, reg));
+                }
+                ExprResultLocation::Stack => {
+                    context.push(&format!("movi r1 {}", byte_size));
+                    context.push("pushmem r1 [r0]");
+                }
+                ExprResultLocation::Discard => {}
+            }
+        }
+    }
+}
+
+fn store_reg0_in_var(context: &mut Context, expr: TypedAnalyzedAddressableExpression) {
+    let byte_size = expr.ty.size();
+    match expr.value {
+        AnalyzedAddressableExpression::Variable(name) => {
+            let var_data = &context.current_data.local_variables[&name];
+            let offset = var_data.offset;
+            context.push(&format!("store #{} r0 [bp;{}]", byte_size * 8, offset));
+        }
+        AnalyzedAddressableExpression::MemberAccess { expr, member, struct_name } => {
+            let var_data = &context.struct_data[&struct_name].fields[&member];
+            let offset = var_data.offset;
+
             context.push("push #64 r0");
-            generate_expression_code(context, *inner_expr);
+            load_var_address(context, *expr, ExprResultLocation::Register(0));
             context.push("pop #64 r1");
-            context.push(&format!("store #{} r1 [r0]", size));
+            context.push(&format!("store #{} r1 [r0;{}]", byte_size * 8, offset));
         }
-        _ => unreachable!(),
+        AnalyzedAddressableExpression::Dereference(inner_expr) => {
+            context.push("push #64 r0");
+            generate_expression_code(context, *inner_expr, ExprResultLocation::Register(0));
+            context.push("pop #64 r1");
+            context.push(&format!("store #{} r1 [r0]", byte_size * 8));
+        }
+    }
+}
+
+fn move_register_to_location(context: &mut Context, register: usize, size: usize, result_location: ExprResultLocation) {
+    match result_location {
+        ExprResultLocation::Register(reg) => {
+            if reg != register {
+                context.push(&format!("mov r{} r{}", reg, register));
+            }
+        }
+        ExprResultLocation::Stack => {
+            context.push(&format!("push #{} r0", size));
+        }
+        ExprResultLocation::Discard => {}
     }
 }

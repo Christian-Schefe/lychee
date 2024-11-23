@@ -1,66 +1,38 @@
 use crate::compiler::lexer::{HasLocation, Location};
-use crate::compiler::parser::types::Type;
+use crate::compiler::parser::types::{Type, SrcType};
 
 #[derive(Debug)]
 pub struct Program {
     pub functions: Vec<SrcFunction>,
+    pub struct_definitions: Vec<SrcStructDefinition>,
 }
+
+pub type SrcStructDefinition = Src<StructDefinition>;
 
 #[derive(Debug, Clone)]
-pub struct SrcFunction {
-    pub(crate) function: Function,
-    pub(crate) location: Location,
+pub struct StructDefinition {
+    pub name: String,
+    pub fields: Vec<(String, SrcType)>,
 }
 
-impl HasLocation for SrcFunction {
-    fn location(&self) -> &Location {
-        &self.location
-    }
-}
-
-impl SrcFunction {
-    pub fn new(function: Function, location: &Location) -> Self {
-        Self {
-            function,
-            location: location.clone(),
-        }
-    }
-}
+pub type SrcFunction = Src<Function>;
 
 #[derive(Debug, Clone)]
 pub struct Function {
     pub name: String,
-    pub args: Vec<(String, Type)>,
-    pub return_type: Type,
+    pub args: Vec<(String, SrcType)>,
+    pub return_type: SrcType,
     pub expr: SrcExpression,
 }
 
-#[derive(Debug, Clone)]
-pub struct SrcStatement {
-    pub(crate) statement: Statement,
-    pub(crate) location: Location,
-}
 
-impl HasLocation for SrcStatement {
-    fn location(&self) -> &Location {
-        &self.location
-    }
-}
-
-impl SrcStatement {
-    pub fn new(statement: Statement, location: &Location) -> Self {
-        Self {
-            statement,
-            location: location.clone(),
-        }
-    }
-}
+pub type SrcStatement = Src<Statement>;
 
 #[derive(Debug, Clone)]
 pub enum Statement {
     Return(Option<SrcExpression>),
     Declaration {
-        var_type: Type,
+        var_type: SrcType,
         name: String,
         value: SrcExpression,
     },
@@ -83,26 +55,7 @@ pub enum Statement {
     Expr(SrcExpression),
 }
 
-#[derive(Debug, Clone)]
-pub struct SrcExpression {
-    pub(crate) expr: Expression,
-    pub(crate) location: Location,
-}
-
-impl HasLocation for SrcExpression {
-    fn location(&self) -> &Location {
-        &self.location
-    }
-}
-
-impl SrcExpression {
-    pub fn new(expr: Expression, location: &Location) -> Self {
-        Self {
-            expr,
-            location: location.clone(),
-        }
-    }
-}
+pub type SrcExpression = Src<Expression>;
 
 #[derive(Debug, Clone)]
 pub enum Expression {
@@ -116,6 +69,7 @@ pub enum Expression {
         op: UnaryOp,
         expr: Box<SrcExpression>,
     },
+    Sizeof(SrcType),
     Literal(Literal),
     Variable(String),
     Ternary {
@@ -128,9 +82,24 @@ pub enum Expression {
         args: Vec<SrcExpression>,
     },
     Cast {
-        var_type: Type,
+        var_type: SrcType,
         expr: Box<SrcExpression>,
     },
+    StructLiteral {
+        struct_type: SrcType,
+        fields: Vec<(String, SrcExpression)>,
+    },
+    MemberAccess {
+        expr: Box<SrcExpression>,
+        member: String,
+    },
+    Increment {
+        expr: Box<SrcExpression>,
+        is_increment: bool,
+        postfix: bool,
+    },
+    Borrow(Box<SrcExpression>),
+    Dereference(Box<SrcExpression>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -179,10 +148,6 @@ pub enum UnaryOp {
     Negate,
     Not,
     LogicalNot,
-    Increment,
-    Decrement,
-    Borrow,
-    Deref,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -200,6 +165,27 @@ impl Literal {
             Literal::Bool(_) => Type::Bool,
             Literal::Char(_) => Type::Char,
             Literal::Integer(_) => Type::Integer { size: 8 },
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Src<T> {
+    pub(crate) value: T,
+    pub(crate) location: Location,
+}
+
+impl<T> HasLocation for Src<T> {
+    fn location(&self) -> &Location {
+        &self.location
+    }
+}
+
+impl<T> Src<T> {
+    pub fn new(value: T, location: &Location) -> Self {
+        Self {
+            value,
+            location: location.clone(),
         }
     }
 }

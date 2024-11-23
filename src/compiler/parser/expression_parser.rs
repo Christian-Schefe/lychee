@@ -1,9 +1,11 @@
-use crate::compiler::lexer::Location;
-use crate::compiler::lexer::token::{StaticToken, Token};
+use anyhow::{Context};
+use crate::compiler::lexer::{Location};
+use crate::compiler::lexer::token::{Keyword, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::parser_error::{ParseResult, LocationError};
 use crate::compiler::parser::{parse_statement, parse_type, pop_or_err};
 use crate::compiler::parser::syntax_tree::{BinaryMathOp, BinaryOp, BinaryComparisonOp, Expression, SrcExpression, UnaryOp, BinaryLogicOp, Literal};
+use crate::compiler::parser::types::{SrcType};
 
 fn parse_left_associative<F>(tokens: &mut TokenStack, op_tokens: &[(StaticToken, BinaryOp)], parse_lower: F) -> ParseResult<SrcExpression>
 where
@@ -11,7 +13,7 @@ where
 {
     let mut expr = parse_lower(tokens)?;
     let location = expr.location.clone();
-    while let Some((_, op)) = op_tokens.iter().find(|t| if let Token::Static(tkn) = &tokens.peek().token { *tkn == t.0 } else { false }) {
+    while let Some((_, op)) = op_tokens.iter().find(|t| if let Token::Static(tkn) = &tokens.peek().value { *tkn == t.0 } else { false }) {
         tokens.pop();
         let right = parse_lower(tokens)?;
         expr = SrcExpression::new(Expression::Binary {
@@ -29,7 +31,7 @@ where
 {
     let mut expr = parse_lower(tokens)?;
     let location = expr.location.clone();
-    let token = &tokens.peek().token;
+    let token = &tokens.peek().value;
     if let Some((_, op)) = op_tokens.iter().find(|t| if let Token::Static(tkn) = token { *tkn == t.0 } else { false }) {
         tokens.pop();
         let right = parse_right_associative(tokens, op_tokens, parse_lower)?;
@@ -67,7 +69,7 @@ fn parse_assignment_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpressi
 fn parse_ternary_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
     let expr = parse_logical_or_or_lower(tokens)?;
     let location = expr.location.clone();
-    if let Token::Static(StaticToken::QuestionMark) = tokens.peek().token {
+    if let Token::Static(StaticToken::QuestionMark) = tokens.peek().value {
         tokens.pop();
         let true_expr = parse_expression(tokens)?;
         pop_or_err(tokens, Token::Static(StaticToken::Colon))?;
@@ -118,57 +120,74 @@ fn parse_add_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
 }
 
 fn parse_mul_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
-    parse_left_associative(tokens, &[(StaticToken::Asterisk, BinaryOp::Math(BinaryMathOp::Mul)), (StaticToken::Slash, BinaryOp::Math(BinaryMathOp::Div)), (StaticToken::Percent, BinaryOp::Math(BinaryMathOp::Mod))], parse_unary_or_lower)
+    parse_left_associative(tokens, &[(StaticToken::Asterisk, BinaryOp::Math(BinaryMathOp::Mul)), (StaticToken::Slash, BinaryOp::Math(BinaryMathOp::Div)), (StaticToken::Percent, BinaryOp::Math(BinaryMathOp::Mod))], parse_prefix_unary_or_lower)
 }
 
-fn parse_unary_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
+fn parse_prefix_unary_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
     let token = tokens.peek();
     let location = token.location.clone();
-    if let Token::Static(static_token) = &token.token {
+    if let Token::Static(static_token) = &token.value {
         let bin_op = match static_token {
             StaticToken::Plus => Some(UnaryOp::Positive),
             StaticToken::Minus => Some(UnaryOp::Negate),
             StaticToken::ExclamationMark => Some(UnaryOp::LogicalNot),
             StaticToken::Tilde => Some(UnaryOp::Not),
-            StaticToken::Increment => Some(UnaryOp::Increment),
-            StaticToken::Decrement => Some(UnaryOp::Decrement),
-            StaticToken::Ampersand => Some(UnaryOp::Borrow),
-            StaticToken::Asterisk => Some(UnaryOp::Deref),
             _ => None
         };
         if let Some(op) = bin_op {
             tokens.pop();
-            let expr = parse_unary_or_lower(tokens)?;
+            let expr = parse_prefix_unary_or_lower(tokens)?;
             return Ok(SrcExpression::new(Expression::Unary {
                 op,
                 expr: Box::new(expr),
             }, &location));
+        } else if let StaticToken::Ampersand = static_token {
+            tokens.pop();
+            let expr = parse_prefix_unary_or_lower(tokens)?;
+            return Ok(SrcExpression::new(Expression::Borrow(Box::new(expr)), &location));
+        } else if let StaticToken::Asterisk = static_token {
+            tokens.pop();
+            let expr = parse_prefix_unary_or_lower(tokens)?;
+            return Ok(SrcExpression::new(Expression::Dereference(Box::new(expr)), &location));
+        } else if let StaticToken::Increment = static_token {
+            tokens.pop();
+            let expr = parse_prefix_unary_or_lower(tokens)?;
+            return Ok(SrcExpression::new(Expression::Increment { expr: Box::new(expr), is_increment: true, postfix: false }, &location));
+        } else if let StaticToken::Decrement = static_token {
+            tokens.pop();
+            let expr = parse_prefix_unary_or_lower(tokens)?;
+            return Ok(SrcExpression::new(Expression::Increment { expr: Box::new(expr), is_increment: false, postfix: false }, &location));
         }
+    } else if let Token::Keyword(Keyword::Sizeof) = token.value {
+        tokens.pop();
+        pop_or_err(tokens, Token::Static(StaticToken::OpenParen))?;
+        let var_type = parse_type(tokens)?;
+        pop_or_err(tokens, Token::Static(StaticToken::CloseParen))?;
+        return Ok(SrcExpression::new(Expression::Sizeof(var_type), &location));
     }
 
-    parse_primary(tokens)
+    parse_postfix_unary_or_lower(tokens)
 }
 
 fn parse_primary(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
+    let location = tokens.peek().location.clone();
+
     let offset = tokens.offset;
-    if let Ok(result) = parse_function_call(tokens) {
-        return Ok(result);
+    match parse_type(tokens) {
+        Ok(var_type) => {
+            if tokens.peek().value == Token::Static(StaticToken::OpenBrace) {
+                return parse_struct_literal(var_type, tokens, &location);
+            }
+        }
+        Err(_) => {}
     }
     tokens.offset = offset;
 
     let token = tokens.peek();
-    let location = token.location.clone();
-    match &token.token {
+    match &token.value {
         Token::Static(StaticToken::OpenParen) => {
-            let offset = tokens.offset;
-
-            match parse_cast(&location, tokens) {
-                Ok(cast_expr) => return Ok(cast_expr),
-                Err(_) => tokens.offset = offset
-            }
-
             tokens.pop();
-            if tokens.peek().token == Token::Static(StaticToken::CloseParen) {
+            if tokens.peek().value == Token::Static(StaticToken::CloseParen) {
                 tokens.pop();
                 return Ok(SrcExpression::new(Expression::Literal(Literal::Unit), &location));
             }
@@ -188,49 +207,68 @@ fn parse_primary(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
             unimplemented!("String literals are not yet supported")
         }
         Token::Identifier(name) => {
-            let expr = SrcExpression::new(Expression::Variable(name.to_string()), &location);
+            let name = name.to_string();
             tokens.pop();
-            Ok(expr)
+            match tokens.peek().value {
+                Token::Static(StaticToken::OpenParen) => parse_function_call(name, tokens, &location),
+                _ => Ok(SrcExpression::new(Expression::Variable(name), &location))
+            }
         }
-        _ => Err(LocationError::expect("Primary expression", token)),
+        _ => Err(LocationError::msg(&format!("Invalid Token: '{}'", token.value), &token.location)),
     }
 }
 
-fn parse_function_call(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
-    let id_token = tokens.pop();
-    let location = id_token.location.clone();
-    let id = match &id_token.token {
-        Token::Identifier(name) => name,
-        _ => return Err(LocationError::expect("Identifier", id_token))
-    }.to_string();
+fn parse_struct_literal(struct_type: SrcType, tokens: &mut TokenStack, location: &Location) -> ParseResult<SrcExpression> {
+    pop_or_err(tokens, Token::Static(StaticToken::OpenBrace))?;
+    let mut fields = Vec::new();
+    while tokens.peek().value != Token::Static(StaticToken::CloseBrace) {
+        let field_name_token = tokens.pop();
+        let field_name = match &field_name_token.value {
+            Token::Identifier(name) => name.clone(),
+            _ => return Err(LocationError::expect("Identifier", field_name_token).context("Failed to parse field identifier.")),
+        };
+        pop_or_err(tokens, Token::Static(StaticToken::Colon))?;
+        let field_expr = parse_expression(tokens).context("Failed to parse field expression.")?;
+        fields.push((field_name, field_expr));
+        if tokens.peek().value != Token::Static(StaticToken::Comma) {
+            break;
+        }
+        tokens.pop();
+    }
+    pop_or_err(tokens, Token::Static(StaticToken::CloseBrace))?;
+    Ok(SrcExpression::new(Expression::StructLiteral { struct_type, fields }, location))
+}
 
+fn parse_function_call(name: String, tokens: &mut TokenStack, location: &Location) -> ParseResult<SrcExpression> {
     pop_or_err(tokens, Token::Static(StaticToken::OpenParen))?;
 
     let mut args = Vec::new();
-    if tokens.peek().token != Token::Static(StaticToken::CloseParen) {
+    if tokens.peek().value != Token::Static(StaticToken::CloseParen) {
         loop {
-            args.push(parse_expression(tokens)?);
-            if tokens.peek().token != Token::Static(StaticToken::Comma) {
+            let arg_location = tokens.peek().location.clone();
+            let arg_expr = parse_expression(tokens).with_context(|| format!("Failed to parse function argument at {}.", arg_location))?;
+            args.push(arg_expr);
+            if tokens.peek().value != Token::Static(StaticToken::Comma) {
                 break;
             }
             tokens.pop();
         }
     }
     pop_or_err(tokens, Token::Static(StaticToken::CloseParen))?;
-    Ok(SrcExpression::new(Expression::FunctionCall { function: id, args }, &location))
+    Ok(SrcExpression::new(Expression::FunctionCall { function: name, args }, &location))
 }
 
 pub fn parse_block_expr(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
     let location = tokens.peek().location.clone();
     pop_or_err(tokens, Token::Static(StaticToken::OpenBrace))?;
     let mut statements = Vec::new();
-    while tokens.peek().token != Token::Static(StaticToken::CloseBrace) {
+    while tokens.peek().value != Token::Static(StaticToken::CloseBrace) {
         let offset = tokens.offset;
         let statement = parse_statement(tokens);
         if let Err(err) = statement {
             tokens.offset = offset;
-            let final_expr = parse_expression(tokens).map_err(|_| err.clone())?;
-            pop_or_err(tokens, Token::Static(StaticToken::CloseBrace)).map_err(|_| err)?;
+            let final_expr = parse_expression(tokens).map_err(|_| err).with_context(|| format!("Failed to parse block at {}.", location))?;
+            pop_or_err(tokens, Token::Static(StaticToken::CloseBrace)).context("Failed to parse block.")?;
             return Ok(SrcExpression::new(Expression::Block(statements, Some(Box::new(final_expr))), &location));
         }
         statements.push(statement?);
@@ -239,10 +277,30 @@ pub fn parse_block_expr(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
     Ok(SrcExpression::new(Expression::Block(statements, None), &location))
 }
 
-fn parse_cast(location: &Location, tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
-    pop_or_err(tokens, Token::Static(StaticToken::OpenParen))?;
-    let var_type = parse_type(tokens)?;
-    pop_or_err(tokens, Token::Static(StaticToken::CloseParen))?;
-    let expr = parse_unary_or_lower(tokens)?;
-    Ok(SrcExpression::new(Expression::Cast { var_type, expr: Box::new(expr) }, location))
+fn parse_postfix_unary_or_lower(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
+    let expr = parse_primary(tokens)?;
+    let location = expr.location.clone();
+    let next_token = tokens.peek();
+    match next_token.value {
+        Token::Static(StaticToken::Increment) | Token::Static(StaticToken::Decrement) => {
+            let is_increment = if let Token::Static(StaticToken::Increment) = next_token.value { true } else { false };
+            tokens.pop();
+            Ok(SrcExpression::new(Expression::Increment { is_increment: is_increment, postfix: true, expr: Box::new(expr) }, &location))
+        }
+        Token::Keyword(Keyword::As) => {
+            tokens.pop();
+            let var_type = parse_type(tokens)?;
+            Ok(SrcExpression::new(Expression::Cast { var_type, expr: Box::new(expr) }, &location))
+        }
+        Token::Static(StaticToken::Dot) => {
+            tokens.pop();
+            let next_token = tokens.pop();
+            let member = match &next_token.value {
+                Token::Identifier(name) => name.clone(),
+                tkn => return Err(LocationError::msg(&format!("Expected an Identifier, found token {}", tkn), &location).context("Failed to parse member access.")),
+            };
+            Ok(SrcExpression::new(Expression::MemberAccess { expr: Box::new(expr), member }, &location))
+        }
+        _ => Ok(expr)
+    }
 }

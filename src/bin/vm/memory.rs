@@ -108,6 +108,10 @@ impl Memory {
         self.data[address..address + bytes.len()].copy_from_slice(bytes);
     }
 
+    pub fn memory_copy(&mut self, src: usize, dest: usize, bytes: usize) {
+        self.data.copy_within(src..src + bytes, dest);
+    }
+
     pub fn print_registers(&self) {
         println!("Registers: {:?}", self.registers.map(|r| r as i64));
     }
@@ -117,7 +121,7 @@ impl Memory {
         let bp = self.registers[constants::BP] as usize;
         let stack = self.data[sp..].iter().rev().collect::<Vec<&u8>>();
         println!("Stack: {:?}", stack);
-        let stack_frame = &self.data[sp..bp].iter().rev().collect::<Vec<&u8>>();;
+        let stack_frame = &self.data[sp..bp].iter().rev().collect::<Vec<&u8>>();
         println!("Stack frame: {:?}", stack_frame);
     }
 }

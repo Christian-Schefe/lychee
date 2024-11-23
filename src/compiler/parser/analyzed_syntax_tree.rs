@@ -6,6 +6,13 @@ use crate::compiler::parser::types::Type;
 pub struct AnalyzedProgram {
     pub functions: HashMap<String, AnalyzedFunction>,
     pub main_function: String,
+    pub struct_definitions: HashMap<String, AnalyzedStructDefinition>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AnalyzedStructDefinition {
+    pub name: String,
+    pub fields: Vec<(String, Type)>,
 }
 
 #[derive(Debug, Clone)]
@@ -17,15 +24,18 @@ pub struct AnalyzedFunction {
     pub expr: TypedAnalyzedExpression,
 }
 
+pub type TypedAnalyzedExpression = Typed<AnalyzedExpression>;
+pub type TypedAnalyzedAddressableExpression = Typed<AnalyzedAddressableExpression>;
+
 #[derive(Debug, Clone)]
-pub struct TypedAnalyzedExpression {
-    pub expr: AnalyzedExpression,
-    pub expr_type: Type,
+pub struct Typed<T> {
+    pub value: T,
+    pub ty: Type,
 }
 
-impl TypedAnalyzedExpression {
-    pub fn new(expr: AnalyzedExpression, expr_type: Type) -> Self {
-        Self { expr, expr_type }
+impl<T> Typed<T> {
+    pub fn new(value: T, ty: Type) -> Self {
+        Self { value, ty }
     }
 }
 
@@ -64,12 +74,17 @@ pub enum AnalyzedExpression {
         left: Box<TypedAnalyzedExpression>,
         right: Box<TypedAnalyzedExpression>,
     },
+    BinaryAssign {
+        op: BinaryOp,
+        left: Box<TypedAnalyzedAddressableExpression>,
+        right: Box<TypedAnalyzedExpression>,
+    },
     Unary {
         op: UnaryOp,
         expr: Box<TypedAnalyzedExpression>,
     },
+    Sizeof(Type),
     Literal(Literal),
-    Variable(String),
     Ternary {
         condition: Box<TypedAnalyzedExpression>,
         true_expr: Box<TypedAnalyzedExpression>,
@@ -77,10 +92,32 @@ pub enum AnalyzedExpression {
     },
     FunctionCall {
         function: String,
-        args: Vec<TypedAnalyzedExpression>,
+        args: HashMap<String, TypedAnalyzedExpression>,
     },
     Cast {
         var_type: Type,
         expr: Box<TypedAnalyzedExpression>,
     },
+    StructLiteral {
+        name: String,
+        fields: Vec<(String, TypedAnalyzedExpression)>,
+    },
+    Increment {
+        expr: Box<TypedAnalyzedAddressableExpression>,
+        is_increment: bool,
+        postfix: bool,
+    },
+    Addressable(TypedAnalyzedAddressableExpression),
+    Borrow(TypedAnalyzedAddressableExpression),
+}
+
+#[derive(Debug, Clone)]
+pub enum AnalyzedAddressableExpression {
+    Variable(String),
+    MemberAccess {
+        expr: Box<TypedAnalyzedAddressableExpression>,
+        member: String,
+        struct_name: String,
+    },
+    Dereference(Box<TypedAnalyzedExpression>),
 }

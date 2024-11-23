@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
+use std::fmt::Display;
 use crate::compiler::parser::syntax_tree::Literal;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -181,6 +182,9 @@ pub enum Keyword {
     For,
     While,
     Do,
+    Sizeof,
+    Struct,
+    As,
 }
 
 impl Keyword {
@@ -192,6 +196,9 @@ impl Keyword {
             "for" => Some(Keyword::For),
             "while" => Some(Keyword::While),
             "do" => Some(Keyword::Do),
+            "sizeof" => Some(Keyword::Sizeof),
+            "struct" => Some(Keyword::Struct),
+            "as" => Some(Keyword::As),
             _ => None,
         }
     }
@@ -207,10 +214,28 @@ impl Token {
             Ok(Token::Literal(Literal::Bool(false)))
         } else if str.chars().all(|c| c.is_numeric()) {
             str.parse::<i64>().map(|x| Token::Literal(Literal::Integer(x))).map_err(|_| true)
+        } else if str.starts_with("0x") {
+            if str.len() > 2 && !str[2..].chars().all(|c| c.is_ascii_hexdigit()) {
+                return Err(true);
+            }
+            i64::from_str_radix(&str[2..], 16).map(|x| Token::Literal(Literal::Integer(x))).map_err(|_| false)
         } else if str.chars().enumerate().all(|(i, c)| if i == 0 { c.is_alphabetic() } else { c.is_alphanumeric() } || c == '_') {
             Ok(Token::Identifier(str.to_string()))
         } else {
             Err(true)
+        }
+    }
+}
+
+impl Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Token::Static(token) => write!(f, "{}", token.get_str()),
+            Token::Identifier(name) => write!(f, "{}", name),
+            Token::Literal(literal) => write!(f, "{:?}", literal),
+            Token::String(string) => write!(f, "\"{}\"", string),
+            Token::Keyword(keyword) => write!(f, "{:?}", keyword),
+            Token::EOF => write!(f, "EOF"),
         }
     }
 }

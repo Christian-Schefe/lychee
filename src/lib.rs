@@ -17,6 +17,8 @@ pub enum OpCode {
     Exit,
     SignExtend,
     Lea,
+    PushMem,
+    PopMem,
 }
 
 impl OpCode {
@@ -39,6 +41,8 @@ impl OpCode {
             OpCode::Exit => 0x33,
             OpCode::SignExtend => 0x34,
             OpCode::Lea => 0x35,
+            OpCode::PushMem => 0x36,
+            OpCode::PopMem => 0x37,
         }
     }
 }
@@ -102,7 +106,4 @@ pub enum RegisterCode {
     PC = 0x0F,
 }
 
-pub const DATA_SIZE_8: u8 = 0x01;
-pub const DATA_SIZE_16: u8 = 0x02;
-pub const DATA_SIZE_32: u8 = 0x04;
 pub const DATA_SIZE_64: u8 = 0x08;

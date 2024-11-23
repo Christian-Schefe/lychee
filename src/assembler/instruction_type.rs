@@ -159,8 +159,12 @@ impl InstructionType {
     }
 
     pub fn parse_register_size_address(opcode: OpCode, parts: Vec<&str>) -> Self {
-        let size = SIZE_MAP.get(parts[1]).cloned().unwrap();
-        let register = REGISTER_MAP.get(parts[2]).cloned().unwrap();
+        let size = SIZE_MAP.get(parts[1]).cloned().unwrap_or_else(|| {
+            panic!("Invalid size: {}", parts[1]);
+        });
+        let register = REGISTER_MAP.get(parts[2]).cloned().unwrap_or_else(|| {
+            panic!("Invalid register: {}", parts[2]);
+        });
         let address = MemoryAddress::from_str(parts[3]);
         InstructionType::SizeRegisterAddress {
             opcode: opcode.byte_code(),

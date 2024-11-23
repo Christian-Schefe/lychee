@@ -121,6 +121,8 @@ pub fn run(memory: &mut Memory, debug_print: bool) -> i64 {
             }
             0x34 => sign_extend(pc, memory, debug_print),
             0x35 => lea(pc, memory, debug_print),
+            0x36 => pushmem(pc, memory, debug_print),
+            0x37 => popmem(pc, memory, debug_print),
             _ => panic!("Unknown opcode: {}", opcode),
         };
         if debug_print {
@@ -469,5 +471,45 @@ fn lea(pc: usize, memory: &mut Memory, debug_print: bool) {
 
     if debug_print {
         println!("Loaded address {} into register {}", address, register);
+    }
+}
+
+fn pushmem(pc: usize, memory: &mut Memory, debug_print: bool) {
+    let register = memory.data[pc + 1];
+    let data_size = memory.registers[register as usize];
+
+    memory.registers[constants::SP] -= data_size;
+    let dest_address = memory.registers[constants::SP] as usize;
+    let src_address = read_address(pc + 2, memory) as usize;
+
+    memory.memory_copy(src_address, dest_address, data_size as usize);
+
+    memory.registers[constants::PC] += 2;
+
+    if debug_print {
+        println!(
+            "Pushed {} bytes from address {} onto the stack at address {}",
+            data_size, src_address, dest_address
+        );
+    }
+}
+
+fn popmem(pc: usize, memory: &mut Memory, debug_print: bool) {
+    let register = memory.data[pc + 1];
+    let data_size = memory.registers[register as usize];
+
+    let src_address = memory.registers[constants::SP] as usize;
+    let dest_address = read_address(pc + 2, memory) as usize;
+
+    memory.memory_copy(src_address, dest_address, data_size as usize);
+
+    memory.registers[constants::SP] += data_size;
+    memory.registers[constants::PC] += 2;
+
+    if debug_print {
+        println!(
+            "Popped {} bytes from the stack at address {} into address {}",
+            data_size, src_address, dest_address
+        );
     }
 }

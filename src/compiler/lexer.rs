@@ -5,7 +5,7 @@ use crate::compiler::lexer::token::{StaticToken, Token, STATIC_TOKEN_MAP};
 use std::fmt::Display;
 use std::path::PathBuf;
 use std::string::String;
-use crate::compiler::parser::syntax_tree::Literal;
+use crate::compiler::parser::syntax_tree::{Literal, Src};
 
 #[derive(Debug, Clone)]
 pub struct Location {
@@ -23,17 +23,7 @@ pub trait HasLocation {
     fn location(&self) -> &Location;
 }
 
-#[derive(Debug, Clone)]
-pub struct SrcToken {
-    pub(crate) token: Token,
-    pub(crate) location: Location,
-}
-
-impl HasLocation for SrcToken {
-    fn location(&self) -> &Location {
-        &self.location
-    }
-}
+pub type SrcToken = Src<Token>;
 
 pub fn lex(input_path: &PathBuf) -> Vec<SrcToken> {
     let input: Vec<char> = std::fs::read_to_string(input_path)
@@ -56,6 +46,12 @@ pub fn lex(input_path: &PathBuf) -> Vec<SrcToken> {
             offset += 1;
             continue;
         }
+        if input[offset] == '/' && offset + 1 < input.len() && input[offset + 1] == '/' {
+            while offset < input.len() && input[offset] != '\n' {
+                offset += 1;
+            }
+            continue;
+        }
         let (token, new_offset) = if input[offset] == '"' {
             read_string(&input, offset, '"')
         } else if input[offset] == '\'' {
@@ -64,14 +60,14 @@ pub fn lex(input_path: &PathBuf) -> Vec<SrcToken> {
             read_token(&input, offset)
         };
         tokens.push(SrcToken {
-            token,
+            value: token,
             location: Location { line, column },
         });
         column += new_offset - offset;
         offset = new_offset;
     }
     tokens.push(SrcToken {
-        token: Token::EOF,
+        value: Token::EOF,
         location: Location { line, column },
     });
 

@@ -1,29 +1,32 @@
-use crate::compiler::parser::syntax_tree::Literal;
+use crate::compiler::parser::syntax_tree::{Literal, SrcStructDefinition};
 use crate::compiler::lexer::Location;
-use crate::compiler::parser::analyzed_syntax_tree::{AnalyzedExpression, AnalyzedFunction, AnalyzedProgram, AnalyzedStatement, TypedAnalyzedExpression};
+use crate::compiler::parser::analyzed_syntax_tree::{AnalyzedAddressableExpression, AnalyzedExpression, AnalyzedFunction, AnalyzedProgram, AnalyzedStatement, AnalyzedStructDefinition, TypedAnalyzedAddressableExpression, TypedAnalyzedExpression};
 use crate::compiler::parser::parser_error::LocationError;
 use crate::compiler::parser::syntax_tree::{BinaryOp, BinaryComparisonOp, Expression, Program, SrcExpression, SrcFunction, SrcStatement, Statement, UnaryOp};
 use crate::compiler::parser::types::Type;
 use std::collections::HashMap;
+use anyhow::Error;
+use crate::compiler::parser::type_resolver::{build_resolved_types, resolve_type, ResolvedTypes};
 
-pub type ValidationResult<T> = Result<T, LocationError>;
+pub type ValidationResult<T> = Result<T, Error>;
 
 struct ValidationContext {
     function_declarations: HashMap<String, FunctionDeclaration>,
     current_function: Option<String>,
     variable_types: HashMap<String, Type>,
+    resolved_types: ResolvedTypes,
 }
 
 #[derive(Clone)]
 struct FunctionDeclaration {
     return_type: Type,
-    args: Vec<Type>,
+    args: Vec<(String, Type)>,
 }
 
 fn add_builtin_function_declarations(context: &mut ValidationContext) {
     let write_declaration = FunctionDeclaration {
         return_type: Type::Unit,
-        args: vec![Type::Char],
+        args: vec![("char".to_string(), Type::Char)],
     };
     let read_declaration = FunctionDeclaration {
         return_type: Type::Char,
@@ -42,56 +45,77 @@ pub fn analyze_program(program: &Program) -> ValidationResult<AnalyzedProgram> {
         function_declarations: HashMap::new(),
         current_function: None,
         variable_types: HashMap::new(),
+        resolved_types: build_resolved_types(program)?,
     };
     add_builtin_function_declarations(&mut context);
+
     let main_function = program
         .functions
         .iter()
-        .find(|f| f.function.name == "main")
+        .find(|f| f.value.name == "main")
         .ok_or(LocationError::msg(
             "Program requires a main function.",
             &Location { line: 1, column: 1 },
         ))?;
-    if main_function.function.return_type != Type::Unit && !matches!(main_function.function.return_type, Type::Integer { size: _ }) {
+    let main_return_type = resolve_type(&context.resolved_types, &main_function.value.return_type)?;
+    if main_return_type != Type::Unit && !matches!(main_return_type, Type::Integer { size: _ }) {
         return Err(LocationError::msg(
             "Main function must return unit or an integer.",
             &main_function.location,
         ));
     }
+
     for function in &program.functions {
+        let mut resolved_args = Vec::with_capacity(function.value.args.len());
+        for (name, ty) in &function.value.args {
+            let ty = resolve_type(&context.resolved_types, ty)?;
+            resolved_args.push((name.clone(), ty));
+        }
         let declaration = FunctionDeclaration {
-            return_type: function.function.return_type.clone(),
-            args: function
-                .function
-                .args
-                .iter()
-                .map(|(_, ty)| ty.clone())
-                .collect(),
+            return_type: resolve_type(&context.resolved_types, &function.value.return_type)?,
+            args: resolved_args,
         };
-        if context
-            .function_declarations
-            .contains_key(&function.function.name)
+        if context.function_declarations.contains_key(&function.value.name)
         {
             return Err(LocationError::msg(
                 &format!(
                     "Function '{}' has already been declared.",
-                    function.function.name
+                    function.value.name
                 ),
                 &function.location,
             ));
         }
-        context
-            .function_declarations
-            .insert(function.function.name.clone(), declaration);
+        context.function_declarations.insert(function.value.name.clone(), declaration);
     }
     let mut analyzed_functions = HashMap::new();
     for function in &program.functions {
         let analyzed_fn = analyze_function(&mut context, function)?;
-        analyzed_functions.insert(function.function.name.clone(), analyzed_fn);
+        analyzed_functions.insert(function.value.name.clone(), analyzed_fn);
+    }
+    let mut analyzed_structs = HashMap::new();
+    for struct_def in &program.struct_definitions {
+        let analyzed_struct = analyze_struct_definition(&context, struct_def)?;
+        analyzed_structs.insert(struct_def.value.name.clone(), analyzed_struct);
     }
     Ok(AnalyzedProgram {
         functions: analyzed_functions,
-        main_function: main_function.function.name.clone(),
+        main_function: main_function.value.name.clone(),
+        struct_definitions: analyzed_structs,
+    })
+}
+
+fn analyze_struct_definition(
+    context: &ValidationContext,
+    struct_def: &SrcStructDefinition,
+) -> ValidationResult<AnalyzedStructDefinition> {
+    let mut resolved_fields = Vec::with_capacity(struct_def.value.fields.len());
+    for (name, ty) in &struct_def.value.fields {
+        let resolved_ty = resolve_type(&context.resolved_types, ty)?;
+        resolved_fields.push((name.clone(), resolved_ty));
+    }
+    Ok(AnalyzedStructDefinition {
+        name: struct_def.value.name.clone(),
+        fields: resolved_fields,
     })
 }
 
@@ -99,23 +123,24 @@ fn analyze_function(
     context: &mut ValidationContext,
     function: &SrcFunction,
 ) -> ValidationResult<AnalyzedFunction> {
-    context.current_function = Some(function.function.name.clone());
+    context.current_function = Some(function.value.name.clone());
     context.variable_types = HashMap::new();
-    for (name, ty) in &function.function.args {
-        context.variable_types.insert(name.clone(), ty.clone());
+    for (name, ty) in &function.value.args {
+        let ty = resolve_type(&context.resolved_types, ty)?;
+        context.variable_types.insert(name.clone(), ty);
     }
-    let return_type = &function.function.return_type;
-    let expected_type = if !always_returns_expr(&function.function.expr) {
-        Some(return_type)
+    let return_type = resolve_type(&context.resolved_types, &function.value.return_type)?;
+    let expected_type = if !always_returns_expr(&function.value.expr) {
+        Some(&return_type)
     } else {
         None
     };
-    let analyzed_expr = analyze_expr(context, &function.function.expr, expected_type)?;
+    let analyzed_expr = analyze_expr(context, &function.value.expr, expected_type)?;
 
-    let stack_space = calc_local_var_stack_space_expr(&function.function.expr);
+    let stack_space = calc_local_var_stack_space_expr(&analyzed_expr);
     Ok(AnalyzedFunction {
-        name: function.function.name.clone(),
-        args: function.function.args.clone(),
+        name: function.value.name.clone(),
+        args: context.function_declarations[&function.value.name].args.clone(),
         return_type: return_type.clone(),
         local_var_stack_size: stack_space,
         expr: analyzed_expr,
@@ -126,7 +151,7 @@ fn analyze_statement(
     context: &mut ValidationContext,
     statement: &SrcStatement,
 ) -> ValidationResult<AnalyzedStatement> {
-    match &statement.statement {
+    match &statement.value {
         Statement::Return(expr) => {
             let function = context
                 .function_declarations
@@ -164,10 +189,11 @@ fn analyze_statement(
                     &statement.location,
                 ));
             }
-            let analyzed_expr = analyze_expr(context, value, Some(var_type))?;
-            context.variable_types.insert(name.clone(), var_type.clone());
+            let resolved_var_type = resolve_type(&context.resolved_types, var_type)?;
+            let analyzed_expr = analyze_expr(context, value, Some(&resolved_var_type))?;
+            context.variable_types.insert(name.clone(), resolved_var_type.clone());
             Ok(AnalyzedStatement::Declaration {
-                var_type: var_type.clone(),
+                var_type: resolved_var_type,
                 name: name.clone(),
                 value: analyzed_expr,
             })
@@ -232,7 +258,7 @@ fn analyze_expr(
     expr: &SrcExpression,
     expected_type: Option<&Type>,
 ) -> ValidationResult<TypedAnalyzedExpression> {
-    match &expr.expr {
+    match &expr.value {
         Expression::Block(statements, return_expr) => {
             let mut always_returns = false;
             let analyzed_statements = statements.into_iter().map(|statement| {
@@ -253,7 +279,7 @@ fn analyze_expr(
                     ));
                 }
                 let analyzed_final_expr = analyze_expr(context, return_expr, expected_type)?;
-                let final_expr_type = analyzed_final_expr.expr_type.clone();
+                let final_expr_type = analyzed_final_expr.ty.clone();
                 Ok(TypedAnalyzedExpression::new(
                     AnalyzedExpression::Block(analyzed_statements, Some(Box::new(analyzed_final_expr))),
                     final_expr_type,
@@ -296,15 +322,15 @@ fn analyze_expr(
                     }
                     Type::Integer { size: _ } => Err(LocationError::msg(
                         &format!(
-                            "Integer literal out of range for type '{:?}'.",
+                            "Integer literal out of range for type '{}'.",
                             expected
                         ),
                         &expr.location,
                     )),
                     _ => Err(LocationError::msg(
                         &format!(
-                            "Expected type '{:?}', found type '{:?}'.",
-                            expected_type.unwrap(),
+                            "Expected type '{}', found type '{}'.",
+                            expected,
                             literal.get_type()
                         ),
                         &expr.location,
@@ -332,8 +358,8 @@ fn analyze_expr(
             UnaryOp::Positive | UnaryOp::Negate | UnaryOp::Not => {
                 if expected_type.is_none_or(|x| x.is_integer()) {
                     let analyzed_expr = analyze_expr(context, inner_expr, expected_type)?;
-                    let expr_type = analyzed_expr.expr_type.clone();
-                    if analyzed_expr.expr_type.is_integer() {
+                    let expr_type = analyzed_expr.ty.clone();
+                    if analyzed_expr.ty.is_integer() {
                         Ok(TypedAnalyzedExpression::new(
                             AnalyzedExpression::Unary {
                                 op: op.clone(),
@@ -380,91 +406,6 @@ fn analyze_expr(
                     ))
                 }
             }
-            UnaryOp::Increment | UnaryOp::Decrement => {
-                if expected_type.is_none_or(|x| x.is_integer()) {
-                    if !is_assignable(&inner_expr.expr) {
-                        return Err(LocationError::msg(
-                            "Expected assignable expression",
-                            &inner_expr.location,
-                        ));
-                    }
-                    let analyzed_expr = analyze_expr(context, inner_expr, expected_type)?;
-                    let expr_type = analyzed_expr.expr_type.clone();
-                    if expr_type.is_integer() {
-                        Ok(TypedAnalyzedExpression::new(
-                            AnalyzedExpression::Unary {
-                                op: op.clone(),
-                                expr: Box::new(analyzed_expr),
-                            },
-                            expr_type,
-                        ))
-                    } else {
-                        Err(LocationError::msg(
-                            &format!(
-                                "Unary operation requires an integer type. Found type '{:?}'.",
-                                &analyzed_expr
-                            ),
-                            &inner_expr.location,
-                        ))
-                    }
-                } else {
-                    Err(LocationError::msg(
-                        &format!(
-                            "Unary operation yields an integer type. Found type '{:?}'.",
-                            expected_type
-                        ),
-                        &expr.location,
-                    ))
-                }
-            }
-            UnaryOp::Borrow => {
-                if expected_type.is_none_or(|x| x.is_pointer()) {
-                    let inner_expected = expected_type.map(|x| if let Type::Pointer(inner) = x { inner.as_ref() } else { unreachable!() });
-                    let analyzed_expr = analyze_expr(context, inner_expr, inner_expected)?;
-                    let expr_type = analyzed_expr.expr_type.clone();
-                    if is_borrowable(&inner_expr.expr) {
-                        Ok(TypedAnalyzedExpression::new(
-                            AnalyzedExpression::Unary {
-                                op: op.clone(),
-                                expr: Box::new(analyzed_expr),
-                            },
-                            Type::Pointer(Box::new(expr_type)),
-                        ))
-                    } else {
-                        Err(LocationError::msg(
-                            "Expected borrowable expression",
-                            &inner_expr.location,
-                        ))
-                    }
-                } else {
-                    Err(LocationError::msg(
-                        &format!(
-                            "Unary operation yields a pointer type. Found type '{:?}'.",
-                            expected_type
-                        ),
-                        &expr.location,
-                    ))
-                }
-            }
-            UnaryOp::Deref => {
-                let inner_expected = expected_type.map(|x| Type::Pointer(Box::new(x.clone())));
-                let analyzed_expr = analyze_expr(context, inner_expr, inner_expected.as_ref())?;
-                let expr_type = analyzed_expr.expr_type.clone();
-                if let Type::Pointer(inner) = expr_type {
-                    Ok(TypedAnalyzedExpression::new(
-                        AnalyzedExpression::Unary {
-                            op: op.clone(),
-                            expr: Box::new(analyzed_expr),
-                        },
-                        *inner,
-                    ))
-                } else {
-                    Err(LocationError::msg(
-                        "Expected pointer type",
-                        &inner_expr.location,
-                    ))
-                }
-            }
         },
         Expression::Binary { op, left, right } => {
             match op {
@@ -493,7 +434,7 @@ fn analyze_expr(
                 BinaryOp::Math(_) => {
                     if expected_type.is_none_or(|x| x.is_integer()) {
                         let analyzed_left = analyze_expr(context, left, expected_type)?;
-                        let left_type = analyzed_left.expr_type.clone();
+                        let left_type = analyzed_left.ty.clone();
                         if !left_type.is_integer() {
                             return Err(LocationError::msg(
                                 &format!(
@@ -525,7 +466,7 @@ fn analyze_expr(
                 BinaryOp::Comparison(op) => {
                     if expected_type.is_none_or(|x| *x == Type::Bool) {
                         let analyzed_left = analyze_expr(context, left, None)?;
-                        let left_type = analyzed_left.expr_type.clone();
+                        let left_type = analyzed_left.ty.clone();
                         if *op != BinaryComparisonOp::Equals && *op != BinaryComparisonOp::NotEquals && !left_type.is_integer() {
                             return Err(LocationError::msg(&format!("Comparison operation requires an integer type. Found type '{:?}'.", &left_type), &left.location));
                         }
@@ -549,74 +490,77 @@ fn analyze_expr(
                     }
                 }
                 BinaryOp::Assign => {
-                    if is_assignable(&left.expr) {
-                        let analyzed_left = analyze_expr(context, left, expected_type)?;
-                        let left_type = analyzed_left.expr_type.clone();
-                        let analyzed_right = analyze_expr(context, right, Some(&left_type))?;
-                        Ok(TypedAnalyzedExpression::new(
-                            AnalyzedExpression::Binary {
-                                op: BinaryOp::Assign,
-                                left: Box::new(analyzed_left),
-                                right: Box::new(analyzed_right),
-                            },
-                            left_type,
-                        ))
-                    } else {
-                        Err(LocationError::msg(
-                            "Expected assignable expression",
-                            &expr.location,
-                        ))
+                    let analyzed_left = analyze_expr(context, left, expected_type)?;
+                    match analyzed_left.value {
+                        AnalyzedExpression::Addressable(adr) => {
+                            let left_type = adr.ty.clone();
+                            let analyzed_right = analyze_expr(context, right, Some(&left_type))?;
+                            Ok(TypedAnalyzedExpression::new(
+                                AnalyzedExpression::BinaryAssign {
+                                    op: BinaryOp::Assign,
+                                    left: Box::new(adr),
+                                    right: Box::new(analyzed_right),
+                                },
+                                left_type,
+                            ))
+                        }
+                        _ => Err(LocationError::msg(
+                            "Expected addressable expression",
+                            &left.location,
+                        )),
                     }
                 }
                 BinaryOp::LogicAssign(_) => {
-                    if is_assignable(&left.expr) {
-                        if expected_type.is_some_and(|x| *x != Type::Bool) {
-                            return Err(LocationError::msg(
-                                &format!(
-                                    "Binary assignment operation yields a boolean type. Found type '{:?}'.",
-                                    expected_type
-                                ),
-                                &expr.location,
-                            ));
-                        }
-                        let analyzed_left = analyze_expr(context, left, Some(&Type::Bool))?;
-                        let analyzed_right = analyze_expr(context, right, Some(&Type::Bool))?;
-                        Ok(TypedAnalyzedExpression::new(
-                            AnalyzedExpression::Binary {
-                                op: op.clone(),
-                                left: Box::new(analyzed_left),
-                                right: Box::new(analyzed_right),
-                            },
-                            Type::Bool,
-                        ))
-                    } else {
-                        Err(LocationError::msg(
-                            "Expected assignable expression",
+                    if expected_type.is_some_and(|x| *x != Type::Bool) {
+                        return Err(LocationError::msg(
+                            &format!(
+                                "Binary assignment operation yields a boolean type. Found type '{:?}'.",
+                                expected_type
+                            ),
                             &expr.location,
-                        ))
+                        ));
+                    }
+                    let analyzed_left = analyze_expr(context, left, Some(&Type::Bool))?;
+                    match analyzed_left.value {
+                        AnalyzedExpression::Addressable(adr) => {
+                            let analyzed_right = analyze_expr(context, right, Some(&Type::Bool))?;
+                            Ok(TypedAnalyzedExpression::new(
+                                AnalyzedExpression::BinaryAssign {
+                                    op: op.clone(),
+                                    left: Box::new(adr),
+                                    right: Box::new(analyzed_right),
+                                },
+                                Type::Bool,
+                            ))
+                        }
+                        _ => Err(LocationError::msg(
+                            "Expected addressable expression",
+                            &left.location,
+                        )),
                     }
                 }
                 BinaryOp::MathAssign(_) => {
-                    if is_assignable(&left.expr) {
-                        let analyzed_left = analyze_expr(context, left, expected_type)?;
-                        let left_type = analyzed_left.expr_type.clone();
-                        if !left_type.is_integer() {
-                            return Err(LocationError::msg(&format!("Binary assignment operation requires an integer type. Found type '{:?}'.", &left_type), &left.location));
+                    let analyzed_left = analyze_expr(context, left, expected_type)?;
+                    match analyzed_left.value {
+                        AnalyzedExpression::Addressable(adr) => {
+                            let left_type = adr.ty.clone();
+                            if !left_type.is_integer() {
+                                return Err(LocationError::msg(&format!("Binary assignment operation requires an integer type. Found type '{:?}'.", &left_type), &left.location));
+                            }
+                            let analyzed_right = analyze_expr(context, right, Some(&left_type))?;
+                            Ok(TypedAnalyzedExpression::new(
+                                AnalyzedExpression::BinaryAssign {
+                                    op: op.clone(),
+                                    left: Box::new(adr),
+                                    right: Box::new(analyzed_right),
+                                },
+                                left_type,
+                            ))
                         }
-                        let analyzed_right = analyze_expr(context, right, Some(&left_type))?;
-                        Ok(TypedAnalyzedExpression::new(
-                            AnalyzedExpression::Binary {
-                                op: op.clone(),
-                                left: Box::new(analyzed_left),
-                                right: Box::new(analyzed_right),
-                            },
-                            left_type,
-                        ))
-                    } else {
-                        Err(LocationError::msg(
-                            "Expected assignable expression",
-                            &expr.location,
-                        ))
+                        _ => Err(LocationError::msg(
+                            "Expected addressable expression",
+                            &left.location,
+                        )),
                     }
                 }
             }
@@ -629,7 +573,7 @@ fn analyze_expr(
             if expected_type.is_none_or(|x| *x == Type::Bool) {
                 let analyzed_condition = analyze_expr(context, condition, Some(&Type::Bool))?;
                 let analyzed_true = analyze_expr(context, true_expr, None)?;
-                let true_type = analyzed_true.expr_type.clone();
+                let true_type = analyzed_true.ty.clone();
                 let analyzed_false = analyze_expr(context, false_expr, Some(&true_type))?;
                 Ok(TypedAnalyzedExpression::new(
                     AnalyzedExpression::Ternary {
@@ -668,7 +612,10 @@ fn analyze_expr(
                 ));
             }
             Ok(TypedAnalyzedExpression::new(
-                AnalyzedExpression::Variable(name.clone()),
+                AnalyzedExpression::Addressable(TypedAnalyzedAddressableExpression::new(
+                    AnalyzedAddressableExpression::Variable(name.clone()),
+                    var_type.clone(),
+                )),
                 var_type,
             ))
         }
@@ -701,23 +648,26 @@ fn analyze_expr(
                     &expr.location,
                 ));
             }
-            let analyzed_exprs = args.iter().zip(function_decl.args.iter()).map(|(arg, expected_arg_type)| {
-                analyze_expr(context, arg, Some(expected_arg_type))
-            }).collect::<ValidationResult<Vec<TypedAnalyzedExpression>>>();
+            let mut analyzed_exprs = HashMap::with_capacity(args.len());
+            for (arg, (arg_name, arg_type)) in args.iter().zip(function_decl.args.iter()) {
+                let analyzed_expr = analyze_expr(context, arg, Some(arg_type))?;
+                analyzed_exprs.insert(arg_name.clone(), analyzed_expr);
+            }
             Ok(TypedAnalyzedExpression::new(
                 AnalyzedExpression::FunctionCall {
                     function: function.clone(),
-                    args: analyzed_exprs?,
+                    args: analyzed_exprs,
                 },
                 return_type,
             ))
         }
         Expression::Cast { var_type, expr } => {
+            let var_type = resolve_type(&context.resolved_types, var_type)?;
             if let Some(expected_type) = expected_type {
-                if *var_type != *expected_type {
+                if var_type != *expected_type {
                     return Err(LocationError::msg(
                         &format!(
-                            "Expected type '{:?}', found type '{:?}'.",
+                            "Expected type '{:?}', found cast to type '{:?}'.",
                             expected_type, var_type
                         ),
                         &expr.location,
@@ -725,14 +675,14 @@ fn analyze_expr(
                 }
             }
             let analyzed_expr = analyze_expr(context, expr, None)?;
-            let expr_type = analyzed_expr.expr_type.clone();
-            if expr_type.can_cast_to(var_type) {
+            let expr_type = analyzed_expr.ty.clone();
+            if expr_type.can_cast_to(&var_type) {
                 Ok(TypedAnalyzedExpression::new(
                     AnalyzedExpression::Cast {
                         var_type: var_type.clone(),
                         expr: Box::new(analyzed_expr),
                     },
-                    var_type.clone(),
+                    var_type,
                 ))
             } else {
                 Err(LocationError::msg(
@@ -744,27 +694,195 @@ fn analyze_expr(
                 ))
             }
         }
-    }
-}
-
-fn is_assignable(expr: &Expression) -> bool {
-    match expr {
-        Expression::Variable(_) => true,
-        Expression::Unary { op: UnaryOp::Deref, expr } => is_assignable(&expr.expr),
-        _ => false,
-    }
-}
-
-fn is_borrowable(expr: &Expression) -> bool {
-    match expr {
-        Expression::Variable(_) => true,
-        Expression::Unary { op: UnaryOp::Deref, expr } => is_borrowable(&expr.expr),
-        _ => false,
+        Expression::Sizeof(ty) => {
+            let ty = resolve_type(&context.resolved_types, ty)?;
+            if expected_type.is_none_or(|x| *x == Type::Integer { size: 4 }) {
+                Ok(TypedAnalyzedExpression::new(
+                    AnalyzedExpression::Sizeof(ty),
+                    Type::Integer { size: 4 },
+                ))
+            } else {
+                Err(LocationError::msg(
+                    &format!(
+                        "Sizeof operation yields an integer type. Found type '{:?}'.",
+                        expected_type
+                    ),
+                    &expr.location,
+                ))
+            }
+        }
+        Expression::StructLiteral { struct_type, fields } => {
+            let struct_type = resolve_type(&context.resolved_types, struct_type)?;
+            let (name, struct_fields) = match &struct_type {
+                Type::Struct { name, fields } => (name, fields),
+                _ => unreachable!("Struct type must be resolved to a struct type."),
+            };
+            if struct_fields.len() != fields.len() {
+                return Err(LocationError::msg(
+                    &format!(
+                        "Expected {} fields, found {}",
+                        struct_fields.len(),
+                        fields.len()
+                    ),
+                    &expr.location,
+                ));
+            }
+            let analyzed_fields = fields.iter().map(|(field_name, field_expr)| {
+                let field_type = struct_fields
+                    .get(field_name)
+                    .cloned()
+                    .ok_or(LocationError::msg(
+                        &format!(
+                            "Field '{}' has not been declared in struct '{}'.",
+                            field_name, name
+                        ),
+                        &expr.location,
+                    ))?;
+                let analyzed_expr = analyze_expr(context, field_expr, Some(&field_type))?;
+                Ok((field_name.clone(), analyzed_expr))
+            }).collect::<ValidationResult<Vec<(String, TypedAnalyzedExpression)>>>()?;
+            Ok(TypedAnalyzedExpression::new(
+                AnalyzedExpression::StructLiteral {
+                    name: name.clone(),
+                    fields: analyzed_fields,
+                },
+                struct_type,
+            ))
+        }
+        Expression::Increment { expr, is_increment, postfix } => {
+            if expected_type.is_none_or(|x| x.is_integer()) {
+                let analyzed_expr = analyze_expr(context, expr, expected_type)?;
+                let expr_type = analyzed_expr.ty.clone();
+                if !expr_type.is_integer() {
+                    return Err(LocationError::msg(
+                        &format!(
+                            "Increment operation requires an integer type. Found type '{:?}'.",
+                            &analyzed_expr
+                        ),
+                        &expr.location,
+                    ));
+                }
+                match analyzed_expr.value {
+                    AnalyzedExpression::Addressable(adr) => Ok(TypedAnalyzedExpression::new(
+                        AnalyzedExpression::Increment {
+                            is_increment: *is_increment,
+                            expr: Box::new(adr),
+                            postfix: *postfix,
+                        },
+                        expr_type,
+                    )),
+                    _ => Err(LocationError::msg(
+                        "Expected addressable expression",
+                        &expr.location,
+                    )),
+                }
+            } else {
+                Err(LocationError::msg(
+                    &format!(
+                        "Unary operation yields an integer type. Found type '{:?}'.",
+                        expected_type
+                    ),
+                    &expr.location,
+                ))
+            }
+        }
+        Expression::MemberAccess { expr, member } => {
+            let analyzed_expr = analyze_expr(context, expr, None)?;
+            let expr_type = analyzed_expr.ty.clone();
+            let (struct_name, member_type) = match &expr_type {
+                Type::Struct { fields, name } => (name.clone(), fields
+                    .get(member)
+                    .cloned()
+                    .ok_or(LocationError::msg(
+                        &format!(
+                            "Field '{}' has not been declared in struct '{}'.",
+                            member, expr_type
+                        ),
+                        &expr.location,
+                    ))?),
+                _ => {
+                    return Err(LocationError::msg(
+                        &format!(
+                            "Member access requires a struct type. Found type '{:?}'.",
+                            expr_type
+                        ),
+                        &expr.location,
+                    ))
+                }
+            };
+            if expected_type.is_none_or(|x| *x == member_type) {
+                match analyzed_expr.value {
+                    AnalyzedExpression::Addressable(adr) => {
+                        Ok(TypedAnalyzedExpression::new(
+                            AnalyzedExpression::Addressable(TypedAnalyzedAddressableExpression::new(AnalyzedAddressableExpression::MemberAccess {
+                                expr: Box::new(adr),
+                                member: member.clone(),
+                                struct_name,
+                            }, member_type.clone())),
+                            member_type,
+                        ))
+                    }
+                    _ => Err(LocationError::msg(
+                        "Expected addressable expression",
+                        &expr.location,
+                    )),
+                }
+            } else {
+                Err(LocationError::msg(
+                    &format!(
+                        "Expected type '{:?}', found type '{:?}'.",
+                        expected_type, member_type
+                    ),
+                    &expr.location,
+                ))
+            }
+        }
+        Expression::Borrow(inner_expr) => {
+            if expected_type.is_none_or(|x| x.is_pointer()) {
+                let inner_expected = expected_type.map(|x| if let Type::Pointer(inner) = x { inner.as_ref() } else { unreachable!() });
+                let analyzed_expr = analyze_expr(context, inner_expr, inner_expected)?;
+                let expr_type = analyzed_expr.ty.clone();
+                match analyzed_expr.value {
+                    AnalyzedExpression::Addressable(adr) => Ok(TypedAnalyzedExpression::new(
+                        AnalyzedExpression::Borrow(adr),
+                        Type::Pointer(Box::new(expr_type)),
+                    )),
+                    _ => Err(LocationError::msg(
+                        "Expected addressable expression",
+                        &inner_expr.location,
+                    )),
+                }
+            } else {
+                Err(LocationError::msg(
+                    &format!(
+                        "Unary operation yields a pointer type. Found type '{:?}'.",
+                        expected_type
+                    ),
+                    &expr.location,
+                ))
+            }
+        }
+        Expression::Dereference(inner_expr) => {
+            let inner_expected = expected_type.map(|x| Type::Pointer(Box::new(x.clone())));
+            let analyzed_expr = analyze_expr(context, inner_expr, inner_expected.as_ref())?;
+            let expr_type = analyzed_expr.ty.clone();
+            if let Type::Pointer(inner) = expr_type {
+                Ok(TypedAnalyzedExpression::new(
+                    AnalyzedExpression::Addressable(TypedAnalyzedAddressableExpression::new(AnalyzedAddressableExpression::Dereference(Box::new(analyzed_expr)), *inner.clone())),
+                    *inner,
+                ))
+            } else {
+                Err(LocationError::msg(
+                    "Expected pointer type",
+                    &inner_expr.location,
+                ))
+            }
+        }
     }
 }
 
 fn always_returns_expr(expr: &SrcExpression) -> bool {
-    match &expr.expr {
+    match &expr.value {
         Expression::Block(statements, return_expr) => {
             if statements.iter().any(always_returns_statement) {
                 return true;
@@ -792,11 +910,17 @@ fn always_returns_expr(expr: &SrcExpression) -> bool {
         Expression::Cast { var_type: _, expr } => always_returns_expr(expr),
         Expression::Variable(_) => false,
         Expression::Literal(_) => false,
+        Expression::Sizeof(_) => false,
+        Expression::StructLiteral { struct_type: _, fields } => fields.iter().any(|(_, expr)| always_returns_expr(expr)),
+        Expression::Increment { expr, .. } => always_returns_expr(expr),
+        Expression::MemberAccess { expr, member: _ } => always_returns_expr(expr),
+        Expression::Borrow(expr) => always_returns_expr(expr),
+        Expression::Dereference(expr) => always_returns_expr(expr),
     }
 }
 
 fn always_returns_statement(statement: &SrcStatement) -> bool {
-    match &statement.statement {
+    match &statement.value {
         Statement::Return(_) => true,
         Statement::Declaration { value, .. } => always_returns_expr(value),
         Statement::Expr(expr) => always_returns_expr(expr),
@@ -826,9 +950,9 @@ fn always_returns_statement(statement: &SrcStatement) -> bool {
     }
 }
 
-fn calc_local_var_stack_space_expr(expression: &SrcExpression) -> usize {
-    match &expression.expr {
-        Expression::Block(statements, return_expr) => {
+fn calc_local_var_stack_space_expr(expression: &TypedAnalyzedExpression) -> usize {
+    match &expression.value {
+        AnalyzedExpression::Block(statements, return_expr) => {
             let mut stack_space = 0;
             for statement in statements {
                 stack_space += calc_local_var_stack_space_statement(statement);
@@ -838,12 +962,12 @@ fn calc_local_var_stack_space_expr(expression: &SrcExpression) -> usize {
             }
             stack_space
         }
-        Expression::Literal(_) => 0,
-        Expression::Unary { op: _, expr } => calc_local_var_stack_space_expr(expr),
-        Expression::Binary { op: _, left, right } => {
+        AnalyzedExpression::Literal(_) => 0,
+        AnalyzedExpression::Unary { op: _, expr } => calc_local_var_stack_space_expr(expr),
+        AnalyzedExpression::Binary { op: _, left, right } => {
             calc_local_var_stack_space_expr(left) + calc_local_var_stack_space_expr(right)
         }
-        Expression::Ternary {
+        AnalyzedExpression::Ternary {
             condition,
             true_expr,
             false_expr,
@@ -852,23 +976,44 @@ fn calc_local_var_stack_space_expr(expression: &SrcExpression) -> usize {
                 + calc_local_var_stack_space_expr(true_expr)
                 + calc_local_var_stack_space_expr(false_expr)
         }
-        Expression::Variable(_) => 0,
-        Expression::FunctionCall { function: _, args } => {
-            args.iter().map(calc_local_var_stack_space_expr).sum()
+        AnalyzedExpression::FunctionCall { function: _, args } => {
+            args.iter().map(|(_, x)| calc_local_var_stack_space_expr(x)).sum()
         }
-        Expression::Cast { var_type: _, expr } => calc_local_var_stack_space_expr(expr),
+        AnalyzedExpression::Cast { var_type: _, expr } => calc_local_var_stack_space_expr(expr),
+        AnalyzedExpression::Sizeof(_) => 0,
+        AnalyzedExpression::StructLiteral { name: _, fields } => {
+            fields.iter().map(|(_, expr)| calc_local_var_stack_space_expr(expr)).sum()
+        }
+        AnalyzedExpression::BinaryAssign { op: _, left, right } => {
+            calc_local_var_stack_space_addressable_expr(left) + calc_local_var_stack_space_expr(right)
+        }
+        AnalyzedExpression::Increment { expr, .. } => calc_local_var_stack_space_addressable_expr(expr),
+        AnalyzedExpression::Addressable(adr) => calc_local_var_stack_space_addressable_expr(adr),
+        AnalyzedExpression::Borrow(adr) => calc_local_var_stack_space_addressable_expr(adr),
     }
 }
 
-fn calc_local_var_stack_space_statement(statement: &SrcStatement) -> usize {
-    match &statement.statement {
-        Statement::Return(expr) => expr
+fn calc_local_var_stack_space_addressable_expr(expression: &TypedAnalyzedAddressableExpression) -> usize {
+    match &expression.value {
+        AnalyzedAddressableExpression::Variable(_) => 0,
+        AnalyzedAddressableExpression::MemberAccess { expr, .. } => {
+            calc_local_var_stack_space_addressable_expr(expr)
+        }
+        AnalyzedAddressableExpression::Dereference(expr) => {
+            calc_local_var_stack_space_expr(expr)
+        }
+    }
+}
+
+fn calc_local_var_stack_space_statement(statement: &AnalyzedStatement) -> usize {
+    match statement {
+        AnalyzedStatement::Return(expr) => expr
             .as_ref()
             .map(calc_local_var_stack_space_expr)
             .unwrap_or(0),
-        Statement::Declaration { var_type, .. } => var_type.size(),
-        Statement::Expr(expr) => calc_local_var_stack_space_expr(expr),
-        Statement::If {
+        AnalyzedStatement::Declaration { var_type, .. } => var_type.size(),
+        AnalyzedStatement::Expr(expr) => calc_local_var_stack_space_expr(expr),
+        AnalyzedStatement::If {
             condition,
             true_expr,
             false_statement,
@@ -880,7 +1025,7 @@ fn calc_local_var_stack_space_statement(statement: &SrcStatement) -> usize {
                 .map(|x| calc_local_var_stack_space_statement(x))
                 .unwrap_or(0)
         }
-        Statement::For {
+        AnalyzedStatement::For {
             init,
             condition,
             update,
@@ -891,7 +1036,7 @@ fn calc_local_var_stack_space_statement(statement: &SrcStatement) -> usize {
                 + calc_local_var_stack_space_expr(update)
                 + calc_local_var_stack_space_expr(body)
         }
-        Statement::While { condition, body, .. } => {
+        AnalyzedStatement::While { condition, body, .. } => {
             calc_local_var_stack_space_expr(condition) + calc_local_var_stack_space_expr(body)
         }
     }

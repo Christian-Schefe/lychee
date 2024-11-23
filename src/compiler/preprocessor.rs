@@ -1,87 +1,105 @@
 use crate::compiler::parser::syntax_tree::{Expression, Literal, Program, SrcExpression, SrcStatement, Statement, UnaryOp};
 
 pub fn preprocess(mut program: Program) -> Program {
-    merge_negative_literals(&mut program);
+    preprocess_program(&mut program);
     program
 }
 
-fn merge_negative_literals(program: &mut Program) {
+fn preprocess_program(program: &mut Program) {
     for func in &mut program.functions {
-        merge_negative_literals_expr(&mut func.function.expr);
+        preprocess_expression(&mut func.value.expr);
     }
 }
 
-fn merge_negative_literals_expr(expr: &mut SrcExpression) {
+fn preprocess_expression(expr: &mut SrcExpression) {
     let mut replace_expr = None;
-    match &mut expr.expr {
+    match &mut expr.value {
         Expression::Unary { op, expr: inner_expr } => {
             if *op == UnaryOp::Negate {
-                if let Expression::Literal(Literal::Integer(n)) = &inner_expr.expr {
+                if let Expression::Literal(Literal::Integer(n)) = &inner_expr.value {
                     replace_expr = Some(Expression::Literal(Literal::Integer(-n)));
                 }
             }
-            merge_negative_literals_expr(inner_expr);
+            preprocess_expression(inner_expr);
         }
         Expression::Literal(_) => {}
         Expression::Variable(_) => {}
         Expression::Binary { left, right, op: _ } => {
-            merge_negative_literals_expr(left);
-            merge_negative_literals_expr(right);
+            preprocess_expression(left);
+            preprocess_expression(right);
         }
         Expression::Ternary { condition, true_expr, false_expr } => {
-            merge_negative_literals_expr(condition);
-            merge_negative_literals_expr(true_expr);
-            merge_negative_literals_expr(false_expr);
+            preprocess_expression(condition);
+            preprocess_expression(true_expr);
+            preprocess_expression(false_expr);
         }
         Expression::FunctionCall { function: _, args } => {
             for arg in args {
-                merge_negative_literals_expr(arg);
+                preprocess_expression(arg);
             }
         }
         Expression::Cast { var_type: _, expr } => {
-            merge_negative_literals_expr(expr);
+            preprocess_expression(expr);
         }
         Expression::Block(statements, last_expr) => {
             for statement in statements {
-                merge_negative_literals_statement(statement);
+                preprocess_statement(statement);
             }
             if let Some(last_expr) = last_expr {
-                merge_negative_literals_expr(last_expr);
+                preprocess_expression(last_expr);
             }
+        }
+        Expression::Sizeof(_) => {}
+        Expression::StructLiteral { struct_type: _, fields } => {
+            for (_, field_expr) in fields {
+                preprocess_expression(field_expr);
+            }
+        }
+        Expression::MemberAccess { expr, member: _ } => {
+            preprocess_expression(expr);
+        }
+        Expression::Dereference(inner_expr) => {
+            preprocess_expression(inner_expr);
+        }
+        Expression::Borrow(inner_expr) => {
+            preprocess_expression(inner_expr);
+        }
+        Expression::Increment { expr, is_increment: _, postfix: _ } => {
+            preprocess_expression(expr);
         }
     }
     if let Some(replace_expr) = replace_expr {
-        expr.expr = replace_expr;
+        expr.value = replace_expr;
     }
 }
 
-fn merge_negative_literals_statement(statement: &mut SrcStatement) {
-    match &mut statement.statement {
-        Statement::Expr(expr) => merge_negative_literals_expr(expr),
+fn preprocess_statement(statement: &mut SrcStatement) {
+    match &mut statement.value {
+        Statement::Expr(expr) => preprocess_expression(expr),
         Statement::If { condition, true_expr, false_statement } => {
-            merge_negative_literals_expr(condition);
-            merge_negative_literals_expr(true_expr);
+            preprocess_expression(condition);
+            preprocess_expression(true_expr);
             if let Some(else_body) = false_statement {
-                merge_negative_literals_statement(else_body);
+                preprocess_statement(else_body);
             }
         }
         Statement::While { condition, body, is_do_while: _ } => {
-            merge_negative_literals_expr(condition);
-            merge_negative_literals_expr(body);
+            preprocess_expression(condition);
+            preprocess_expression(body);
         }
         Statement::For { init, condition, update, body } => {
-            merge_negative_literals_statement(init);
-            merge_negative_literals_expr(condition);
-            merge_negative_literals_expr(update);
-            merge_negative_literals_expr(body);
+            preprocess_statement(init);
+            preprocess_expression(condition);
+            preprocess_expression(update);
+            preprocess_expression(body);
         }
         Statement::Return(expr) => {
             if let Some(expr) = expr {
-                merge_negative_literals_expr(expr);
+                preprocess_expression(expr);
             }
         }
         Statement::Declaration { var_type: _, name: _, value } => {
-            merge_negative_literals_expr(value);
+            preprocess_expression(value);
         }
     }
 }

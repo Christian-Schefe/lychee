@@ -1,4 +1,5 @@
-use crate::compiler::codegen::Context;
+use std::collections::HashMap;
+use crate::compiler::codegen::{Context, ExprResultLocation, FunctionData, VarData};
 
 pub fn add_builtin_fn_code(context: &mut Context) {
     write_fn(context);
@@ -7,12 +8,12 @@ pub fn add_builtin_fn_code(context: &mut Context) {
 
 fn read_fn(context: &mut Context) {
     let label = context.get_new_label();
-    context
-        .function_labels
-        .insert("readchar".to_string(), label.clone());
-    context
-        .function_arg_sizes
-        .insert("readchar".to_string(), vec![]);
+
+    context.function_data.insert("readchar".to_string(), FunctionData {
+        label: label.clone(),
+        args: HashMap::new(),
+        return_location: ExprResultLocation::Register(0),
+    });
     context.push_label(label);
     context.push("movi r0 1");
     context.push("subi sp 1");
@@ -23,12 +24,11 @@ fn read_fn(context: &mut Context) {
 
 fn write_fn(context: &mut Context) {
     let label = context.get_new_label();
-    context
-        .function_labels
-        .insert("writechar".to_string(), label.clone());
-    context
-        .function_arg_sizes
-        .insert("writechar".to_string(), vec![1]);
+    context.function_data.insert("writechar".to_string(), FunctionData {
+        label: label.clone(),
+        args: HashMap::from([("char".to_string(), VarData { offset: 8, byte_size: 1 })]),
+        return_location: ExprResultLocation::Discard,
+    });
     context.push_label(label);
     context.push("movi r0 1");
     context.push("write r0 [sp;8]");
