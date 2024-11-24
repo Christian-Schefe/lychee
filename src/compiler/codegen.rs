@@ -509,6 +509,8 @@ fn generate_expression_code(context: &mut Context, expr: TypedAnalyzedExpression
                 context.push("setnz r0");
             } else if bit_size < 64 {
                 context.push(&format!("signext #{} r0", bit_size));
+            } else if bit_size > 64 {
+                panic!("Cannot cast to a size greater than 64 bits");
             }
             match result_location {
                 ExprResultLocation::Register(reg) => {
@@ -740,11 +742,10 @@ fn load_var_address(context: &mut Context, expr: TypedAnalyzedAddressableExpress
             }
         }
         AnalyzedAddressableExpression::MemberAccess { expr, member, struct_name } => {
-            let byte_size = expr.ty.size();
             load_var_address(context, *expr, ExprResultLocation::Register(0));
             let offset = context.struct_data[&struct_name].fields[&member].offset;
             context.push(&format!("addi r0 {}", offset));
-            move_register_to_location(context, 0, byte_size * 8, result_location);
+            move_register_to_location(context, 0, 64, result_location);
         }
         AnalyzedAddressableExpression::Dereference(inner_expr) => {
             generate_expression_code(context, *inner_expr, ExprResultLocation::Register(0));

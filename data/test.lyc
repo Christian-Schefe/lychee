@@ -1,33 +1,59 @@
 int main() {
      Point p1 = (Point) {
         x: 5,
-        y: 88
+        y: (Test) {
+            x: 88,
+            y: 99
+        }
     };
     p1 = add(p1, (Point) {
         x: 8,
-        y: 5
+        y: (Test) {
+            x: 2,
+            y: 8
+        }
     }, ());
-    Point p2 = add(p1 = add(p1, p1, ()), p1, writenum(p1.y));
-    writenum(p2.y);
-    call_order_test({ writechar('a'); -777}, { writechar('b'); 6666}, { writechar('c'); true});
-    p2.x
+    Point p2 = add(p1 = add(p1, p1, ()), p1, writenum(p1.y.y));
+    writenum(p2.y.y);
+    call_order_test({ writechar('a'); -777}, { writechar('b'); 6666}, { writechar('c'); &p2.y});
+    writechar('\n');
+    print_point(p2);
+    p2.y.x
 }
 
 struct Point {
     int x;
+    Test y;
+}
+
+struct Test {
+    int x;
     int y;
 }
 
-unit call_order_test(int a, long b, bool c) {
+unit call_order_test(int a, long b, &Test c) {
     writenum(a);
     writenum(b as int);
-    writenum(c as int);
+    writenum((*c).y as int);
+    (*c).x = 8888;
+}
+
+unit print_point(Point p) {
+    writenum(p.x);
+    writechar(' ');
+    writenum(p.y.x);
+    writechar(' ');
+    writenum(p.y.y);
+    writechar('\n');
 }
 
 Point add(Point p1, Point p2, unit a) {
     return (Point) {
         x: p1.x + p2.x,
-        y: p1.y + p2.y
+        y: (Test) {
+            x: p1.y.x + p2.y.x,
+            y: p1.y.y + p2.y.y
+        }
     };
 }
 

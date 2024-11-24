@@ -131,7 +131,9 @@ impl InstructionType {
     }
 
     pub fn parse_size_register(opcode: OpCode, parts: Vec<&str>) -> Self {
-        let size = SIZE_MAP.get(parts[1]).cloned().unwrap();
+        let size = SIZE_MAP.get(parts[1]).cloned().unwrap_or_else(|| {
+            panic!("Invalid size: {}", parts[1]);
+        });
         let register = REGISTER_MAP.get(parts[2]).cloned().unwrap();
         InstructionType::SizeRegister {
             opcode: opcode.byte_code(),
