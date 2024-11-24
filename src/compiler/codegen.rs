@@ -18,7 +18,7 @@ struct Context {
 struct FunctionData {
     label: String,
     args: HashMap<String, VarData>,
-    arg_order: Vec<String>,
+    arg_push_order: Vec<String>,
     return_location: FunctionResultLocation,
 }
 
@@ -84,7 +84,7 @@ pub fn generate_code(program: AnalyzedProgram, output: &PathBuf) {
         label_counter: 0,
     };
 
-    for (struct_name, struct_def) in &program.struct_definitions {
+    for (_, struct_def) in &program.struct_definitions {
         let mut fields = HashMap::new();
         let mut field_order = Vec::new();
         let mut offset = 0;
@@ -98,14 +98,14 @@ pub fn generate_code(program: AnalyzedProgram, output: &PathBuf) {
             offset += field_size;
         }
         let struct_data = StructData { fields, field_order };
-        context.struct_data.insert(struct_name.clone(), struct_data);
+        context.struct_data.insert(struct_def.name.clone(), struct_data);
     }
 
     for (name, func) in &program.functions {
         let fun_label = context.get_new_label();
         let return_type = &func.return_type;
         let mut args = HashMap::new();
-        let mut arg_order = Vec::new();
+        let mut arg_push_order = Vec::new();
 
         let mut offset = 16;
         for (arg_name, ty) in func.args.iter().rev() {
@@ -115,8 +115,10 @@ pub fn generate_code(program: AnalyzedProgram, output: &PathBuf) {
                 byte_size: arg_size,
             });
             offset += arg_size;
-            arg_order.push(arg_name.clone());
+            arg_push_order.push(arg_name.clone());
         }
+
+        arg_push_order.reverse();
 
         let return_location = match return_type {
             Type::Struct { .. } => FunctionResultLocation::Stack(offset as isize),
@@ -127,7 +129,7 @@ pub fn generate_code(program: AnalyzedProgram, output: &PathBuf) {
         let function_data = FunctionData {
             label: fun_label,
             args,
-            arg_order,
+            arg_push_order,
             return_location,
         };
         context.function_data.insert(name.clone(), function_data);
@@ -368,7 +370,7 @@ fn generate_expression_code(context: &mut Context, expr: TypedAnalyzedExpression
                 total_byte_size += return_bytes;
             }
 
-            let arg_exprs = context.function_data[&function].arg_order.iter().map(|arg_name| {
+            let arg_exprs = context.function_data[&function].arg_push_order.iter().map(|arg_name| {
                 (arg_name.clone(), args.remove(arg_name).unwrap_or_else(|| {
                     panic!("Argument {} not found in function call", arg_name)
                 }))

@@ -6,9 +6,10 @@ int main() {
     p1 = add(p1, (Point) {
         x: 8,
         y: 5
-    });
-    Point p2 = add(p1, p1);
+    }, ());
+    Point p2 = add(p1 = add(p1, p1, ()), p1, writenum(p1.y));
     writenum(p2.y);
+    call_order_test({ writechar('a'); -777}, { writechar('b'); 6666}, { writechar('c'); true});
     p2.x
 }
 
@@ -17,7 +18,13 @@ struct Point {
     int y;
 }
 
-Point add(Point p1, Point p2) {
+unit call_order_test(int a, long b, bool c) {
+    writenum(a);
+    writenum(b as int);
+    writenum(c as int);
+}
+
+Point add(Point p1, Point p2, unit a) {
     return (Point) {
         x: p1.x + p2.x,
         y: p1.y + p2.y

@@ -12,7 +12,7 @@ fn read_fn(context: &mut Context) {
     context.function_data.insert("readchar".to_string(), FunctionData {
         label: label.clone(),
         args: HashMap::new(),
-        arg_order: Vec::new(),
+        arg_push_order: Vec::new(),
         return_location: FunctionResultLocation::Register(0),
     });
     context.push_label(label);
@@ -28,7 +28,7 @@ fn write_fn(context: &mut Context) {
     context.function_data.insert("writechar".to_string(), FunctionData {
         label: label.clone(),
         args: HashMap::from([("char".to_string(), VarData { offset: 8, byte_size: 1 })]),
-        arg_order: vec!["char".to_string()],
+        arg_push_order: vec!["char".to_string()],
         return_location: FunctionResultLocation::Discard,
     });
     context.push_label(label);

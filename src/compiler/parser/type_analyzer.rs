@@ -3,8 +3,8 @@ use crate::compiler::lexer::Location;
 use crate::compiler::parser::analyzed_syntax_tree::{AnalyzedAddressableExpression, AnalyzedExpression, AnalyzedFunction, AnalyzedProgram, AnalyzedStatement, AnalyzedStructDefinition, TypedAnalyzedAddressableExpression, TypedAnalyzedExpression};
 use crate::compiler::parser::parser_error::LocationError;
 use crate::compiler::parser::syntax_tree::{BinaryOp, BinaryComparisonOp, Expression, Program, SrcExpression, SrcFunction, SrcStatement, Statement, UnaryOp};
-use crate::compiler::parser::types::{Type, UnknownType};
-use std::collections::HashMap;
+use crate::compiler::parser::types::Type;
+use std::collections::{HashMap, HashSet};
 use anyhow::Error;
 use crate::compiler::parser::type_resolver::{build_resolved_types, resolve_type, ResolvedTypes};
 
@@ -67,9 +67,16 @@ pub fn analyze_program(program: &Program) -> ValidationResult<AnalyzedProgram> {
 
     for function in &program.functions {
         let mut resolved_args = Vec::with_capacity(function.value.args.len());
+        let mut used_names = HashSet::new();
         for (name, ty) in &function.value.args {
             let ty = resolve_type(&context.resolved_types, ty)?;
             resolved_args.push((name.clone(), ty));
+            if !used_names.insert(name) {
+                return Err(LocationError::msg(
+                    &format!("Argument '{}' has already been declared.", name),
+                    &function.location,
+                ));
+            }
         }
         let declaration = FunctionDeclaration {
             return_type: resolve_type(&context.resolved_types, &function.value.return_type)?,
@@ -109,9 +116,16 @@ fn analyze_struct_definition(
     struct_def: &SrcStructDefinition,
 ) -> ValidationResult<AnalyzedStructDefinition> {
     let mut resolved_fields = Vec::with_capacity(struct_def.value.fields.len());
+    let mut used_names = HashSet::new();
     for (name, ty) in &struct_def.value.fields {
         let resolved_ty = resolve_type(&context.resolved_types, ty)?;
         resolved_fields.push((name.clone(), resolved_ty));
+        if !used_names.insert(name) {
+            return Err(LocationError::msg(
+                &format!("Field '{}' has already been declared.", name),
+                &struct_def.location,
+            ));
+        }
     }
     Ok(AnalyzedStructDefinition {
         name: struct_def.value.name.clone(),
