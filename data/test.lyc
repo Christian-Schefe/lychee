@@ -1,38 +1,30 @@
 int main() {
-    int pointed = 5;
-    Test test_str = Test {
-        a: 55,
-        b: 0x100000068
+     Point p1 = (Point) {
+        x: 5,
+        y: 88
     };
-    //int test = 3;
-    //&int pointer = &pointed;
-    //write_alphabet(&test);
-    //pointer_test(pointer);
-    return test_str.a;
+    p1 = add(p1, (Point) {
+        x: 8,
+        y: 5
+    });
+    Point p2 = add(p1, p1);
+    writenum(p2.y);
+    p2.x
 }
 
-struct Test {
-    int a;
-    long b;
+struct Point {
+    int x;
+    int y;
 }
 
-unit pointer_test(&int pointer) {
-    long c = 0x100000068;
-    &long long_pointer = &c;
-    &int casted_pointer = long_pointer as &int;
-    *casted_pointer = 0x63;
-    writechar((*casted_pointer) as char);
-    writenum(c);
-    *pointer += 125 * *pointer;
+Point add(Point p1, Point p2) {
+    return (Point) {
+        x: p1.x + p2.x,
+        y: p1.y + p2.y
+    };
 }
 
-unit write_alphabet(&int counter) {
-    for (*counter = 0; *counter < 26; (*counter)++) {
-        writechar(((*counter += 2) + 'a' as int) as char);
-    }
-}
-
-unit writenum(long num) {
+unit writenum(int num) {
     if num == 0 {
         writechar('0');
         return;
@@ -44,5 +36,5 @@ unit writenum(long num) {
     if num >= 10 {
         writenum(num / 10);
     }
-    writechar((num % 10 + '0' as long) as char);
+    writechar((num % 10 + '0' as int) as char);
 }

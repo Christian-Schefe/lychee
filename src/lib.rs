@@ -19,6 +19,7 @@ pub enum OpCode {
     Lea,
     PushMem,
     PopMem,
+    PeekMem,
 }
 
 impl OpCode {
@@ -43,6 +44,7 @@ impl OpCode {
             OpCode::Lea => 0x35,
             OpCode::PushMem => 0x36,
             OpCode::PopMem => 0x37,
+            OpCode::PeekMem => 0x38,
         }
     }
 }

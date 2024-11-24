@@ -18,11 +18,13 @@ struct Context {
 struct FunctionData {
     label: String,
     args: HashMap<String, VarData>,
-    return_location: ExprResultLocation,
+    arg_order: Vec<String>,
+    return_location: FunctionResultLocation,
 }
 
 struct StructData {
     fields: HashMap<String, VarData>,
+    field_order: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -61,6 +63,13 @@ enum ExprResultLocation {
     Discard,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+enum FunctionResultLocation {
+    Register(usize),
+    Stack(isize),
+    Discard,
+}
+
 pub fn generate_code(program: AnalyzedProgram, output: &PathBuf) {
     let mut context = Context {
         output: Vec::new(),
@@ -77,6 +86,7 @@ pub fn generate_code(program: AnalyzedProgram, output: &PathBuf) {
 
     for (struct_name, struct_def) in &program.struct_definitions {
         let mut fields = HashMap::new();
+        let mut field_order = Vec::new();
         let mut offset = 0;
         for (field_name, ty) in &struct_def.fields {
             let field_size = ty.size();
@@ -84,35 +94,42 @@ pub fn generate_code(program: AnalyzedProgram, output: &PathBuf) {
                 offset: offset as isize,
                 byte_size: field_size,
             });
+            field_order.push(field_name.clone());
             offset += field_size;
         }
-        let struct_data = StructData { fields };
+        let struct_data = StructData { fields, field_order };
         context.struct_data.insert(struct_name.clone(), struct_data);
     }
 
     for (name, func) in &program.functions {
         let fun_label = context.get_new_label();
         let return_type = &func.return_type;
-        let return_location = match return_type {
-            Type::Struct { .. } => ExprResultLocation::Stack,
-            ty if ty.size() > 0 => ExprResultLocation::Register(0),
-            _ => ExprResultLocation::Discard,
-        };
+        let mut args = HashMap::new();
+        let mut arg_order = Vec::new();
 
-        let mut function_data = FunctionData {
-            label: fun_label,
-            args: HashMap::new(),
-            return_location,
-        };
         let mut offset = 16;
         for (arg_name, ty) in func.args.iter().rev() {
             let arg_size = ty.size();
-            function_data.args.insert(arg_name.clone(), VarData {
+            args.insert(arg_name.clone(), VarData {
                 offset: offset as isize,
                 byte_size: arg_size,
             });
             offset += arg_size;
+            arg_order.push(arg_name.clone());
         }
+
+        let return_location = match return_type {
+            Type::Struct { .. } => FunctionResultLocation::Stack(offset as isize),
+            ty if ty.size() > 0 => FunctionResultLocation::Register(0),
+            _ => FunctionResultLocation::Discard,
+        };
+
+        let function_data = FunctionData {
+            label: fun_label,
+            args,
+            arg_order,
+            return_location,
+        };
         context.function_data.insert(name.clone(), function_data);
     }
 
@@ -123,11 +140,11 @@ pub fn generate_code(program: AnalyzedProgram, output: &PathBuf) {
 
     match &context.function_data[&program.main_function].return_location
     {
-        ExprResultLocation::Discard => context.push("movi r0 0"),
-        ExprResultLocation::Register(reg) => if *reg != 0 {
+        FunctionResultLocation::Discard => context.push("movi r0 0"),
+        FunctionResultLocation::Register(reg) => if *reg != 0 {
             context.push(&format!("mov r0 r{}", reg))
         },
-        ExprResultLocation::Stack => unreachable!("Main function cannot return a struct"),
+        FunctionResultLocation::Stack(_) => unreachable!("Main function cannot return a struct"),
     }
     context.push("exit");
 
@@ -162,9 +179,24 @@ fn generate_function_code(context: &mut Context, function: AnalyzedFunction) {
         context.current_data.local_variables.insert(arg_name.clone(), arg_data.clone());
     }
 
-    generate_expression_code(context, function.expr, context.function_data[&function.name].return_location.clone());
+    let return_location = context.function_data[&function.name].return_location.clone();
+    match return_location {
+        FunctionResultLocation::Register(reg) => {
+            generate_expression_code(context, function.expr, ExprResultLocation::Register(reg));
+            context.push_label(return_label);
+        }
+        FunctionResultLocation::Stack(offset) => {
+            generate_expression_code(context, function.expr, ExprResultLocation::Stack);
+            context.push_label(return_label);
+            context.push(&format!("movi r0 {}", function.return_type.size()));
+            context.push(&format!("popmem r0 [bp;{}]", offset));
+        }
+        FunctionResultLocation::Discard => {
+            generate_expression_code(context, function.expr, ExprResultLocation::Discard);
+            context.push_label(return_label);
+        }
+    }
 
-    context.push_label(return_label);
     context.push("mov sp bp");
     context.push("pop #64 bp");
     context.push("ret");
@@ -176,8 +208,17 @@ fn generate_statement_code(context: &mut Context, statement: AnalyzedStatement) 
         AnalyzedStatement::Return(expr) => {
             let return_label = context.current_data.return_label.clone();
             if let Some(return_expr) = expr {
-                let function_return_location = fn_data.return_location.clone();
-                generate_expression_code(context, return_expr, function_return_location);
+                match fn_data.return_location {
+                    FunctionResultLocation::Register(reg) => {
+                        generate_expression_code(context, return_expr, ExprResultLocation::Register(reg));
+                    }
+                    FunctionResultLocation::Stack(_) => {
+                        generate_expression_code(context, return_expr, ExprResultLocation::Stack);
+                    }
+                    FunctionResultLocation::Discard => {
+                        generate_expression_code(context, return_expr, ExprResultLocation::Discard);
+                    }
+                }
             }
             context.push(&format!("jmp {}", return_label));
         }
@@ -199,9 +240,11 @@ fn generate_statement_code(context: &mut Context, statement: AnalyzedStatement) 
                 context.push(&format!("movi r0 {}", byte_size));
                 context.push(&format!("popmem r0 [bp;{}]", offset));
             } else {
-                generate_expression_code(context, value, ExprResultLocation::Register(0));
                 if byte_size > 0 {
+                    generate_expression_code(context, value, ExprResultLocation::Register(0));
                     context.push(&format!("store #{} r0 [bp;{}]", byte_size * 8, offset));
+                } else {
+                    generate_expression_code(context, value, ExprResultLocation::Discard);
                 }
             }
         }
@@ -316,10 +359,22 @@ fn generate_expression_code(context: &mut Context, expr: TypedAnalyzedExpression
                 ExprResultLocation::Discard => {}
             }
         }
-        AnalyzedExpression::FunctionCall { function, args } => {
-            let mut total_size = 0;
+        AnalyzedExpression::FunctionCall { function, mut args } => {
             let function_return_location = context.function_data[&function].return_location.clone();
-            for (arg_name, arg_expr) in args {
+            let return_bytes = expr.ty.size();
+            let mut total_byte_size = 0;
+            if let FunctionResultLocation::Stack(_) = function_return_location {
+                context.push(&format!("subi sp {}", return_bytes));
+                total_byte_size += return_bytes;
+            }
+
+            let arg_exprs = context.function_data[&function].arg_order.iter().map(|arg_name| {
+                (arg_name.clone(), args.remove(arg_name).unwrap_or_else(|| {
+                    panic!("Argument {} not found in function call", arg_name)
+                }))
+            }).collect::<Vec<(String, TypedAnalyzedExpression)>>();
+
+            for (arg_name, arg_expr) in arg_exprs {
                 let arg_bytes = context.function_data[&function].args[&arg_name].byte_size;
                 let arg_location = if arg_bytes > 0 {
                     ExprResultLocation::Stack
@@ -327,22 +382,28 @@ fn generate_expression_code(context: &mut Context, expr: TypedAnalyzedExpression
                     ExprResultLocation::Discard
                 };
                 generate_expression_code(context, arg_expr, arg_location);
-                total_size += arg_bytes;
+                total_byte_size += arg_bytes;
             }
             context.push(&format!("call {}", context.function_data[&function].label));
-            context.push(&format!("addi sp {}", total_size));
-            if result_location == function_return_location {
-                return;
-            }
             match (result_location, function_return_location) {
-                (ExprResultLocation::Register(reg), ExprResultLocation::Register(func_reg)) => {
-                    context.push(&format!("mov r{} r{}", reg, func_reg));
+                (ExprResultLocation::Register(reg), FunctionResultLocation::Register(func_reg)) => {
+                    context.push(&format!("addi sp {}", total_byte_size));
+                    if reg != func_reg {
+                        context.push(&format!("mov r{} r{}", reg, func_reg));
+                    }
                 }
-                (ExprResultLocation::Stack, ExprResultLocation::Register(func_reg)) => {
+                (ExprResultLocation::Stack, FunctionResultLocation::Stack(_)) => {
+                    context.push(&format!("addi sp {}", total_byte_size - return_bytes));
+                }
+                (ExprResultLocation::Stack, FunctionResultLocation::Register(func_reg)) => {
                     let return_size = expr.ty.size() * 8;
+                    context.push(&format!("addi sp {}", total_byte_size));
                     context.push(&format!("push #{} r{}", return_size, func_reg));
                 }
-                _ => panic!("Invalid function call result location"),
+                (ExprResultLocation::Discard, FunctionResultLocation::Discard) => {
+                    context.push(&format!("addi sp {}", total_byte_size));
+                }
+                (a, b) => panic!("Invalid function call result location: {:?} {:?}", a, b),
             }
         }
         AnalyzedExpression::Block(statements, final_expr) => {
@@ -421,20 +482,20 @@ fn generate_expression_code(context: &mut Context, expr: TypedAnalyzedExpression
             context.push_label(end_label);
         }
         AnalyzedExpression::Binary { op, left, right } => {
-            let size = expr.ty.size() * 8;
+            let byte_size = expr.ty.size();
             match op {
-                BinaryOp::Logical(logic_op) => generate_logic_binop(context, logic_op, size, *left, *right, result_location),
-                BinaryOp::Math(math_op) => generate_math_binop(context, math_op, size, *left, *right, result_location),
-                BinaryOp::Comparison(comp_op) => generate_comparison_binop(context, comp_op, size, *left, *right, result_location),
+                BinaryOp::Logical(logic_op) => generate_logic_binop(context, logic_op, byte_size, *left, *right, result_location),
+                BinaryOp::Math(math_op) => generate_math_binop(context, math_op, byte_size, *left, *right, result_location),
+                BinaryOp::Comparison(comp_op) => generate_comparison_binop(context, comp_op, byte_size, *left, *right, result_location),
                 _ => unreachable!("Invalid binary operator"),
             }
         }
         AnalyzedExpression::BinaryAssign { op, left, right } => {
-            let size = expr.ty.size() * 8;
+            let byte_size = expr.ty.size();
             match op {
-                BinaryOp::Assign => generate_assignment_binop(context, None, size, *left, *right, result_location),
-                BinaryOp::MathAssign(math_op) => generate_assignment_binop(context, Some(math_op), size, *left, *right, result_location),
-                BinaryOp::LogicAssign(logic_op) => generate_logic_assignment_binop(context, logic_op, size, *left, *right, result_location),
+                BinaryOp::Assign => generate_assignment_binop(context, byte_size, *left, *right, result_location),
+                BinaryOp::MathAssign(math_op) => generate_math_assignment_binop(context, math_op, byte_size, *left, *right, result_location),
+                BinaryOp::LogicAssign(logic_op) => generate_logic_assignment_binop(context, logic_op, byte_size, *left, *right, result_location),
                 _ => unreachable!("Invalid binary assign operator"),
             }
         }
@@ -459,8 +520,15 @@ fn generate_expression_code(context: &mut Context, expr: TypedAnalyzedExpression
                 ExprResultLocation::Discard => {}
             }
         }
-        AnalyzedExpression::StructLiteral { name: _, fields } => {
-            for (_, field_expr) in fields {
+        AnalyzedExpression::StructLiteral { name, mut fields } => {
+            let struct_data = &context.struct_data[&name];
+            let field_exprs = struct_data.field_order.iter().rev().map(|field_name| {
+                let field_expr = fields.remove(field_name).unwrap_or_else(|| {
+                    panic!("Field {} not found in struct literal", field_name)
+                });
+                field_expr
+            }).collect::<Vec<TypedAnalyzedExpression>>();
+            for field_expr in field_exprs {
                 generate_expression_code(context, field_expr, ExprResultLocation::Stack);
             }
             match result_location {
@@ -479,7 +547,7 @@ fn generate_expression_code(context: &mut Context, expr: TypedAnalyzedExpression
 fn generate_logic_binop(
     context: &mut Context,
     op: BinaryLogicOp,
-    size: usize,
+    byte_size: usize,
     left: TypedAnalyzedExpression,
     right: TypedAnalyzedExpression,
     result_location: ExprResultLocation,
@@ -494,13 +562,13 @@ fn generate_logic_binop(
     generate_expression_code(context, right, ExprResultLocation::Register(0));
     context.push_label(end_label);
 
-    move_register_to_location(context, 0, size, result_location);
+    move_register_to_location(context, 0, byte_size * 8, result_location);
 }
 
 fn generate_math_binop(
     context: &mut Context,
     op: BinaryMathOp,
-    size: usize,
+    byte_size: usize,
     left: TypedAnalyzedExpression,
     right: TypedAnalyzedExpression,
     result_location: ExprResultLocation,
@@ -511,14 +579,17 @@ fn generate_math_binop(
     context.push("mov r1 r0");
     context.push("pop #64 r0");
     add_math_op_instruction(context, op);
+    if byte_size < 8 {
+        context.push(&format!("signext #{} r0", byte_size * 8));
+    }
 
-    move_register_to_location(context, 0, size, result_location);
+    move_register_to_location(context, 0, byte_size * 8, result_location);
 }
 
 fn generate_comparison_binop(
     context: &mut Context,
     op: BinaryComparisonOp,
-    size: usize,
+    byte_size: usize,
     left: TypedAnalyzedExpression,
     right: TypedAnalyzedExpression,
     result_location: ExprResultLocation,
@@ -537,35 +608,85 @@ fn generate_comparison_binop(
         BinaryComparisonOp::Greater => context.push("setg r0"),
         BinaryComparisonOp::GreaterEquals => context.push("setge r0"),
     }
-    move_register_to_location(context, 0, size, result_location);
+    move_register_to_location(context, 0, byte_size * 8, result_location);
 }
 
 fn generate_assignment_binop(
     context: &mut Context,
-    op: Option<BinaryMathOp>,
-    size: usize,
+    byte_size: usize,
+    left: TypedAnalyzedAddressableExpression,
+    right: TypedAnalyzedExpression,
+    result_location: ExprResultLocation,
+) {
+    let value_location = match right.ty {
+        Type::Struct { .. } => ExprResultLocation::Stack,
+        _ if byte_size > 0 => ExprResultLocation::Register(0),
+        _ => ExprResultLocation::Discard,
+    };
+
+    match (value_location, result_location) {
+        (ExprResultLocation::Register(val_reg), ExprResultLocation::Register(reg)) => {
+            generate_expression_code(context, right, ExprResultLocation::Register(val_reg));
+
+            context.push(&format!("push #{} r{}", byte_size, val_reg));
+            store_reg0_in_var(context, left);
+            context.push(&format!("pop #{} r{}", byte_size, reg));
+        }
+        (ExprResultLocation::Register(val_reg), ExprResultLocation::Stack) => {
+            generate_expression_code(context, right, ExprResultLocation::Register(val_reg));
+
+            context.push(&format!("push #{} r{}", byte_size, val_reg));
+            store_reg0_in_var(context, left);
+        }
+        (ExprResultLocation::Stack, ExprResultLocation::Stack) => {
+            generate_expression_code(context, right, ExprResultLocation::Stack);
+            store_stack_in_var(context, left);
+        }
+        (ExprResultLocation::Discard, ExprResultLocation::Discard) => {
+            generate_expression_code(context, right, ExprResultLocation::Discard);
+        }
+        (ExprResultLocation::Register(val_reg), ExprResultLocation::Discard) => {
+            generate_expression_code(context, right, ExprResultLocation::Register(val_reg));
+            store_reg0_in_var(context, left);
+        }
+        (ExprResultLocation::Stack, ExprResultLocation::Discard) => {
+            generate_expression_code(context, right, ExprResultLocation::Stack);
+            store_stack_in_var(context, left);
+            context.push(&format!("addi sp {}", byte_size));
+        }
+        (a, b) => panic!("Invalid assignment result location: {:?} {:?} {:?}", a, b, right),
+    }
+}
+
+fn generate_math_assignment_binop(
+    context: &mut Context,
+    op: BinaryMathOp,
+    byte_size: usize,
     left: TypedAnalyzedAddressableExpression,
     right: TypedAnalyzedExpression,
     result_location: ExprResultLocation,
 ) {
     generate_expression_code(context, right, ExprResultLocation::Register(0));
-    if let Some(math_op) = op {
-        context.push("push #64 r0");
-        load_var(context, left.clone(), ExprResultLocation::Register(0));
-        context.push("pop #64 r1");
-        add_math_op_instruction(context, math_op);
+
+    context.push("push #64 r0");
+    load_var(context, left.clone(), ExprResultLocation::Register(0));
+    context.push("pop #64 r1");
+    add_math_op_instruction(context, op);
+    if byte_size < 8 {
+        context.push(&format!("signext #{} r0", byte_size * 8));
     }
+
     context.push("push #64 r0");
     store_reg0_in_var(context, left);
     context.push("pop #64 r0");
 
-    move_register_to_location(context, 0, size, result_location);
+    move_register_to_location(context, 0, byte_size * 8, result_location);
 }
 
 fn generate_logic_assignment_binop(
     context: &mut Context,
     op: BinaryLogicOp,
-    size: usize,
+    byte_size: usize,
     left: TypedAnalyzedAddressableExpression,
     right: TypedAnalyzedExpression,
     result_location: ExprResultLocation,
@@ -583,7 +704,7 @@ fn generate_logic_assignment_binop(
     store_reg0_in_var(context, left);
     context.push("pop #64 r0");
 
-    move_register_to_location(context, 0, size, result_location);
+    move_register_to_location(context, 0, byte_size * 8, result_location);
 }
 
 fn add_math_op_instruction(context: &mut Context, op: BinaryMathOp) {
@@ -617,10 +738,11 @@ fn load_var_address(context: &mut Context, expr: TypedAnalyzedAddressableExpress
             }
         }
         AnalyzedAddressableExpression::MemberAccess { expr, member, struct_name } => {
+            let byte_size = expr.ty.size();
             load_var_address(context, *expr, ExprResultLocation::Register(0));
             let offset = context.struct_data[&struct_name].fields[&member].offset;
             context.push(&format!("addi r0 {}", offset));
-            move_register_to_location(context, 0, 64, result_location);
+            move_register_to_location(context, 0, byte_size * 8, result_location);
         }
         AnalyzedAddressableExpression::Dereference(inner_expr) => {
             generate_expression_code(context, *inner_expr, ExprResultLocation::Register(0));
@@ -659,8 +781,8 @@ fn load_var(context: &mut Context, expr: TypedAnalyzedAddressableExpression, res
                     context.push(&format!("load #{} r{} [r0;{}]", byte_size * 8, reg, offset));
                 }
                 ExprResultLocation::Stack => {
-                    context.push(&format!("movi r0 {}", byte_size));
-                    context.push(&format!("pushmem r0 [r0;{}]", offset));
+                    context.push(&format!("movi r1 {}", byte_size));
+                    context.push(&format!("pushmem r1 [r0;{}]", offset));
                 }
                 ExprResultLocation::Discard => {}
             }
@@ -703,6 +825,31 @@ fn store_reg0_in_var(context: &mut Context, expr: TypedAnalyzedAddressableExpres
             generate_expression_code(context, *inner_expr, ExprResultLocation::Register(0));
             context.push("pop #64 r1");
             context.push(&format!("store #{} r1 [r0]", byte_size * 8));
+        }
+    }
+}
+
+fn store_stack_in_var(context: &mut Context, expr: TypedAnalyzedAddressableExpression) {
+    let byte_size = expr.ty.size();
+    match expr.value {
+        AnalyzedAddressableExpression::Variable(name) => {
+            let var_data = &context.current_data.local_variables[&name];
+            let offset = var_data.offset;
+            context.push(&format!("movi r0 {}", byte_size));
+            context.push(&format!("peekmem r0 [bp;{}]", offset));
+        }
+        AnalyzedAddressableExpression::MemberAccess { expr, member, struct_name } => {
+            let var_data = &context.struct_data[&struct_name].fields[&member];
+            let offset = var_data.offset;
+
+            load_var_address(context, *expr, ExprResultLocation::Register(0));
+            context.push(&format!("movi r1 {}", byte_size));
+            context.push(&format!("peekmem r1 [r0;{}]", offset));
+        }
+        AnalyzedAddressableExpression::Dereference(inner_expr) => {
+            generate_expression_code(context, *inner_expr, ExprResultLocation::Register(0));
+            context.push(&format!("movi r1 {}", byte_size));
+            context.push("peekmem r1 [r0]");
         }
     }
 }

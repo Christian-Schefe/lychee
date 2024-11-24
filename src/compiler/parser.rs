@@ -3,7 +3,7 @@ use crate::compiler::lexer::{Location, SrcToken};
 use crate::compiler::lexer::token::{Keyword, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::expression_parser::{parse_block_expr, parse_expression};
-use crate::compiler::parser::parser_error::{LocationError, ParseResult};
+use crate::compiler::parser::parser_error::{add_context, consume_propagate, transform_propagate, LocationError, MaybeParseResult, ParseResult};
 use crate::compiler::parser::struct_parser::parse_struct_definition;
 use crate::compiler::parser::syntax_tree::{
     Function, Program, SrcFunction, SrcStatement, Statement,
@@ -97,7 +97,7 @@ fn parse_function(tokens: &mut TokenStack) -> ParseResult<SrcFunction> {
     ))
 }
 
-fn parse_statement(tokens: &mut TokenStack) -> ParseResult<SrcStatement> {
+fn parse_statement(tokens: &mut TokenStack) -> MaybeParseResult<SrcStatement> {
     let token = tokens.peek();
     let location = token.location.clone();
     match &token.value {
@@ -107,14 +107,14 @@ fn parse_statement(tokens: &mut TokenStack) -> ParseResult<SrcStatement> {
                 tokens.pop();
                 return Ok(SrcStatement::new(Statement::Return(None), &location));
             }
-            let expr = parse_expression(tokens)?;
-            pop_or_err(tokens, Token::Static(StaticToken::Semicolon))?;
+            let expr = transform_propagate(parse_expression(tokens).with_context(|| format!("Failed to parse return value.")), true)?;
+            transform_propagate(pop_or_err(tokens, Token::Static(StaticToken::Semicolon)), true)?;
             Ok(SrcStatement::new(Statement::Return(Some(expr)), &location))
         }
         Token::Keyword(Keyword::If) => {
             tokens.pop();
-            let condition = parse_expression(tokens)?;
-            let true_expr = parse_block_expr(tokens)?;
+            let condition = transform_propagate(parse_expression(tokens).with_context(|| format!("Failed to parse if condition.")), true)?;
+            let true_expr = transform_propagate(parse_block_expr(tokens).with_context(|| format!("Failed to parse if statement true branch.")), true)?;
             let false_expr = if tokens.peek().value == Token::Keyword(Keyword::Else) {
                 tokens.pop();
                 match tokens.peek().value {
@@ -122,7 +122,7 @@ fn parse_statement(tokens: &mut TokenStack) -> ParseResult<SrcStatement> {
                         Some(Box::new(parse_statement(tokens)?))
                     }
                     _ => {
-                        let else_expr = parse_block_expr(tokens)?;
+                        let else_expr = transform_propagate(parse_block_expr(tokens).with_context(|| format!("Failed to parse if statement else branch.")), true)?;
                         Some(Box::new(SrcStatement::new(Statement::Expr(else_expr), &location)))
                     }
                 }
@@ -138,56 +138,41 @@ fn parse_statement(tokens: &mut TokenStack) -> ParseResult<SrcStatement> {
                 &location,
             ))
         }
-        Token::Keyword(Keyword::For) => parse_for_loop(tokens, &location),
-        Token::Keyword(Keyword::While) => parse_while_loop(tokens, &location),
-        Token::Keyword(Keyword::Do) => parse_do_while_loop(tokens, &location),
+        Token::Keyword(Keyword::For) => transform_propagate(parse_for_loop(tokens, &location).with_context(|| format!("Failed to parse for loop.")), true),
+        Token::Keyword(Keyword::While) => transform_propagate(parse_while_loop(tokens, &location).with_context(|| format!("Failed to parse while loop.")), true),
+        Token::Keyword(Keyword::Do) => transform_propagate(parse_do_while_loop(tokens, &location).with_context(|| format!("Failed to parse do-while loop.")), true),
         _ => {
             let offset = tokens.offset;
-            let (decl_statement, propagate_err) = parse_declaration_statement(tokens, &location);
-
-            match decl_statement {
-                Ok(declaration) => {
-                    pop_or_err(tokens, Token::Static(StaticToken::Semicolon))?;
-                    return Ok(declaration);
-                }
-                Err(err) if propagate_err => {
-                    println!("Err {}", err);
-                    return Err(err);
-                }
-                _ => tokens.offset = offset
+            let decl_statement = add_context(consume_propagate(parse_declaration_statement(tokens, &location)), "Failed to parse declaration.".to_string())?;
+            if let Some(declaration) = decl_statement {
+                transform_propagate(pop_or_err(tokens, Token::Static(StaticToken::Semicolon)).with_context(|| format!("Failed to parse declaration at {}: Expected semicolon.", location)), true)?;
+                return Ok(declaration);
             }
-            let expr = parse_expression(tokens)?;
-            pop_or_err(tokens, Token::Static(StaticToken::Semicolon))?;
+            tokens.offset = offset;
+            let expr = transform_propagate(parse_expression(tokens), false)?;
+            transform_propagate(pop_or_err(tokens, Token::Static(StaticToken::Semicolon)), false)?;
             Ok(SrcStatement::new(Statement::Expr(expr), &location))
         }
     }
 }
 
-fn parse_declaration_statement(tokens: &mut TokenStack, location: &Location) -> (ParseResult<SrcStatement>, bool) {
-    let var_type = match parse_type(tokens) {
-        Ok(var_type) => var_type,
-        Err(err) => return (Err(err), false),
-    };
+fn parse_declaration_statement(tokens: &mut TokenStack, location: &Location) -> MaybeParseResult<SrcStatement> {
+    let var_type = transform_propagate(parse_type(tokens), false)?;
     let token = tokens.pop();
     let name = match &token.value {
         Token::Identifier(name) => name,
-        _ => return (Err(LocationError::expect("Identifier", token)), false),
+        _ => return transform_propagate(Err(LocationError::expect("Identifier", token)), false),
     }.to_string();
 
-    if let Err(err) = pop_or_err(tokens, Token::Static(StaticToken::Assign)) {
-        return (Err(err), false);
-    }
+    transform_propagate(pop_or_err(tokens, Token::Static(StaticToken::Assign)), false)?;
 
-    let value = match parse_expression(tokens) {
-        Ok(value) => value,
-        Err(err) => return (Err(err), true),
-    };
+    let value = transform_propagate(parse_expression(tokens).with_context(|| format!("Failed to parse declaration value.")), false)?;
 
-    (Ok(SrcStatement::new(Statement::Declaration {
+    Ok(SrcStatement::new(Statement::Declaration {
         var_type,
         name,
         value,
-    }, location)), true)
+    }, location))
 }
 
 fn parse_for_loop(tokens: &mut TokenStack, location: &Location) -> ParseResult<SrcStatement> {

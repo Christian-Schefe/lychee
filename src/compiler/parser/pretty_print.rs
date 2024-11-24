@@ -180,7 +180,7 @@ impl PrettyPrint for Expression {
             }
             Expression::Sizeof(ty) => format!("sizeof({:?})", ty),
             Expression::StructLiteral { struct_type, fields } => {
-                let mut result = format!("{:?} {{\n", struct_type);
+                let mut result = format!("({struct_type:?}) {{\n");
                 for (field_name, field_expr) in fields {
                     for _ in 0..=indent {
                         result.push_str("    ");

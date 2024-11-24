@@ -122,7 +122,8 @@ pub fn run(memory: &mut Memory, debug_print: bool) -> i64 {
             0x34 => sign_extend(pc, memory, debug_print),
             0x35 => lea(pc, memory, debug_print),
             0x36 => pushmem(pc, memory, debug_print),
-            0x37 => popmem(pc, memory, debug_print),
+            0x37 => popmem(pc, memory, false, debug_print),
+            0x38 => popmem(pc, memory, true, debug_print),
             _ => panic!("Unknown opcode: {}", opcode),
         };
         if debug_print {
@@ -457,7 +458,7 @@ fn sign_extend(pc: usize, memory: &mut Memory, debug_print: bool) {
     if debug_print {
         println!(
             "Sign extended register {} with value {} ({} bytes)",
-            data_size, register, value
+            data_size, value, register
         );
     }
 }
@@ -494,7 +495,7 @@ fn pushmem(pc: usize, memory: &mut Memory, debug_print: bool) {
     }
 }
 
-fn popmem(pc: usize, memory: &mut Memory, debug_print: bool) {
+fn popmem(pc: usize, memory: &mut Memory, is_peek: bool, debug_print: bool) {
     let register = memory.data[pc + 1];
     let data_size = memory.registers[register as usize];
 
@@ -503,13 +504,22 @@ fn popmem(pc: usize, memory: &mut Memory, debug_print: bool) {
 
     memory.memory_copy(src_address, dest_address, data_size as usize);
 
-    memory.registers[constants::SP] += data_size;
+    if !is_peek {
+        memory.registers[constants::SP] += data_size;
+    }
     memory.registers[constants::PC] += 2;
 
     if debug_print {
-        println!(
-            "Popped {} bytes from the stack at address {} into address {}",
-            data_size, src_address, dest_address
-        );
+        if is_peek {
+            println!(
+                "Peeked {} bytes from the stack at address {} into address {}",
+                data_size, src_address, dest_address
+            );
+        } else {
+            println!(
+                "Popped {} bytes from the stack at address {} into address {}",
+                data_size, src_address, dest_address
+            );
+        }
     }
 }

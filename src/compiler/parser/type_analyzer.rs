@@ -3,7 +3,7 @@ use crate::compiler::lexer::Location;
 use crate::compiler::parser::analyzed_syntax_tree::{AnalyzedAddressableExpression, AnalyzedExpression, AnalyzedFunction, AnalyzedProgram, AnalyzedStatement, AnalyzedStructDefinition, TypedAnalyzedAddressableExpression, TypedAnalyzedExpression};
 use crate::compiler::parser::parser_error::LocationError;
 use crate::compiler::parser::syntax_tree::{BinaryOp, BinaryComparisonOp, Expression, Program, SrcExpression, SrcFunction, SrcStatement, Statement, UnaryOp};
-use crate::compiler::parser::types::Type;
+use crate::compiler::parser::types::{Type, UnknownType};
 use std::collections::HashMap;
 use anyhow::Error;
 use crate::compiler::parser::type_resolver::{build_resolved_types, resolve_type, ResolvedTypes};
@@ -740,7 +740,7 @@ fn analyze_expr(
                     ))?;
                 let analyzed_expr = analyze_expr(context, field_expr, Some(&field_type))?;
                 Ok((field_name.clone(), analyzed_expr))
-            }).collect::<ValidationResult<Vec<(String, TypedAnalyzedExpression)>>>()?;
+            }).collect::<ValidationResult<HashMap<String, TypedAnalyzedExpression>>>()?;
             Ok(TypedAnalyzedExpression::new(
                 AnalyzedExpression::StructLiteral {
                     name: name.clone(),

@@ -219,6 +219,11 @@ impl Token {
                 return Err(true);
             }
             i64::from_str_radix(&str[2..], 16).map(|x| Token::Literal(Literal::Integer(x))).map_err(|_| false)
+        } else if str.starts_with("0b") {
+            if str.len() > 2 && !str[2..].chars().all(|c| c == '0' || c == '1') {
+                return Err(true);
+            }
+            i64::from_str_radix(&str[2..], 2).map(|x| Token::Literal(Literal::Integer(x))).map_err(|_| false)
         } else if str.chars().enumerate().all(|(i, c)| if i == 0 { c.is_alphabetic() } else { c.is_alphanumeric() } || c == '_') {
             Ok(Token::Identifier(str.to_string()))
         } else {

@@ -100,7 +100,7 @@ pub enum AnalyzedExpression {
     },
     StructLiteral {
         name: String,
-        fields: Vec<(String, TypedAnalyzedExpression)>,
+        fields: HashMap<String, TypedAnalyzedExpression>,
     },
     Increment {
         expr: Box<TypedAnalyzedAddressableExpression>,
