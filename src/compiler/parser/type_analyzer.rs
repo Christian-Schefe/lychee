@@ -1,5 +1,5 @@
 use crate::compiler::parser::syntax_tree::{Literal, SrcStructDefinition};
-use crate::compiler::lexer::Location;
+use crate::compiler::lexer::location::Location;
 use crate::compiler::parser::analyzed_syntax_tree::{AnalyzedAddressableExpression, AnalyzedExpression, AnalyzedFunction, AnalyzedProgram, AnalyzedStatement, AnalyzedStructDefinition, TypedAnalyzedAddressableExpression, TypedAnalyzedExpression};
 use crate::compiler::parser::parser_error::LocationError;
 use crate::compiler::parser::syntax_tree::{BinaryOp, BinaryComparisonOp, Expression, Program, SrcExpression, SrcFunction, SrcStatement, Statement, UnaryOp};

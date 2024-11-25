@@ -1,5 +1,5 @@
 use anyhow::{Context};
-use crate::compiler::lexer::{Location};
+use crate::compiler::lexer::location::{Location};
 use crate::compiler::lexer::token::{Keyword, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::parser_error::{ParseResult, LocationError, consume_propagate};
@@ -196,12 +196,10 @@ fn parse_primary(tokens: &mut TokenStack) -> ParseResult<SrcExpression> {
             parse_block_expr(tokens)
         }
         Token::Literal(c) => {
-            let expr = SrcExpression::new(Expression::Literal(c.clone()), &location);
+            unimplemented!();
+            /*let expr = SrcExpression::new(Expression::Literal(c.clone()), &location);
             tokens.pop();
-            Ok(expr)
-        }
-        Token::String(_) => {
-            unimplemented!("String literals are not yet supported")
+            Ok(expr)*/
         }
         Token::Identifier(name) => {
             let name = name.to_string();
@@ -225,7 +223,7 @@ fn parse_struct_literal(tokens: &mut TokenStack, location: &Location) -> ParseRe
         let field_name_token = tokens.pop();
         let field_name = match &field_name_token.value {
             Token::Identifier(name) => name.clone(),
-            _ => return Err(LocationError::expect("Identifier", field_name_token).context("Failed to parse field identifier.")),
+            _ => return Err(LocationError::msg(&format!("Expected identifier"), location).context("Failed to parse field identifier.")),
         };
         pop_or_err(tokens, Token::Static(StaticToken::Colon))?;
         let field_expr = parse_expression(tokens).context("Failed to parse field expression.")?;

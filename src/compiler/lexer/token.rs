@@ -1,7 +1,6 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::fmt::Display;
-use crate::compiler::parser::syntax_tree::Literal;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum StaticToken {
@@ -169,7 +168,6 @@ pub enum Token {
     Static(StaticToken),
     Identifier(String),
     Literal(Literal),
-    String(String),
     Keyword(Keyword),
     EOF,
 }
@@ -185,6 +183,10 @@ pub enum Keyword {
     Sizeof,
     Struct,
     As,
+    New,
+    Continue,
+    Break,
+    Let,
 }
 
 impl Keyword {
@@ -199,35 +201,52 @@ impl Keyword {
             "sizeof" => Some(Keyword::Sizeof),
             "struct" => Some(Keyword::Struct),
             "as" => Some(Keyword::As),
+            "new" => Some(Keyword::New),
+            "continue" => Some(Keyword::Continue),
+            "break" => Some(Keyword::Break),
+            "let" => Some(Keyword::Let),
             _ => None,
         }
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Literal {
+    Integer(i64),
+    Bool(bool),
+    Char(char),
+    String(String),
+}
+
+impl Display for Literal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Literal::Integer(x) => write!(f, "{}", x),
+            Literal::Bool(x) => write!(f, "{}", x),
+            Literal::Char(x) => write!(f, "'{}'", x),
+            Literal::String(x) => write!(f, "\"{}\"", x),
+        }
+    }
+}
+
 impl Token {
-    pub(crate) fn token_from_str(str: &str) -> Result<Self, bool> {
+    pub(crate) fn token_from_str(str: &str) -> Option<Self> {
         if let Some(keyword) = Keyword::from_str(str) {
-            Ok(Token::Keyword(keyword))
+            Some(Token::Keyword(keyword))
         } else if str == "true" {
-            Ok(Token::Literal(Literal::Bool(true)))
+            Some(Token::Literal(Literal::Bool(true)))
         } else if str == "false" {
-            Ok(Token::Literal(Literal::Bool(false)))
+            Some(Token::Literal(Literal::Bool(false)))
         } else if str.chars().all(|c| c.is_numeric()) {
-            str.parse::<i64>().map(|x| Token::Literal(Literal::Integer(x))).map_err(|_| true)
+            str.parse::<i64>().map(|x| Token::Literal(Literal::Integer(x))).ok()
         } else if str.starts_with("0x") {
-            if str.len() > 2 && !str[2..].chars().all(|c| c.is_ascii_hexdigit()) {
-                return Err(true);
-            }
-            i64::from_str_radix(&str[2..], 16).map(|x| Token::Literal(Literal::Integer(x))).map_err(|_| false)
+            i64::from_str_radix(&str[2..], 16).map(|x| Token::Literal(Literal::Integer(x))).ok()
         } else if str.starts_with("0b") {
-            if str.len() > 2 && !str[2..].chars().all(|c| c == '0' || c == '1') {
-                return Err(true);
-            }
-            i64::from_str_radix(&str[2..], 2).map(|x| Token::Literal(Literal::Integer(x))).map_err(|_| false)
+            i64::from_str_radix(&str[2..], 2).map(|x| Token::Literal(Literal::Integer(x))).ok()
         } else if str.chars().enumerate().all(|(i, c)| if i == 0 { c.is_alphabetic() } else { c.is_alphanumeric() } || c == '_') {
-            Ok(Token::Identifier(str.to_string()))
+            Some(Token::Identifier(str.to_string()))
         } else {
-            Err(true)
+            None
         }
     }
 }
@@ -238,7 +257,6 @@ impl Display for Token {
             Token::Static(token) => write!(f, "{}", token.get_str()),
             Token::Identifier(name) => write!(f, "{}", name),
             Token::Literal(literal) => write!(f, "{:?}", literal),
-            Token::String(string) => write!(f, "\"{}\"", string),
             Token::Keyword(keyword) => write!(f, "{:?}", keyword),
             Token::EOF => write!(f, "EOF"),
         }

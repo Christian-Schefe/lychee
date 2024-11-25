@@ -1,3 +1,4 @@
+use crate::compiler::lexer::location::Location;
 use crate::compiler::lexer::SrcToken;
 
 pub(crate) struct TokenStack {
@@ -27,5 +28,9 @@ impl TokenStack {
         } else {
             panic!("Tried to pop from empty token stack");
         }
+    }
+
+    pub fn location(&self) -> &Location {
+        &self.peek().location
     }
 }

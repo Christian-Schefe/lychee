@@ -11,7 +11,7 @@ pub(crate) fn parse_struct_definition(tokens: &mut TokenStack) -> ParseResult<Sr
     let name_token = tokens.pop();
     let name = match &name_token.value {
         Token::Identifier(name) => name.clone(),
-        _ => return Err(LocationError::expect("Identifier", name_token).context("Failed to parse struct identifier.")),
+        _ => return Err(LocationError::msg("Expected Identifier.", &location).context("Failed to parse struct identifier.")),
     };
     pop_or_err(tokens, Token::Static(StaticToken::OpenBrace))?;
     let mut fields = Vec::new();
@@ -20,7 +20,7 @@ pub(crate) fn parse_struct_definition(tokens: &mut TokenStack) -> ParseResult<Sr
         let field_name_token = tokens.pop();
         let field_name = match &field_name_token.value {
             Token::Identifier(name) => name.clone(),
-            _ => return Err(LocationError::expect("Identifier", field_name_token).context("Failed to parse field identifier.")),
+            _ => return Err(LocationError::msg("Expected Identifier.", &location).context("Failed to parse field identifier.")),
         };
         pop_or_err(tokens, Token::Static(StaticToken::Semicolon))?;
         fields.push((field_name, field_type));

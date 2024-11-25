@@ -1,90 +1,73 @@
 pub mod token;
 pub mod token_stack;
+pub mod lexer_error;
+pub mod location;
 
-use crate::compiler::lexer::token::{StaticToken, Token, STATIC_TOKEN_MAP};
-use std::fmt::Display;
+use crate::compiler::lexer::token::{Literal, StaticToken, Token, STATIC_TOKEN_MAP};
 use std::path::PathBuf;
 use std::string::String;
-use crate::compiler::parser::syntax_tree::{Literal, Src};
-
-#[derive(Debug, Clone)]
-pub struct Location {
-    pub line: usize,
-    pub column: usize,
-}
-
-impl Display for Location {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "line {}, column {}", self.line, self.column)
-    }
-}
-
-pub trait HasLocation {
-    fn location(&self) -> &Location;
-}
+use crate::compiler::lexer::lexer_error::{LexResult, LocationError};
+use crate::compiler::lexer::location::Location;
+use crate::compiler::parser::syntax_tree::{Src};
 
 pub type SrcToken = Src<Token>;
 
-pub fn lex(input_path: &PathBuf) -> Vec<SrcToken> {
+pub fn lex(input_path: &PathBuf) -> LexResult<Vec<SrcToken>> {
     let input: Vec<char> = std::fs::read_to_string(input_path)
         .unwrap()
         .chars()
         .collect();
     let mut offset = 0;
     let mut tokens = Vec::new();
-    let mut line = 1;
-    let mut column = 1;
+    let mut location = Location::new();
 
     while offset < input.len() {
-        if input[offset].is_whitespace() {
-            if input[offset] == '\n' {
-                line += 1;
-                column = 1;
-            } else {
-                column += 1;
-            }
-            offset += 1;
-            continue;
-        }
         if input[offset] == '/' && offset + 1 < input.len() && input[offset + 1] == '/' {
             while offset < input.len() && input[offset] != '\n' {
                 offset += 1;
             }
             continue;
         }
-        let (token, new_offset) = if input[offset] == '"' {
-            read_string(&input, offset, '"')
-        } else if input[offset] == '\'' {
-            read_char(&input, offset)
-        } else {
-            read_token(&input, offset)
+        let (token, new_offset) = match input[offset] {
+            c if c.is_whitespace() => {
+                if input[offset] == '\n' {
+                    location.advance_line();
+                } else {
+                    location.advance_column(1);
+                }
+                offset += 1;
+                continue;
+            }
+            '"' => read_string(&input, &location, offset, '"')?,
+            '\'' => read_char(&input, &location, offset)?,
+            _ => read_token(&input, &location, offset)?,
         };
         tokens.push(SrcToken {
             value: token,
-            location: Location { line, column },
+            location: location.clone(),
         });
-        column += new_offset - offset;
+        location.advance_column(new_offset - offset);
         offset = new_offset;
     }
     tokens.push(SrcToken {
         value: Token::EOF,
-        location: Location { line, column },
+        location,
     });
 
-    tokens
+    Ok(tokens)
 }
 
-fn read_string(input: &Vec<char>, offset: usize, quote_char: char) -> (Token, usize) {
+fn read_string(input: &Vec<char>, location: &Location, offset: usize, quote_char: char) -> LexResult<(Token, usize)> {
     let mut string = String::new();
     let mut i = offset + 1;
 
     while i < input.len() {
         if input[i] == quote_char {
-            return (Token::String(string), i + 1);
+            return Ok((Token::Literal(Literal::String(string)), i + 1));
         } else if input[i] == '\\' {
             i += 1;
             if i >= input.len() {
-                panic!("Unterminated string");
+                return Err(LocationError::new("Unterminated string.".to_string(), location.clone()));
             }
             match input[i] {
                 'n' => string.push('\n'),
@@ -93,7 +76,7 @@ fn read_string(input: &Vec<char>, offset: usize, quote_char: char) -> (Token, us
                 '\\' => string.push('\\'),
                 '"' => string.push('"'),
                 '\'' => string.push('\''),
-                _ => panic!("Invalid escape sequence"),
+                _ => return Err(LocationError::new("Invalid escape sequence.".to_string(), location.clone())),
             }
         } else {
             string.push(input[i]);
@@ -101,53 +84,42 @@ fn read_string(input: &Vec<char>, offset: usize, quote_char: char) -> (Token, us
         i += 1;
     }
 
-    panic!("Unterminated string");
+    Err(LocationError::new("Unterminated string.".to_string(), location.clone()))
 }
 
-fn read_char(input: &Vec<char>, offset: usize) -> (Token, usize) {
-    let (c, new_offset) = read_string(input, offset, '\'');
-    let mut buffer = [0; 1];
+fn read_char(input: &Vec<char>, location: &Location, offset: usize) -> LexResult<(Token, usize)> {
+    let (c, new_offset) = read_string(input, location, offset, '\'')?;
     let str = match c {
-        Token::String(s) => s,
-        _ => panic!("Expected string"),
+        Token::Literal(Literal::String(s)) => s,
+        _ => return Err(LocationError::new("Invalid char literal.".to_string(), location.clone())),
     };
     if str.len() != 1 {
-        panic!("Invalid char literal: {}", str);
+        return Err(LocationError::new("Invalid char literal.".to_string(), location.clone()));
     }
     let char = str.chars().next().unwrap();
     if char.len_utf8() != 1 {
-        panic!("Invalid char literal: {}", char);
+        Err(LocationError::new("Invalid char literal.".to_string(), location.clone()))
+    } else {
+        Ok((Token::Literal(Literal::Char(char)), new_offset))
     }
-    char.encode_utf8(&mut buffer);
-    (Token::Literal(Literal::Char(buffer[0] as i8)), new_offset)
 }
 
-fn read_token(input: &Vec<char>, offset: usize) -> (Token, usize) {
+fn read_token(input: &Vec<char>, location: &Location, offset: usize) -> LexResult<(Token, usize)> {
     for len in (1..=StaticToken::MAX_LENGTH).rev() {
         if offset + len > input.len() {
             continue;
         }
         let substr: String = input[offset..offset + len].iter().collect();
         if let Some(token) = STATIC_TOKEN_MAP.get(&substr) {
-            return (Token::Static(token.clone()), offset + len);
+            return Ok((Token::Static(token.clone()), offset + len));
         }
     }
 
-    let mut substr = String::new();
-    let mut last_valid = None;
+    let substr = input[offset..].iter().take_while(|&c| c.is_ascii_alphanumeric() || *c == '_').collect::<String>();
+    let token = Token::token_from_str(&substr).ok_or(LocationError::new(format!("Invalid token: '{substr}'"), location.clone()))?;
 
-    for i in offset..input.len() {
-        substr.push(input[i]);
-        match Token::token_from_str(&substr) {
-            Ok(token) => last_valid = Some((token, i + 1)),
-            Err(true) => break,
-            Err(false) => (),
-        }
-    }
-
-    if let Some((token, new_offset)) = last_valid {
-        (token, new_offset)
-    } else {
-        panic!("Invalid token: {}", substr);
+    match substr.len() {
+        0 => Err(LocationError::new(format!("Invalid token: '{}'", input[offset]), location.clone())),
+        len => Ok((token, offset + len))
     }
 }

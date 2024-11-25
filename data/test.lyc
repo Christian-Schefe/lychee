@@ -1,19 +1,21 @@
 int main() {
-     Point p1 = (Point) {
+     let Point p1 = new Point {
         x: 5,
-        y: (Test) {
+        y: new Test {
             x: 88,
             y: 99
         }
     };
-    p1 = add(p1, (Point) {
+    p1 = add(p1, new Point {
         x: 8,
-        y: (Test) {
+        y: new Test {
             x: 2,
             y: 8
         }
     }, ());
-    Point p2 = add(p1 = add(p1, p1, ()), p1, writenum(p1.y.y));
+    let [int] arr = 5;
+    arr[1];
+    let Point p2 = add(p1 = add(p1, p1, ()), p1, writenum(p1.y.y));
     writenum(p2.y.y);
     call_order_test({ writechar('a'); -777}, { writechar('b'); 6666}, { writechar('c'); &p2.y});
     writechar('\n');
@@ -48,9 +50,9 @@ unit print_point(Point p) {
 }
 
 Point add(Point p1, Point p2, unit a) {
-    return (Point) {
+    return new Point {
         x: p1.x + p2.x,
-        y: (Test) {
+        y: new Test {
             x: p1.y.x + p2.y.x,
             y: p1.y.y + p2.y.y
         }
@@ -64,10 +66,10 @@ unit writenum(int num) {
     } else if num < 0 {
         writechar('-');
         num = -num;
-    }
+    };
 
     if num >= 10 {
         writenum(num / 10);
-    }
+    };
     writechar((num % 10 + '0' as int) as char);
 }

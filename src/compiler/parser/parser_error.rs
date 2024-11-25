@@ -1,4 +1,4 @@
-use crate::compiler::lexer::{HasLocation, Location};
+use crate::compiler::lexer::location::{Location};
 use std::fmt::{Debug, Display};
 use anyhow::Error;
 use thiserror::Error;
@@ -63,12 +63,6 @@ impl LocationError {
         Error::from(LocationError {
             message: msg.to_string(),
             location: location.clone(),
-        })
-    }
-    pub fn expect<T: Debug, T2: Debug + HasLocation>(expected: T, actual: &T2) -> Error {
-        Error::from(LocationError {
-            message: format!("Expected {:?}, found {:?}", expected, actual),
-            location: actual.location().clone(),
         })
     }
 }

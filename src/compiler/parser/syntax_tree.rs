@@ -1,4 +1,4 @@
-use crate::compiler::lexer::{HasLocation, Location};
+use crate::compiler::lexer::location::{Location};
 use crate::compiler::parser::types::{Type, SrcType};
 
 #[derive(Debug)]
@@ -173,12 +173,6 @@ impl Literal {
 pub struct Src<T> {
     pub(crate) value: T,
     pub(crate) location: Location,
-}
-
-impl<T> HasLocation for Src<T> {
-    fn location(&self) -> &Location {
-        &self.location
-    }
 }
 
 impl<T> Src<T> {

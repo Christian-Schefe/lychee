@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::compiler::lexer::Location;
+use crate::compiler::lexer::location::Location;
 use crate::compiler::parser::parser_error::LocationError;
 use crate::compiler::parser::syntax_tree::{Program, SrcStructDefinition};
 use crate::compiler::parser::type_analyzer::ValidationResult;
