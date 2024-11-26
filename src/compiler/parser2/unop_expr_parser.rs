@@ -1,6 +1,6 @@
 use crate::compiler::lexer::token::{Keyword, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
-use crate::compiler::parser2::parsed_expression::{ParsedExpression, ParsedExpressionKind, UnaryMathOp, UnaryOp};
+use crate::compiler::parser2::parsed_expression::{ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryMathOp, UnaryOp};
 use crate::compiler::parser2::parser_error::ParseResult;
 use crate::compiler::parser2::primary_expr_parser::parse_primary_expression;
 use crate::compiler::parser2::program_parser::{parse_expression, parse_identifier, pop_expected};
@@ -24,16 +24,28 @@ where
 }
 
 pub fn parse_unop_expression(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
-    parse_prefix_unary(tokens, &[
+    let expr = parse_prefix_unary(tokens, &[
         (StaticToken::Ampersand, UnaryOp::Borrow),
         (StaticToken::Asterisk, UnaryOp::Dereference),
         (StaticToken::Minus, UnaryOp::Math(UnaryMathOp::Negate)),
         (StaticToken::Plus, UnaryOp::Math(UnaryMathOp::Positive)),
         (StaticToken::Tilde, UnaryOp::Math(UnaryMathOp::BitwiseNot)),
         (StaticToken::ExclamationMark, UnaryOp::LogicalNot),
-        (StaticToken::Increment, UnaryOp::Increment(true)),
-        (StaticToken::Decrement, UnaryOp::Decrement(true)),
-    ], parse_postfix_unary)
+        (StaticToken::Increment, UnaryOp::Increment { is_prefix: true }),
+        (StaticToken::Decrement, UnaryOp::Decrement { is_prefix: true }),
+    ], parse_postfix_unary)?;
+
+    match &expr.value {
+        ParsedExpressionKind::Unary { op: UnaryOp::Math(UnaryMathOp::Negate), expr: inner } => {
+            match &inner.value {
+                ParsedExpressionKind::Literal(ParsedLiteral::Integer(int)) => {
+                    Ok(ParsedExpression::new(ParsedExpressionKind::Literal(ParsedLiteral::Integer(-int.clone())), expr.location))
+                }
+                _ => Ok(expr)
+            }
+        }
+        _ => Ok(expr)
+    }
 }
 
 fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
@@ -45,14 +57,14 @@ fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression>
                 tokens.pop();
                 expr = ParsedExpression::new(ParsedExpressionKind::Unary {
                     expr: Box::new(expr),
-                    op: UnaryOp::Increment(false),
+                    op: UnaryOp::Increment { is_prefix: false },
                 }, token.location);
             }
             Token::Static(StaticToken::Decrement) => {
                 tokens.pop();
                 expr = ParsedExpression::new(ParsedExpressionKind::Unary {
                     expr: Box::new(expr),
-                    op: UnaryOp::Decrement(false),
+                    op: UnaryOp::Decrement { is_prefix: false },
                 }, token.location);
             }
             Token::Keyword(Keyword::As) => {

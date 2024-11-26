@@ -1,8 +1,9 @@
 use anyhow::Context;
 use crate::compiler::lexer::lexer_error::LocationError;
+use crate::compiler::lexer::location::Location;
 use crate::compiler::lexer::token::{Keyword, Literal, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
-use crate::compiler::parser2::parsed_expression::{ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryOp};
+use crate::compiler::parser2::parsed_expression::{ParsedExpression, ParsedExpressionKind, ParsedLiteral, ParsedType, ParsedTypeKind};
 use crate::compiler::parser2::parser_error::ParseResult;
 use crate::compiler::parser2::program_parser::{parse_expression, parse_identifier, pop_expected};
 use crate::compiler::parser2::type_parser::parse_type;
@@ -14,21 +15,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             tokens.pop();
             match tokens.peek().value {
                 Token::Static(StaticToken::OpenParen) => {
-                    tokens.pop();
-                    let mut args = Vec::new();
-                    while tokens.peek().value != Token::Static(StaticToken::CloseParen) {
-                        let arg_location = tokens.location().clone();
-                        let arg = parse_expression(tokens).with_context(|| format!("Failed to parse function argument at {}.", arg_location))?;
-                        args.push(arg);
-                        match tokens.peek().value {
-                            Token::Static(StaticToken::Comma) => {
-                                tokens.pop();
-                            }
-                            Token::Static(StaticToken::CloseParen) => {}
-                            _ => Err(LocationError::new("Expected comma or close paren after function argument.".to_string(), tokens.location().clone()))?,
-                        }
-                    }
-                    pop_expected(tokens, Token::Static(StaticToken::CloseParen))?;
+                    let (_, args, _) = parse_seperated_expressions(tokens, Token::Static(StaticToken::OpenParen), Token::Static(StaticToken::CloseParen), Token::Static(StaticToken::Comma), false, "function call arguments")?;
                     Ok(ParsedExpression::new(ParsedExpressionKind::FunctionCall { function_name: name, args }, token.location))
                 }
                 _ => {
@@ -123,25 +110,17 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
         Token::Keyword(Keyword::New) => {
             tokens.pop();
             let type_location = tokens.location().clone();
-            let struct_type = parse_type(tokens).with_context(|| format!("Failed to parse struct type at {}.", type_location))?;
-            pop_expected(tokens, Token::Static(StaticToken::OpenBrace))?;
-            let mut fields = Vec::new();
-            while tokens.peek().value != Token::Static(StaticToken::CloseBrace) {
-                let field_name = parse_identifier(tokens)?.value;
-                pop_expected(tokens, Token::Static(StaticToken::Colon))?;
-                let expr_location = tokens.location().clone();
-                let field_value = parse_expression(tokens).with_context(|| format!("Failed to parse struct field value at {}.", expr_location))?;
-                fields.push((field_name, field_value));
-                match tokens.peek().value {
-                    Token::Static(StaticToken::Comma) => {
-                        tokens.pop();
-                    }
-                    Token::Static(StaticToken::CloseBrace) => {}
-                    _ => Err(LocationError::new("Expected comma or close brace after struct field value.".to_string(), tokens.location().clone()))?,
+            let ty = parse_type(tokens).with_context(|| format!("Failed to parse type at {}.", type_location))?;
+            match &ty.value {
+                ParsedTypeKind::Named(_) => {
+                    parse_struct_literal(tokens, ty, token.location.clone()).with_context(|| format!("Failed to parse struct literal at {}.", token.location))
                 }
+                ParsedTypeKind::Array(_) => {
+                    let (_, expressions, _) = parse_seperated_expressions(tokens, Token::Static(StaticToken::OpenBrace), Token::Static(StaticToken::CloseBrace), Token::Static(StaticToken::Comma), false, "array")?;
+                    Ok(ParsedExpression::new(ParsedExpressionKind::Literal(ParsedLiteral::Array(ty, expressions)), token.location))
+                }
+                _ => Err(LocationError::new("Expected named type or array type for new expression.".to_string(), type_location))?,
             }
-            pop_expected(tokens, Token::Static(StaticToken::CloseBrace))?;
-            Ok(ParsedExpression::new(ParsedExpressionKind::Literal(ParsedLiteral::Struct(struct_type, fields)), token.location))
         }
         Token::Keyword(Keyword::Let) => {
             tokens.pop();
@@ -157,28 +136,54 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
 }
 
 pub fn parse_block_expression(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
-    let token = pop_expected(tokens, Token::Static(StaticToken::OpenBrace))?;
+    let (location, expressions, has_trailed) = parse_seperated_expressions(tokens, Token::Static(StaticToken::OpenBrace), Token::Static(StaticToken::CloseBrace), Token::Static(StaticToken::Semicolon), true, "block")?;
+    Ok(ParsedExpression::new(ParsedExpressionKind::Block { expressions, returns_value: !has_trailed }, location))
+}
+
+pub fn parse_seperated_expressions(tokens: &mut TokenStack, open_token: Token, close_token: Token, separator_token: Token, allow_trailing: bool, component_name: &str) -> ParseResult<(Location, Vec<ParsedExpression>, bool)> {
+    let token = pop_expected(tokens, open_token)?;
     let mut expressions = Vec::new();
-    let mut last_expr_has_semicolon = true;
-    while tokens.peek().value != Token::Static(StaticToken::CloseBrace) {
+    let mut has_trailed = false;
+    while tokens.peek().value != close_token {
         let expr_location = tokens.location().clone();
-        let expr = parse_expression(tokens).with_context(|| format!("Failed to parse expression in block at {}.", expr_location))?;
+        let expr = parse_expression(tokens).with_context(|| format!("Failed to parse expression in {component_name} at {}.", expr_location))?;
         expressions.push(expr);
-        match tokens.peek().value {
-            Token::Static(StaticToken::Semicolon) => {
-                tokens.pop();
-                continue;
-            }
-            Token::Static(StaticToken::CloseBrace) => {
-                last_expr_has_semicolon = false;
+        if tokens.peek().value == close_token {
+            break;
+        } else if tokens.peek().value == separator_token {
+            tokens.pop();
+            if tokens.peek().value == close_token {
+                has_trailed = true;
                 break;
             }
-            _ => Err(LocationError::new("Expected semicolon or close brace after expression in block".to_string(), tokens.location().clone()))?,
+        } else {
+            Err(anyhow::anyhow!("Expected {} or {} after expression in {component_name} at {}.", separator_token, close_token, tokens.location().clone()))?;
         }
     }
-    if last_expr_has_semicolon {
-        expressions.push(ParsedExpression::new(ParsedExpressionKind::Literal(ParsedLiteral::Unit), tokens.location().clone()));
+    if !allow_trailing && has_trailed {
+        Err(anyhow::anyhow!("Unexpected trailing {} in {component_name} at {}.", separator_token, tokens.location().clone()))?;
+    }
+    pop_expected(tokens, close_token)?;
+    Ok((token.location, expressions, has_trailed))
+}
+
+fn parse_struct_literal(tokens: &mut TokenStack, struct_type: ParsedType, location: Location) -> ParseResult<ParsedExpression> {
+    pop_expected(tokens, Token::Static(StaticToken::OpenBrace))?;
+    let mut fields = Vec::new();
+    while tokens.peek().value != Token::Static(StaticToken::CloseBrace) {
+        let field_name = parse_identifier(tokens)?.value;
+        pop_expected(tokens, Token::Static(StaticToken::Colon))?;
+        let expr_location = tokens.location().clone();
+        let field_value = parse_expression(tokens).with_context(|| format!("Failed to parse struct field value at {}.", expr_location))?;
+        fields.push((field_name, field_value));
+        match tokens.peek().value {
+            Token::Static(StaticToken::Comma) => {
+                tokens.pop();
+            }
+            Token::Static(StaticToken::CloseBrace) => {}
+            _ => Err(LocationError::new("Expected comma or close brace after struct field value.".to_string(), tokens.location().clone()))?,
+        }
     }
     pop_expected(tokens, Token::Static(StaticToken::CloseBrace))?;
-    Ok(ParsedExpression::new(ParsedExpressionKind::Block(expressions), token.location))
+    Ok(ParsedExpression::new(ParsedExpressionKind::Literal(ParsedLiteral::Struct(struct_type, fields)), location))
 }

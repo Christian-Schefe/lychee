@@ -1,16 +1,16 @@
-use crate::compiler::lexer::location::{Location, Src};
+use std::collections::HashMap;
+use crate::compiler::lexer::location::Src;
 
 #[derive(Debug, Clone)]
 pub struct ParsedProgram {
-    pub functions: Vec<ParsedFunction>,
-    pub struct_definitions: Vec<ParsedStructDefinition>,
+    pub functions: Vec<Src<ParsedFunction>>,
+    pub struct_definitions: Vec<Src<ParsedStructDefinition>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ParsedStructDefinition {
     pub struct_name: String,
-    pub fields: Vec<(ParsedType, String)>,
-    pub location: Location,
+    pub fields: HashMap<String, ParsedType>,
 }
 
 #[derive(Debug, Clone)]
@@ -19,14 +19,16 @@ pub struct ParsedFunction {
     pub return_type: ParsedType,
     pub args: Vec<(ParsedType, String)>,
     pub body: ParsedExpression,
-    pub location: Location,
 }
 
 pub type ParsedExpression = Src<ParsedExpressionKind>;
 
 #[derive(Debug, Clone)]
 pub enum ParsedExpressionKind {
-    Block(Vec<ParsedExpression>),
+    Block {
+        expressions: Vec<ParsedExpression>,
+        returns_value: bool,
+    },
     Return(Option<Box<ParsedExpression>>),
     Continue,
     Break(Option<Box<ParsedExpression>>),
@@ -79,6 +81,7 @@ pub enum ParsedLiteral {
     Integer(i64),
     String(String),
     Struct(ParsedType, Vec<(String, ParsedExpression)>),
+    Array(ParsedType, Vec<ParsedExpression>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -127,8 +130,12 @@ pub enum UnaryOp {
     LogicalNot,
     Borrow,
     Dereference,
-    Increment(bool),
-    Decrement(bool),
+    Increment {
+        is_prefix: bool,
+    },
+    Decrement {
+        is_prefix: bool,
+    },
     Cast(ParsedType),
     Member(String),
     Index(Box<ParsedExpression>),

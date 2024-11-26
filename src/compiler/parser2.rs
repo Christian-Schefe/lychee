@@ -2,7 +2,7 @@ use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser2::parsed_expression::ParsedProgram;
 use crate::compiler::parser2::program_parser::parse_program;
 
-mod parsed_expression;
+pub mod parsed_expression;
 mod program_parser;
 mod parser_error;
 mod type_parser;

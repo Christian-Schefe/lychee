@@ -13,11 +13,17 @@ int main() {
             y: 8
         }
     }, ());
-    let [int] arr = 5;
-    arr[1];
+    let [int] arr1 = new [int] { 1, 2 };
+    let int f = arr1[1];
+    let [[int]] arr = new [[int]] { new [int] {}, arr1 };
+    arr[f] = new [int] { 3, 4 };
+    let [char] text = "Hello world!";
+    let unit ua = let [char] hello = "Hello";
     let Point p2 = add(p1 = add(p1, p1, ()), p1, writenum(p1.y.y));
+    let bool t = true;
+    let bool fa = t &&= false || false && true;
     writenum(p2.y.y);
-    call_order_test({ writechar('a'); -777}, { writechar('b'); 6666}, { writechar('c'); &p2.y});
+    call_order_test({ writechar('a'); -777}, { writechar('b'); 6666 as long}, { writechar('c'); &p2.y});
     writechar('\n');
     print_point(p2);
     p2.y.x
@@ -31,6 +37,8 @@ struct Point {
 struct Test {
     int x;
     int y;
+    [&[long]] t;
+    &bool a;
 }
 
 unit call_order_test(int a, long b, &Test c) {

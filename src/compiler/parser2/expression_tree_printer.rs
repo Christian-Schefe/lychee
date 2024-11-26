@@ -39,10 +39,10 @@ impl Printer {
 pub fn print_program(expr: &ParsedProgram) {
     let mut printer = Printer::new();
     for struct_def in &expr.struct_definitions {
-        print_struct_definition(&mut printer, struct_def);
+        print_struct_definition(&mut printer, &struct_def.value);
     }
     for function in &expr.functions {
-        print_function(&mut printer, function);
+        print_function(&mut printer, &function.value);
     }
     println!("{}", printer.build());
 }
@@ -50,7 +50,7 @@ pub fn print_program(expr: &ParsedProgram) {
 fn print_struct_definition(printer: &mut Printer, struct_def: &ParsedStructDefinition) {
     printer.add_line(format!("struct {} {{", struct_def.struct_name));
     printer.indent();
-    for (field_type, field_name) in &struct_def.fields {
+    for (field_name, field_type) in &struct_def.fields {
         printer.add_line(format!("{}: {:?},", field_name, field_type.value));
     }
     printer.dedent();
@@ -100,10 +100,10 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
         ParsedExpressionKind::Literal(lit) => {
             print_literal(printer, lit);
         }
-        ParsedExpressionKind::Block(exprs) => {
+        ParsedExpressionKind::Block { expressions, returns_value: _ } => {
             printer.add_line("{".to_string());
             printer.indent();
-            for expr in exprs {
+            for expr in expressions {
                 print_expression(printer, expr);
             }
             printer.dedent();
@@ -161,7 +161,7 @@ fn print_literal(printer: &mut Printer, lit: &ParsedLiteral) {
             printer.add_line(format!("Int({})", value));
         }
         ParsedLiteral::Unit => {
-            printer.add_line(format!("Unit"));
+            printer.add_line("Unit".to_string());
         }
         ParsedLiteral::String(value) => {
             printer.add_line(format!("String({})", value));
@@ -178,6 +178,14 @@ fn print_literal(printer: &mut Printer, lit: &ParsedLiteral) {
             for (field_name, field_value) in fields {
                 printer.add_line(format!("{}: ", field_name));
                 print_expression(printer, field_value);
+            }
+            printer.dedent();
+        }
+        ParsedLiteral::Array(ty, values) => {
+            printer.add_line(format!("Array({:?})", ty.value));
+            printer.indent();
+            for value in values {
+                print_expression(printer, value);
             }
             printer.dedent();
         }
