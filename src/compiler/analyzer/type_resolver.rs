@@ -24,7 +24,7 @@ impl Display for AnalyzedType {
             AnalyzedType::Char => write!(f, "char"),
             AnalyzedType::Integer(size) => write!(f, "int{}", size * 8),
             AnalyzedType::Struct(name) => write!(f, "{}", name),
-            AnalyzedType::Pointer(inner) => write!(f, "*{}", inner),
+            AnalyzedType::Pointer(inner) => write!(f, "&{}", inner),
             AnalyzedType::Array(inner) => write!(f, "[{}]", inner),
         }
     }
@@ -47,14 +47,16 @@ impl AnalyzedType {
 }
 
 #[derive(Debug, Clone)]
-pub struct StructType {
+pub struct AnalyzedStructType {
     pub fields: HashMap<String, AnalyzedType>,
+    pub field_order: Vec<String>,
     pub size: usize,
     pub location: Location,
 }
 
+#[derive(Debug, Clone)]
 pub struct AnalyzedTypes {
-    pub struct_types: HashMap<String, StructType>,
+    pub struct_types: HashMap<String, AnalyzedStructType>,
     pub type_lookup: HashMap<String, AnalyzedType>,
 }
 
@@ -97,17 +99,19 @@ pub fn analyze_types(program: &ParsedProgram) -> AnalyzerResult<AnalyzedTypes> {
     let mut raw_struct_types = HashMap::with_capacity(program.struct_definitions.len());
     for struct_def in &program.struct_definitions {
         let mut fields = HashMap::with_capacity(struct_def.value.fields.len());
+        let mut field_order = Vec::with_capacity(struct_def.value.fields.len());
         for (field_name, parsed_type) in &struct_def.value.fields {
             fields.insert(field_name.clone(), map_parsed_type(&known_type_names, parsed_type)?);
+            field_order.push(field_name.clone());
         }
-        raw_struct_types.insert(struct_def.value.struct_name.clone(), (fields, struct_def.location.clone()));
+        raw_struct_types.insert(struct_def.value.struct_name.clone(), (fields, field_order, struct_def.location.clone()));
     }
 
     let mut struct_types = HashMap::with_capacity(raw_struct_types.len());
-    for (name, (fields, location)) in &raw_struct_types {
+    for (name, (fields, field_order, location)) in &raw_struct_types {
         let mut visited = HashSet::new();
         let size = determine_struct_size(&raw_struct_types, name, &mut visited)?;
-        struct_types.insert(name.clone(), StructType { fields: fields.clone(), size, location: location.clone() });
+        struct_types.insert(name.clone(), AnalyzedStructType { fields: fields.clone(), field_order: field_order.clone(), size, location: location.clone() });
     }
 
     Ok(AnalyzedTypes { struct_types, type_lookup: known_type_names })
@@ -127,8 +131,8 @@ fn map_parsed_type(known_struct_names: &HashMap<String, AnalyzedType>, parsed_ty
     }
 }
 
-fn determine_struct_size(struct_types: &HashMap<String, (HashMap<String, AnalyzedType>, Location)>, struct_name: &str, visited: &mut HashSet<String>) -> AnalyzerResult<usize> {
-    let (struct_fields, location) = struct_types.get(struct_name).unwrap();
+fn determine_struct_size(struct_types: &HashMap<String, (HashMap<String, AnalyzedType>, Vec<String>, Location)>, struct_name: &str, visited: &mut HashSet<String>) -> AnalyzerResult<usize> {
+    let (struct_fields, _, location) = struct_types.get(struct_name).unwrap();
     if !visited.insert(struct_name.to_string()) {
         return Err(LocationError::new(format!("Struct {} contains a cycle", struct_name), location.clone()))?;
     }

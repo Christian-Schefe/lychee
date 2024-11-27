@@ -1,10 +1,14 @@
 use crate::compiler::analyzer::type_resolver::{AnalyzedType, AnalyzedTypes};
 use crate::compiler::parser2::parsed_expression::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, UnaryMathOp};
 
+#[derive(Debug, Clone)]
 pub struct AnalyzedProgram {
     pub analyzed_types: AnalyzedTypes,
+    pub functions: Vec<AnalyzedFunction>,
+    pub main_function: usize,
 }
 
+#[derive(Debug, Clone)]
 pub struct AnalyzedFunction {
     pub name: String,
     pub return_type: AnalyzedType,
@@ -21,7 +25,9 @@ pub struct AnalyzedExpression {
 
 #[derive(Debug, Clone)]
 pub enum AnalyzedExpressionKind {
-    Block(Vec<AnalyzedExpression>),
+    Block {
+        expressions: Vec<AnalyzedExpression>,
+    },
     Return(Option<Box<AnalyzedExpression>>),
     Continue,
     Break(Option<Box<AnalyzedExpression>>),
@@ -81,8 +87,7 @@ pub enum AnalyzedLiteral {
     Bool(bool),
     Char(i8),
     Integer(i64),
-    String(String),
-    Struct(AnalyzedType, Vec<(String, AnalyzedExpression)>),
+    Struct(Vec<(String, AnalyzedExpression)>),
     Array(Vec<AnalyzedExpression>),
 }
 
@@ -119,5 +124,5 @@ pub enum AnalyzedUnaryOp {
     Math(UnaryMathOp),
     LogicalNot,
     Dereference,
-    Cast(AnalyzedType),
+    Cast,
 }

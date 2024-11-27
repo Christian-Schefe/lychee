@@ -187,6 +187,7 @@ pub enum Keyword {
     Continue,
     Break,
     Let,
+    Var,
 }
 
 impl Keyword {
@@ -205,6 +206,7 @@ impl Keyword {
             "continue" => Some(Keyword::Continue),
             "break" => Some(Keyword::Break),
             "let" => Some(Keyword::Let),
+            "var" => Some(Keyword::Var),
             _ => None,
         }
     }

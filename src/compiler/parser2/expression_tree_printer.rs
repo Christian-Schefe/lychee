@@ -10,7 +10,7 @@ impl Display for Line {
     }
 }
 
-struct Printer {
+pub struct Printer {
     lines: Vec<Line>,
     indent: usize,
 }
@@ -128,7 +128,7 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
             printer.dedent();
         }
         ParsedExpressionKind::Declaration { var_type, var_name, value } => {
-            printer.add_line(format!("Declaration({:?}, {})", var_type.value, var_name));
+            printer.add_line(format!("Declaration({}, {})", var_type.as_ref().map_or("var".to_string(), |x| format!("{:?}", x.value)), var_name));
             printer.indent();
             print_expression(printer, value);
             printer.dedent();

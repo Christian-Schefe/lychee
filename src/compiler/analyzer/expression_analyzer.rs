@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use anyhow::Context;
 use crate::compiler::analyzer::analyzed_expression::{AnalyzedBinaryOp, AnalyzedExpression, AnalyzedExpressionKind, AnalyzedLiteral, AnalyzedUnaryOp, AssignableExpression, AssignableExpressionKind, BinaryAssignOp};
 use crate::compiler::analyzer::AnalyzerResult;
@@ -24,7 +25,9 @@ pub fn analyze_expression(context: &mut AnalyzerContext, expression: &ParsedExpr
 
             context.local_variables = old_local_variables;
             Ok(AnalyzedExpression {
-                kind: AnalyzedExpressionKind::Block(analyzed_expressions),
+                kind: AnalyzedExpressionKind::Block {
+                    expressions: analyzed_expressions,
+                },
                 ty: return_ty,
             })
         }
@@ -132,9 +135,11 @@ pub fn analyze_expression(context: &mut AnalyzerContext, expression: &ParsedExpr
         }
         ParsedExpressionKind::Declaration { var_type, var_name, value } => {
             let analyzed_value = analyze_expression(context, value).with_context(|| format!("Failed to analyze type of declaration value at {}.", value.location))?;
-            let declared_type = context.analyzed_types.resolve_type(var_type)?;
-            if analyzed_value.ty != declared_type {
-                Err(anyhow::anyhow!("Declaration expression should be of type '{}', but was '{}' at {}.", declared_type, analyzed_value.ty, value.location))?;
+            let maybe_declared_type = var_type.as_ref().map(|x| context.analyzed_types.resolve_type(x)).transpose()?;
+            if let Some(declared_type) = maybe_declared_type {
+                if analyzed_value.ty != declared_type {
+                    Err(anyhow::anyhow!("Declaration expression should be of type '{}', but was '{}' at {}.", declared_type, analyzed_value.ty, value.location))?;
+                }
             }
             if let Some(old_var) = context.local_variables.insert(var_name.clone(), LocalVariable { ty: analyzed_value.ty.clone(), is_current_scope: true }) {
                 if old_var.is_current_scope {
@@ -143,7 +148,7 @@ pub fn analyze_expression(context: &mut AnalyzerContext, expression: &ParsedExpr
             }
             Ok(AnalyzedExpression {
                 kind: AnalyzedExpressionKind::Declaration {
-                    var_type: context.analyzed_types.resolve_type(var_type)?,
+                    var_type: analyzed_value.ty.clone(),
                     var_name: var_name.clone(),
                     value: Box::new(analyzed_value),
                 },
@@ -184,10 +189,17 @@ pub fn analyze_expression(context: &mut AnalyzerContext, expression: &ParsedExpr
                         ty,
                     })
                 }
-                ParsedLiteral::String(val) => Ok(AnalyzedExpression {
-                    kind: AnalyzedExpressionKind::Literal(AnalyzedLiteral::String(val.clone())),
-                    ty: AnalyzedType::Array(Box::new(AnalyzedType::Char)),
-                }),
+                ParsedLiteral::String(val) => {
+                    let bytes = val.as_bytes();
+                    let array_values = bytes.iter().map(|b| AnalyzedExpression {
+                        kind: AnalyzedExpressionKind::Literal(AnalyzedLiteral::Char(*b as i8)),
+                        ty: AnalyzedType::Char,
+                    }).collect();
+                    Ok(AnalyzedExpression {
+                        kind: AnalyzedExpressionKind::Literal(AnalyzedLiteral::Array(array_values)),
+                        ty: AnalyzedType::Array(Box::new(AnalyzedType::Char)),
+                    })
+                }
                 ParsedLiteral::Struct(ty, field_values) => {
                     let analyzed_ty = context.analyzed_types.resolve_type(ty)?;
                     let struct_type = if let AnalyzedType::Struct(str_name) = &analyzed_ty {
@@ -198,30 +210,28 @@ pub fn analyze_expression(context: &mut AnalyzerContext, expression: &ParsedExpr
                         Err(anyhow::anyhow!("Expected struct type, found '{}' at {}.", analyzed_ty, ty.location))?
                     };
 
-                    let missing_fields = field_values.iter().filter_map(|(field_name, _)| {
-                        if struct_type.fields.contains_key(field_name) {
-                            None
-                        } else {
-                            Some(field_name.clone())
-                        }
-                    }).collect::<Vec<_>>();
-                    if !missing_fields.is_empty() {
-                        Err(anyhow::anyhow!("Struct type '{}' is missing fields: {:?} at {}.", analyzed_ty, missing_fields, ty.location))?;
-                    }
-
+                    let mut present_fields = field_values.keys().collect::<HashSet<_>>();
                     let mut analyzed_field_values = Vec::new();
-                    for (field_name, field_value) in field_values {
-                        let analyzed_field_value = analyze_expression(context, field_value).with_context(|| format!("Failed to analyze type of struct field value at {}.", field_value.location))?;
-                        let expected_type = struct_type.fields.get(field_name).ok_or_else(|| {
-                            anyhow::anyhow!("Struct type '{}' does not have field '{}' at {}.", analyzed_ty, field_name, field_value.location)
+
+                    for field_name in &struct_type.field_order {
+                        let field_value = field_values.get(field_name).ok_or_else(|| {
+                            anyhow::anyhow!("Struct type '{}' is missing field '{}' at {}.", analyzed_ty, field_name, ty.location)
                         })?;
+                        let analyzed_field_value = analyze_expression(context, field_value).with_context(|| format!("Failed to analyze type of struct field value at {}.", field_value.location))?;
+                        let expected_type = struct_type.fields.get(field_name).unwrap();
                         if analyzed_field_value.ty != *expected_type {
                             Err(anyhow::anyhow!("Struct field '{}' has type '{}', but expected '{}' at {}.", field_name, analyzed_field_value.ty, expected_type, field_value.location))?;
                         }
                         analyzed_field_values.push((field_name.clone(), analyzed_field_value));
+                        present_fields.remove(field_name);
                     }
+
+                    if !present_fields.is_empty() {
+                        Err(anyhow::anyhow!("Struct literal of type '{}' has extra fields: {:?} at {}.", analyzed_ty, present_fields, ty.location))?;
+                    }
+
                     Ok(AnalyzedExpression {
-                        kind: AnalyzedExpressionKind::Literal(AnalyzedLiteral::Struct(analyzed_ty.clone(), analyzed_field_values)),
+                        kind: AnalyzedExpressionKind::Literal(AnalyzedLiteral::Struct(analyzed_field_values)),
                         ty: analyzed_ty,
                     })
                 }
@@ -325,7 +335,7 @@ pub fn analyze_expression(context: &mut AnalyzerContext, expression: &ParsedExpr
                 if analyzed_expr.ty.can_cast_to(&target_type) {
                     Ok(AnalyzedExpression {
                         kind: AnalyzedExpressionKind::Unary {
-                            op: AnalyzedUnaryOp::Cast(target_type.clone()),
+                            op: AnalyzedUnaryOp::Cast,
                             expr: Box::new(analyzed_expr),
                         },
                         ty: target_type,

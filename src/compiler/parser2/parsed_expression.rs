@@ -43,7 +43,7 @@ pub enum ParsedExpressionKind {
         else_expr: Option<Box<ParsedExpression>>,
     },
     Declaration {
-        var_type: ParsedType,
+        var_type: Option<ParsedType>,
         var_name: String,
         value: Box<ParsedExpression>,
     },
@@ -80,7 +80,7 @@ pub enum ParsedLiteral {
     Char(i8),
     Integer(i64),
     String(String),
-    Struct(ParsedType, Vec<(String, ParsedExpression)>),
+    Struct(ParsedType, HashMap<String, ParsedExpression>),
     Array(ParsedType, Vec<ParsedExpression>),
 }
 

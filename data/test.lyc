@@ -6,6 +6,20 @@ int main() {
             y: 99
         }
     };
+    {
+        let var p1 = "hello world";
+        let var p2 = 65 as long;
+        let var p3 = 65 as long;
+        let var p4 = 65 as long;
+        let var p5 = 65 as long;
+        let var p6 = 65 as long;
+        let var p7 = 65 as long;
+        let var p8 = 65 as long;
+        let var p9 = 65 as long;
+        let var p10 = 65 as long;
+        let var p11 = 65 as long;
+        let var p12 = 65 as long;
+    };
     p1 = add(p1, new Point {
         x: 8,
         y: new Test {
@@ -14,19 +28,26 @@ int main() {
         }
     }, ());
     let [int] arr1 = new [int] { 1, 2 };
-    let int f = arr1[1];
+    let var f = arr1[1];
+    let &int k = &f;
     let [[int]] arr = new [[int]] { new [int] {}, arr1 };
     arr[f] = new [int] { 3, 4 };
     let [char] text = "Hello world!";
     let unit ua = let [char] hello = "Hello";
-    let Point p2 = add(p1 = add(p1, p1, ()), p1, writenum(p1.y.y));
+    let Point p2 = add(p1 = add(p1, p1, ()), p1, write_num(p1.y.y));
     let bool t = true;
     let bool fa = t &&= false || false && true;
-    writenum(p2.y.y);
-    call_order_test({ writechar('a'); -777}, { writechar('b'); 6666 as long}, { writechar('c'); &p2.y});
-    writechar('\n');
+    let Unit test = new Unit {
+        a: 5,
+    };
+    write_num(p2.y.y);
+    call_order_test({ write_char('a'); -777}, { write_char('b'); 6666 as long}, { write_char('c'); &p2.y});
+    write_char('\n');
     print_point(p2);
     p2.y.x
+}
+struct Unit {
+int a;
 }
 
 struct Point {
@@ -37,24 +58,22 @@ struct Point {
 struct Test {
     int x;
     int y;
-    [&[long]] t;
-    &bool a;
 }
 
 unit call_order_test(int a, long b, &Test c) {
-    writenum(a);
-    writenum(b as int);
-    writenum((*c).y as int);
+    write_num(a);
+    write_num(b as int);
+    write_num((*c).y as int);
     (*c).x = 8888;
 }
 
 unit print_point(Point p) {
-    writenum(p.x);
-    writechar(' ');
-    writenum(p.y.x);
-    writechar(' ');
-    writenum(p.y.y);
-    writechar('\n');
+    write_num(p.x);
+    write_char(' ');
+    write_num(p.y.x);
+    write_char(' ');
+    write_num(p.y.y);
+    write_char('\n');
 }
 
 Point add(Point p1, Point p2, unit a) {
@@ -67,17 +86,17 @@ Point add(Point p1, Point p2, unit a) {
     };
 }
 
-unit writenum(int num) {
+unit write_num(int num) {
     if num == 0 {
-        writechar('0');
+        write_char('0');
         return;
     } else if num < 0 {
-        writechar('-');
+        write_char('-');
         num = -num;
     };
 
     if num >= 10 {
-        writenum(num / 10);
+        write_num(num / 10);
     };
-    writechar((num % 10 + '0' as int) as char);
+    write_char((num % 10 + '0' as int) as char);
 }

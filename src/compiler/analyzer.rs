@@ -1,7 +1,7 @@
 use anyhow::Error;
 
-mod type_resolver;
-mod analyzed_expression;
+pub mod type_resolver;
+pub mod analyzed_expression;
 pub mod program_analyzer;
 mod expression_analyzer;
 

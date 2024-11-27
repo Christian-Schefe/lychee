@@ -32,18 +32,18 @@ pub struct LocalVariable {
 }
 
 fn add_builtin_function_headers(function_headers: &mut HashMap<String, FunctionHeader>) {
-    function_headers.insert("readchar".to_string(), FunctionHeader {
+    function_headers.insert("read_char".to_string(), FunctionHeader {
         return_type: AnalyzedType::Char,
         parameters: vec![],
     });
-    function_headers.insert("writechar".to_string(), FunctionHeader {
+    function_headers.insert("write_char".to_string(), FunctionHeader {
         return_type: AnalyzedType::Unit,
         parameters: vec![AnalyzedType::Char],
     });
 }
 
-pub fn analyze_program(program: ParsedProgram) -> AnalyzedProgram {
-    let analyzed_types = analyze_types(&program).unwrap();
+pub fn analyze_program(program: &ParsedProgram) -> AnalyzerResult<AnalyzedProgram> {
+    let analyzed_types = analyze_types(&program)?;
 
     analyzed_types.struct_types.iter().for_each(|(name, struct_type)| {
         println!("Struct: {}, size: {}", name, struct_type.size);
@@ -63,17 +63,31 @@ pub fn analyze_program(program: ParsedProgram) -> AnalyzedProgram {
     add_builtin_function_headers(&mut function_headers);
 
     let mut analyzed_functions = Vec::with_capacity(program.functions.len());
-    for function in program.functions {
+    let mut main_function = None;
+    for function in &program.functions {
         let analyzed_function = analyze_function(&analyzed_types, &function_headers, function).unwrap();
+        if analyzed_function.name == "main" {
+            main_function = Some(analyzed_functions.len());
+        }
         analyzed_functions.push(analyzed_function);
     }
+    if let Some(main_function) = main_function {
+        let main_return_type = &analyzed_functions[main_function].return_type;
+        if main_return_type != &AnalyzedType::Integer(4) {
+            return Err(anyhow::anyhow!("Main function must return int32, found {:?}", main_return_type));
+        }
 
-    AnalyzedProgram {
-        analyzed_types,
+        Ok(AnalyzedProgram {
+            analyzed_types,
+            functions: analyzed_functions,
+            main_function,
+        })
+    } else {
+        Err(anyhow::anyhow!("No main function found"))
     }
 }
 
-pub fn analyze_function(analyzed_types: &AnalyzedTypes, function_headers: &HashMap<String, FunctionHeader>, function: Src<ParsedFunction>) -> AnalyzerResult<AnalyzedFunction> {
+pub fn analyze_function(analyzed_types: &AnalyzedTypes, function_headers: &HashMap<String, FunctionHeader>, function: &Src<ParsedFunction>) -> AnalyzerResult<AnalyzedFunction> {
     let return_type = analyzed_types.resolve_type(&function.value.return_type)?;
 
     let mut context = AnalyzerContext {
@@ -96,7 +110,7 @@ pub fn analyze_function(analyzed_types: &AnalyzedTypes, function_headers: &HashM
     let analyzed_body = analyze_expression(&mut context, &function.value.body)?;
 
     Ok(AnalyzedFunction {
-        name: function.value.function_name,
+        name: function.value.function_name.clone(),
         return_type,
         parameters,
         body: analyzed_body,

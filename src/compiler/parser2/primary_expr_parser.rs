@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use anyhow::Context;
 use crate::compiler::lexer::lexer_error::LocationError;
 use crate::compiler::lexer::location::Location;
@@ -124,7 +125,13 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
         }
         Token::Keyword(Keyword::Let) => {
             tokens.pop();
-            let var_type = parse_type(tokens).with_context(|| format!("Failed to parse variable type at {}.", token.location))?;
+            let var_type = match tokens.peek().value {
+                Token::Keyword(Keyword::Var) => {
+                    tokens.pop();
+                    None
+                }
+                _ => Some(parse_type(tokens).with_context(|| format!("Failed to parse variable type at {}.", token.location))?),
+            };
             let var_name = parse_identifier(tokens)?.value;
             pop_expected(tokens, Token::Static(StaticToken::Assign))?;
             let value_location = tokens.location().clone();
@@ -169,13 +176,15 @@ pub fn parse_seperated_expressions(tokens: &mut TokenStack, open_token: Token, c
 
 fn parse_struct_literal(tokens: &mut TokenStack, struct_type: ParsedType, location: Location) -> ParseResult<ParsedExpression> {
     pop_expected(tokens, Token::Static(StaticToken::OpenBrace))?;
-    let mut fields = Vec::new();
+    let mut fields = HashMap::new();
     while tokens.peek().value != Token::Static(StaticToken::CloseBrace) {
         let field_name = parse_identifier(tokens)?.value;
         pop_expected(tokens, Token::Static(StaticToken::Colon))?;
         let expr_location = tokens.location().clone();
         let field_value = parse_expression(tokens).with_context(|| format!("Failed to parse struct field value at {}.", expr_location))?;
-        fields.push((field_name, field_value));
+        if fields.insert(field_name.clone(), field_value).is_some() {
+            Err(LocationError::new(format!("Duplicate field name '{}'", field_name), expr_location))?;
+        }
         match tokens.peek().value {
             Token::Static(StaticToken::Comma) => {
                 tokens.pop();
