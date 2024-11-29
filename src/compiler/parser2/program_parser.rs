@@ -75,6 +75,9 @@ pub fn parse_struct_definition(tokens: &mut TokenStack) -> ParseResult<Src<Parse
         }
     }
     pop_expected(tokens, Token::Static(StaticToken::CloseBrace))?;
+    if fields.is_empty() {
+        Err(anyhow::anyhow!("Structs must have at least one field at {location}."))?;
+    }
 
     Ok(Src::new(ParsedStructDefinition {
         struct_name,

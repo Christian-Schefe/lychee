@@ -17,7 +17,7 @@ fn print_function(printer: &mut Printer, function: &ResolvedFunction) {
 }
 
 fn print_expression(printer: &mut Printer, expr: &ResolvedExpression) {
-    printer.add_line(format!("Expr: {:?}", expr.value_location));
+    printer.add_line(format!("Expr: {:?}, stack discard: {}", expr.value_location, expr.stack_discard));
     match &expr.kind {
         ResolvedExpressionKind::Literal(literal) => {
             match literal {
@@ -65,9 +65,9 @@ fn print_expression(printer: &mut Printer, expr: &ResolvedExpression) {
         ResolvedExpressionKind::Continue => {
             printer.add_line("Continue".to_string());
         }
-        ResolvedExpressionKind::Break(expr) => {
+        ResolvedExpressionKind::Break { maybe_expr } => {
             printer.add_line("Break".to_string());
-            if let Some(expr) = expr {
+            if let Some(expr) = maybe_expr {
                 printer.indent();
                 print_expression(printer, expr);
                 printer.dedent();

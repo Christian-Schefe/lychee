@@ -27,6 +27,7 @@ pub struct AnalyzedExpression {
 pub enum AnalyzedExpressionKind {
     Block {
         expressions: Vec<AnalyzedExpression>,
+        returns_value: bool,
     },
     Return(Option<Box<AnalyzedExpression>>),
     Continue,

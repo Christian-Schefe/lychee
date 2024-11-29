@@ -26,6 +26,7 @@ pub fn analyze_expression(context: &mut AnalyzerContext, expression: &ParsedExpr
             context.local_variables = old_local_variables;
             Ok(AnalyzedExpression {
                 kind: AnalyzedExpressionKind::Block {
+                    returns_value: *returns_value,
                     expressions: analyzed_expressions,
                 },
                 ty: return_ty,

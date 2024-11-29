@@ -10,6 +10,7 @@ pub struct ResolverContext {
     pub local_vars: HashMap<String, isize>,
     pub maximum_local_var_stack_size: usize,
     pub current_local_var_stack_size: usize,
+    pub current_loop_temp_stack_size: usize,
 }
 
 impl ResolverContext {
@@ -36,6 +37,7 @@ fn resolve_function(analyzed_types: &AnalyzedTypes, function: &AnalyzedFunction)
         local_vars: HashMap::new(),
         maximum_local_var_stack_size: 0,
         current_local_var_stack_size: 0,
+        current_loop_temp_stack_size: 0,
         resolved_types: ResolvedTypes {
             struct_types: HashMap::new(),
         },
@@ -53,7 +55,7 @@ fn resolve_function(analyzed_types: &AnalyzedTypes, function: &AnalyzedFunction)
         param_offset += type_size;
     }
 
-    let resolved_body = resolve_expression(&mut context, &function.body);
+    let resolved_body = resolve_expression(&mut context, &function.body, false);
 
     ResolvedFunction {
         name: function.name.clone(),

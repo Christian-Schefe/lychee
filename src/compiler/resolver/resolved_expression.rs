@@ -1,6 +1,6 @@
 use crate::compiler::analyzer::analyzed_expression::{AnalyzedBinaryOp, BinaryAssignOp};
 use crate::compiler::analyzer::type_resolver::AnalyzedType;
-use crate::compiler::parser2::parsed_expression::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, UnaryMathOp};
+use crate::compiler::parser2::parsed_expression::{UnaryMathOp};
 
 #[derive(Debug, Clone)]
 pub struct ResolvedProgram {
@@ -10,7 +10,7 @@ pub struct ResolvedProgram {
 #[derive(Debug, Clone)]
 pub enum ValueLocation {
     Stack,
-    Register(usize),
+    Register,
     None,
 }
 
@@ -19,7 +19,7 @@ impl ValueLocation {
         match ty {
             AnalyzedType::Unit => ValueLocation::None,
             AnalyzedType::Struct(_) => ValueLocation::Stack,
-            _ => ValueLocation::Register(0),
+            _ => ValueLocation::Register,
         }
     }
 }
@@ -36,15 +36,17 @@ pub struct ResolvedFunction {
 pub struct ResolvedExpression {
     pub kind: ResolvedExpressionKind,
     pub value_location: ValueLocation,
+    pub stack_discard: usize,
 }
-
 
 #[derive(Debug, Clone)]
 pub enum ResolvedExpressionKind {
     Block(Vec<ResolvedExpression>),
     Return(Option<Box<ResolvedExpression>>),
     Continue,
-    Break(Option<Box<ResolvedExpression>>),
+    Break {
+        maybe_expr: Option<Box<ResolvedExpression>>,
+    },
     If {
         condition: Box<ResolvedExpression>,
         then_block: Box<ResolvedExpression>,

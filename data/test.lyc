@@ -67,6 +67,25 @@ unit call_order_test(int a, long b, &Test c) {
     (*c).x = 8888;
 }
 
+unit fun_test(int a, unit b) {
+}
+
+int while_loop_test() {
+    let int i = 0;
+    let int y = while true {
+        fun_test(5, {
+            continue;
+        });
+        i++;
+        if i > 1000 {
+            break i;
+        };
+    } else {
+        0
+    };
+    y
+}
+
 unit print_point(Point p) {
     write_num(p.x);
     write_char(' ');
