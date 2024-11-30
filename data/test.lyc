@@ -1,21 +1,41 @@
 int main() {
-     let Test a = test_fn();
-     a = combine(a, test_fn());
-     return a.b as int;
+    let Point a = new_point(1, 2);
+    let Point b = new_point(3, 4);
+    let Point c = add(a, b);
+    let Point d = sub(a, b);
+    let Point e = mul(c, d);
+    return e.y;
 }
-Test test_fn() {
-    return new Test {
-        a: -5,
-        b: 88 as long,
-    };
+
+Point new_point(int x, int y) {
+    new Point {
+        x: x,
+        y: y
+    }
 }
-Test combine(Test a, Test b) {
-    return new Test {
-        a: a.a + b.a,
-        b: a.b + b.b,
-    };
+
+struct Point {
+    int x;
+    int y;
 }
-struct Test {
-    int a;
-    long b;
+
+Point add(Point a, Point b) {
+    new Point {
+        x: a.x + b.x,
+        y: a.y + b.y
+    }
+}
+
+Point sub(Point a, Point b) {
+    new Point {
+        x: a.x - b.x,
+        y: a.y - b.y
+    }
+}
+
+Point mul(Point a, Point b) {
+    new Point {
+        x: a.x * b.x,
+        y: a.y * b.y
+    }
 }

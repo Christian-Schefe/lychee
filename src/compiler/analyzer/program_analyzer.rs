@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use crate::compiler::analyzer::analyzed_expression::{AnalyzedFunction, AnalyzedProgram};
 use crate::compiler::analyzer::AnalyzerResult;
 use crate::compiler::analyzer::expression_analyzer::analyze_expression;
+use crate::compiler::analyzer::return_analyzer::always_calls_return;
 use crate::compiler::analyzer::type_resolver::{analyze_types, AnalyzedType, AnalyzedTypes};
 use crate::compiler::builtin::add_builtin_function_headers;
 use crate::compiler::lexer::location::Src;
@@ -102,6 +103,12 @@ pub fn analyze_function(analyzed_types: &AnalyzedTypes, function_headers: &HashM
     }
 
     let analyzed_body = analyze_expression(&mut context, &function.value.body)?;
+
+    if analyzed_body.ty != return_type {
+        if analyzed_body.ty != AnalyzedType::Unit || !always_calls_return(&analyzed_body) {
+            return Err(anyhow::anyhow!("All code paths in function body must return {:?}, found {:?} at {}", return_type, analyzed_body.ty, function.location));
+        }
+    }
 
     Ok(AnalyzedFunction {
         name: function.value.function_name.clone(),

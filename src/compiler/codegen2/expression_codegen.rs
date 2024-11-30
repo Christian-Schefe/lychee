@@ -172,6 +172,7 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
                 context.inc("r1");
             }
             context.store(expression.value_data.size, "r1", "[r0]");
+            context.pop(expression.value_data.size, "r0");
         }
         ResolvedExpressionKind::Decrement(expr, is_prefix) => {
             generate_assignable_expression_pointer_code(context, expr);
@@ -184,15 +185,16 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
                 context.dec("r1");
             }
             context.store(expression.value_data.size, "r1", "[r0]");
+            context.pop(expression.value_data.size, "r0");
         }
         ResolvedExpressionKind::Binary { op, left, right } => {
             match op {
                 AnalyzedBinaryOp::Math(math_op) => {
                     generate_expression_code(context, left);
-                    context.push(expression.value_data.size, "r0");
+                    context.push(left.value_data.size, "r0");
                     generate_expression_code(context, right);
                     context.mov("r1", "r0");
-                    context.pop(expression.value_data.size, "r0");
+                    context.pop(left.value_data.size, "r0");
                     do_math_op(context, math_op, "r0", "r1");
                 }
                 AnalyzedBinaryOp::Logical(logical_op) => {
@@ -208,10 +210,10 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
                 }
                 AnalyzedBinaryOp::Comparison(comp_op) => {
                     generate_expression_code(context, left);
-                    context.push(expression.value_data.size, "r0");
+                    context.push(left.value_data.size, "r0");
                     generate_expression_code(context, right);
                     context.mov("r1", "r0");
-                    context.pop(expression.value_data.size, "r0");
+                    context.pop(left.value_data.size, "r0");
                     do_comp_op(context, comp_op, "r0", "r1");
                 }
             }
