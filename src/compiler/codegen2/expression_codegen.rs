@@ -211,7 +211,8 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
                     generate_expression_code(context, left);
                     context.push(expression.value_data.size, "r0");
                     generate_expression_code(context, right);
-                    context.pop(expression.value_data.size, "r1");
+                    context.mov("r1", "r0");
+                    context.pop(expression.value_data.size, "r0");
                     do_comp_op(context, comp_op, "r0", "r1");
                 }
             }

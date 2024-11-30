@@ -168,6 +168,12 @@ impl CodegenContext {
         let label = self.function_labels.get(function).unwrap();
         self.lines.push(format!("call {}", label));
     }
+    pub fn read(&mut self, register: &str, address: &str) {
+        self.lines.push(format!("read {register} {address}"));
+    }
+    pub fn write(&mut self, register: &str, address: &str) {
+        self.lines.push(format!("write {register} {address}"));
+    }
 }
 
 pub fn gen_code(program: ResolvedProgram, output: &PathBuf) {

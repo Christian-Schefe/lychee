@@ -3,10 +3,12 @@ use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser2::parsed_expression::{ParsedExpression, ParsedExpressionKind, UnaryOp};
 use crate::compiler::parser2::parser_error::ParseResult;
 use crate::compiler::parser2::parsed_expression::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, BinaryOp};
-use crate::compiler::parser2::primary_expr_parser::parse_primary_expression;
-use crate::compiler::parser2::program_parser::{parse_expression, parse_identifier, pop_expected};
 use crate::compiler::parser2::type_parser::parse_type;
 use crate::compiler::parser2::unop_expr_parser::parse_unop_expression;
+
+fn find_op(tokens: &TokenStack, op_tokens: &[(StaticToken, BinaryOp)]) -> Option<BinaryOp> {
+    op_tokens.iter().find(|t| if let Token::Static(tkn) = &tokens.peek().value { *tkn == t.0 } else { false }).map(|t| t.1.clone())
+}
 
 fn parse_left_associative<F>(tokens: &mut TokenStack, op_tokens: &[(StaticToken, BinaryOp)], parse_lower: F) -> ParseResult<ParsedExpression>
 where
@@ -14,7 +16,7 @@ where
 {
     let mut expr = parse_lower(tokens)?;
     let location = expr.location.clone();
-    while let Some((_, op)) = op_tokens.iter().find(|t| if let Token::Static(tkn) = &tokens.peek().value { *tkn == t.0 } else { false }) {
+    while let Some(op) = find_op(tokens, op_tokens) {
         tokens.pop();
         let right = parse_lower(tokens)?;
         expr = ParsedExpression::new(ParsedExpressionKind::Binary {
@@ -32,8 +34,7 @@ where
 {
     let mut expr = parse_lower(tokens)?;
     let location = expr.location.clone();
-    let token = &tokens.peek().value;
-    if let Some((_, op)) = op_tokens.iter().find(|t| if let Token::Static(tkn) = token { *tkn == t.0 } else { false }) {
+    if let Some(op) = find_op(tokens, op_tokens) {
         tokens.pop();
         let right = parse_right_associative(tokens, op_tokens, parse_lower)?;
         expr = ParsedExpression::new(ParsedExpressionKind::Binary {

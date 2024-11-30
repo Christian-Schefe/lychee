@@ -3,6 +3,7 @@ use crate::compiler::analyzer::analyzed_expression::{AnalyzedFunction, AnalyzedP
 use crate::compiler::analyzer::AnalyzerResult;
 use crate::compiler::analyzer::expression_analyzer::analyze_expression;
 use crate::compiler::analyzer::type_resolver::{analyze_types, AnalyzedType, AnalyzedTypes};
+use crate::compiler::builtin::add_builtin_function_headers;
 use crate::compiler::lexer::location::Src;
 use crate::compiler::parser2::parsed_expression::{ParsedFunction, ParsedProgram};
 
@@ -31,16 +32,6 @@ pub struct LocalVariable {
     pub is_current_scope: bool,
 }
 
-fn add_builtin_function_headers(function_headers: &mut HashMap<String, FunctionHeader>) {
-    function_headers.insert("read_char".to_string(), FunctionHeader {
-        return_type: AnalyzedType::Char,
-        parameters: vec![],
-    });
-    function_headers.insert("write_char".to_string(), FunctionHeader {
-        return_type: AnalyzedType::Unit,
-        parameters: vec![AnalyzedType::Char],
-    });
-}
 
 pub fn analyze_program(program: &ParsedProgram) -> AnalyzerResult<AnalyzedProgram> {
     let analyzed_types = analyze_types(&program)?;

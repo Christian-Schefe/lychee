@@ -1,12 +1,8 @@
 int main() {
-     let int a = 5;
-     let bool c = false;
-     if c {
-         let long b = 88 as long;
-         a -= b as int;
-     } else {
-         let long b = 77 as long;
-         a -= b as int;
-     };
-     a
+     let int a = add(6, 2);
+     return a
+}
+
+int add(int a, int b) {
+    a - b
 }

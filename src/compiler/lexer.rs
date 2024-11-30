@@ -8,7 +8,12 @@ use std::path::PathBuf;
 use std::string::String;
 use crate::compiler::lexer::lexer_error::{LexResult, LocationError};
 use crate::compiler::lexer::location::Location;
-use crate::compiler::parser::syntax_tree::{Src};
+
+#[derive(Debug, Clone)]
+pub struct Src<T> {
+    pub value: T,
+    pub location: Location,
+}
 
 pub type SrcToken = Src<Token>;
 
