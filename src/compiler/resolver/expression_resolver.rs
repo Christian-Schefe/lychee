@@ -216,10 +216,13 @@ pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedEx
             }).collect();
 
             let total_stack_discard = stack_discard + arg_stack_size;
+            let return_stack_space = value_data.discard_stack_size(true);
+
             ResolvedExpression {
                 kind: ResolvedExpressionKind::FunctionCall {
                     function_name: function_name.clone(),
                     args: resolved_args,
+                    return_stack_space,
                 },
                 stack_discard: total_stack_discard,
                 value_data,
@@ -229,7 +232,7 @@ pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedEx
             let resolved_expr = resolve_expression(context, expr, false);
             let field_offset = field_offset(context, &expr.ty, field_name);
             let struct_size = resolved_expr.value_data.size;
-            
+
             ResolvedExpression {
                 kind: ResolvedExpressionKind::FieldAccess {
                     expr: Box::new(resolved_expr),
@@ -244,7 +247,7 @@ pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedEx
             let resolved_array = resolve_expression(context, array, false);
             let resolved_index = resolve_expression(context, index, false);
             let element_size = value_data.size;
-            
+
             ResolvedExpression {
                 kind: ResolvedExpressionKind::ValueOfAssignable(ResolvedAssignableExpression::ArrayIndex(
                     Box::new(resolved_array),

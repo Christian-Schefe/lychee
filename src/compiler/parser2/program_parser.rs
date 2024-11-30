@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashSet};
 use anyhow::Context;
 use crate::compiler::lexer::lexer_error::LocationError;
 use crate::compiler::lexer::location::Src;
@@ -64,15 +64,17 @@ pub fn parse_struct_definition(tokens: &mut TokenStack) -> ParseResult<Src<Parse
     let struct_name = parse_identifier(tokens)?.value;
     pop_expected(tokens, Token::Static(StaticToken::OpenBrace))?;
 
-    let mut fields = HashMap::new();
+    let mut fields = Vec::new();
+    let mut used_field_names = HashSet::new();
     while tokens.peek().value != Token::Static(StaticToken::CloseBrace) {
         let location = tokens.peek().location.clone();
         let field_type = parse_type(tokens).with_context(|| format!("Failed to parse type at {}.", location))?;
         let field_name = parse_identifier(tokens)?.value;
         pop_expected(tokens, Token::Static(StaticToken::Semicolon))?;
-        if fields.insert(field_name.clone(), field_type).is_some() {
+        if !used_field_names.insert(field_name.clone()) {
             Err(LocationError::new(format!("Duplicate field name '{}'", field_name), location))?;
         }
+        fields.push((field_name, field_type));
     }
     pop_expected(tokens, Token::Static(StaticToken::CloseBrace))?;
     if fields.is_empty() {

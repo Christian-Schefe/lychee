@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
+use anyhow::Context;
 use crate::compiler::analyzer::AnalyzerResult;
 use crate::compiler::lexer::lexer_error::LocationError;
 use crate::compiler::lexer::location::Location;
@@ -51,7 +52,6 @@ pub struct AnalyzedStructType {
     pub fields: HashMap<String, AnalyzedType>,
     pub field_order: Vec<String>,
     pub size: usize,
-    pub location: Location,
 }
 
 #[derive(Debug, Clone)]
@@ -110,8 +110,8 @@ pub fn analyze_types(program: &ParsedProgram) -> AnalyzerResult<AnalyzedTypes> {
     let mut struct_types = HashMap::with_capacity(raw_struct_types.len());
     for (name, (fields, field_order, location)) in &raw_struct_types {
         let mut visited = HashSet::new();
-        let size = determine_struct_size(&raw_struct_types, name, &mut visited)?;
-        struct_types.insert(name.clone(), AnalyzedStructType { fields: fields.clone(), field_order: field_order.clone(), size, location: location.clone() });
+        let size = determine_struct_size(&raw_struct_types, name, &mut visited).with_context(|| format!("Failed to analyze struct type '{name}' at {location}."))?;
+        struct_types.insert(name.clone(), AnalyzedStructType { fields: fields.clone(), field_order: field_order.clone(), size });
     }
 
     Ok(AnalyzedTypes { struct_types, type_lookup: known_type_names })

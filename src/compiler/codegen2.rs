@@ -40,10 +40,6 @@ impl CodegenContext {
     pub fn jmp(&mut self, label: &str) {
         self.lines.push(format!("jmp {}", label));
     }
-    pub fn jmp_fn(&mut self, function: &str) {
-        let label = self.function_labels.get(function).unwrap();
-        self.lines.push(format!("jmp {}", label));
-    }
     pub fn push(&mut self, bytes: usize, register: &str) {
         self.lines.push(format!("push #{} {register}", bytes * 8));
     }

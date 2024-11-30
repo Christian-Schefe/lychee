@@ -1,8 +1,21 @@
 int main() {
-     let int a = add(6, 2);
-     return a
+     let Test a = test_fn();
+     a = combine(a, test_fn());
+     return a.b as int;
 }
-
-int add(int a, int b) {
-    a - b
+Test test_fn() {
+    return new Test {
+        a: -5,
+        b: 88 as long,
+    };
+}
+Test combine(Test a, Test b) {
+    return new Test {
+        a: a.a + b.a,
+        b: a.b + b.b,
+    };
+}
+struct Test {
+    int a;
+    long b;
 }

@@ -31,13 +31,14 @@ fn generate_function_code(context: &mut CodegenContext, function: &ResolvedFunct
 
     generate_expression_code(context, &function.body);
 
+    let return_label = context.return_label.clone();
+    context.label(&return_label);
+
     if let FunctionReturnLocation::Stack { offset, size } = function.value_location {
         context.movi("r0", size as isize);
         context.popmem("r0", &format!("[bp;{}]", offset));
     }
 
-    let return_label = context.return_label.clone();
-    context.label(&return_label);
     generate_function_epilogue(context);
 }
 

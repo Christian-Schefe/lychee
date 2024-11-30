@@ -5,7 +5,6 @@ use crate::compiler::parser2::parsed_expression::{BinaryComparisonOp, BinaryLogi
 pub struct AnalyzedProgram {
     pub analyzed_types: AnalyzedTypes,
     pub functions: Vec<AnalyzedFunction>,
-    pub main_function: usize,
 }
 
 #[derive(Debug, Clone)]

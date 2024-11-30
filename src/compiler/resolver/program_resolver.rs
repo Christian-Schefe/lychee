@@ -1,19 +1,18 @@
 use std::collections::HashMap;
 use crate::compiler::analyzer::analyzed_expression::{AnalyzedFunction, AnalyzedProgram};
-use crate::compiler::analyzer::type_resolver::{AnalyzedType, AnalyzedTypes};
-use crate::compiler::resolver::expression_resolver::{resolve_expression, type_size, type_size_fn};
-use crate::compiler::resolver::resolved_expression::{FunctionReturnLocation, ResolvedFunction, ResolvedProgram, ValueLocation};
+use crate::compiler::analyzer::type_resolver::{AnalyzedTypes};
+use crate::compiler::resolver::expression_resolver::{resolve_expression, type_size};
+use crate::compiler::resolver::resolved_expression::{FunctionReturnLocation, ResolvedFunction, ResolvedProgram, ValueData, ValueLocation};
 use crate::compiler::resolver::resolved_type::{ResolvedStructType, ResolvedTypes};
 
-pub struct ResolverContext<'a> {
+pub struct ResolverContext {
     pub resolved_types: ResolvedTypes,
     pub local_vars: HashMap<String, isize>,
-    pub function_return_stack_sizes: &'a HashMap<String, usize>,
     pub maximum_local_var_stack_size: usize,
     pub current_local_var_stack_size: usize,
 }
 
-impl<'a> ResolverContext<'a> {
+impl ResolverContext {
     pub fn add_local_var(&mut self, name: String, size: usize) -> isize {
         self.current_local_var_stack_size += size;
         self.maximum_local_var_stack_size = self.maximum_local_var_stack_size.max(self.current_local_var_stack_size);
@@ -27,29 +26,17 @@ impl<'a> ResolverContext<'a> {
 pub fn resolve_program(program: &AnalyzedProgram) -> ResolvedProgram {
     let mut resolved_functions = Vec::with_capacity(program.functions.len());
 
-    let mut function_return_stack_sizes = HashMap::new();
-
     for function in &program.functions {
-        let return_stack_size = if matches!(function.return_type, AnalyzedType::Struct(_)) {
-            type_size_fn(|x| program.analyzed_types.struct_types.get(x).unwrap().size, &function.return_type)
-        } else {
-            0
-        };
-        function_return_stack_sizes.insert(function.name.clone(), return_stack_size);
-    }
-
-    for function in &program.functions {
-        resolved_functions.push(resolve_function(&function_return_stack_sizes, &program.analyzed_types, function));
+        resolved_functions.push(resolve_function(&program.analyzed_types, function));
     }
     ResolvedProgram { functions: resolved_functions }
 }
 
-fn resolve_function(function_return_stack_sizes: &HashMap<String, usize>, analyzed_types: &AnalyzedTypes, function: &AnalyzedFunction) -> ResolvedFunction {
+fn resolve_function(analyzed_types: &AnalyzedTypes, function: &AnalyzedFunction) -> ResolvedFunction {
     let mut context = ResolverContext {
         local_vars: HashMap::new(),
         maximum_local_var_stack_size: 0,
         current_local_var_stack_size: 0,
-        function_return_stack_sizes,
         resolved_types: ResolvedTypes {
             struct_types: HashMap::new(),
         },
@@ -69,10 +56,11 @@ fn resolve_function(function_return_stack_sizes: &HashMap<String, usize>, analyz
 
     let resolved_body = resolve_expression(&mut context, &function.body, false);
 
-    let return_location = match resolved_body.value_data.location {
+    let return_type_data = ValueData::from_type(&function.return_type, &context);
+    let return_location = match return_type_data.location {
         ValueLocation::Stack => FunctionReturnLocation::Stack {
             offset: param_offset as isize,
-            size: function_return_stack_sizes[&function.name],
+            size: return_type_data.size,
         },
         ValueLocation::Register => FunctionReturnLocation::Register,
         ValueLocation::None => FunctionReturnLocation::None,

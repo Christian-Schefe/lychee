@@ -43,20 +43,24 @@ pub fn analyze_program(program: &ParsedProgram) -> AnalyzerResult<AnalyzedProgra
         });
     });
 
-    let mut function_headers = program.functions.iter().map(|function| {
-        let return_type = analyzed_types.resolve_type(&function.value.return_type).unwrap();
-        let parameters = function.value.args.iter().map(|(arg_type, _)| {
-            analyzed_types.resolve_type(arg_type).unwrap()
-        }).collect();
-        (function.value.function_name.clone(), FunctionHeader { return_type, parameters })
-    }).collect();
+    let mut function_headers = HashMap::new();
+    for function in &program.functions {
+        let return_type = analyzed_types.resolve_type(&function.value.return_type)?;
+        let mut parameters = Vec::with_capacity(function.value.args.len());
+        for (arg_type, _) in &function.value.args {
+            parameters.push(analyzed_types.resolve_type(arg_type)?);
+        }
+        if function_headers.insert(function.value.function_name.clone(), FunctionHeader { return_type, parameters }).is_some() {
+            return Err(anyhow::anyhow!("Duplicate function definition: {} at {}", function.value.function_name, function.location));
+        }
+    }
 
     add_builtin_function_headers(&mut function_headers);
 
     let mut analyzed_functions = Vec::with_capacity(program.functions.len());
     let mut main_function = None;
     for function in &program.functions {
-        let analyzed_function = analyze_function(&analyzed_types, &function_headers, function).unwrap();
+        let analyzed_function = analyze_function(&analyzed_types, &function_headers, function)?;
         if analyzed_function.name == "main" {
             main_function = Some(analyzed_functions.len());
         }
@@ -71,7 +75,6 @@ pub fn analyze_program(program: &ParsedProgram) -> AnalyzerResult<AnalyzedProgra
         Ok(AnalyzedProgram {
             analyzed_types,
             functions: analyzed_functions,
-            main_function,
         })
     } else {
         Err(anyhow::anyhow!("No main function found"))

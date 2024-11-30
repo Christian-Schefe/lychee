@@ -10,7 +10,7 @@ pub struct ParsedProgram {
 #[derive(Debug, Clone)]
 pub struct ParsedStructDefinition {
     pub struct_name: String,
-    pub fields: HashMap<String, ParsedType>,
+    pub fields: Vec<(String, ParsedType)>,
 }
 
 #[derive(Debug, Clone)]

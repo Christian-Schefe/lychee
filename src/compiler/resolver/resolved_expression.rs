@@ -114,6 +114,7 @@ pub enum ResolvedExpressionKind {
     FunctionCall {
         function_name: String,
         args: Vec<ResolvedExpression>,
+        return_stack_space: usize,
     },
     FieldAccess {
         expr: Box<ResolvedExpression>,
@@ -146,7 +147,6 @@ pub enum ResolvedAssignableExpression {
 pub enum ResolvedUnaryOp {
     Math(UnaryMathOp),
     LogicalNot,
-    Dereference,
     IntCast,
     BoolCast,
 }

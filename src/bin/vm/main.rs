@@ -458,7 +458,7 @@ fn sign_extend(pc: usize, memory: &mut Memory, debug_print: bool) {
     if debug_print {
         println!(
             "Sign extended register {} with value {} ({} bytes)",
-            data_size, value, register
+            register, value, data_size
         );
     }
 }

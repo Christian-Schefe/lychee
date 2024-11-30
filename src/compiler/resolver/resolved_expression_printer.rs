@@ -131,8 +131,8 @@ fn print_expression(printer: &mut Printer, expr: &ResolvedExpression) {
             print_assignable_expression(printer, expr);
             printer.dedent();
         }
-        ResolvedExpressionKind::FunctionCall { function_name, args } => {
-            printer.add_line(format!("FunctionCall {}", function_name));
+        ResolvedExpressionKind::FunctionCall { function_name, args, return_stack_space } => {
+            printer.add_line(format!("FunctionCall {} (return on stack: {})", function_name, return_stack_space));
             printer.indent();
             for arg in args {
                 print_expression(printer, arg);
