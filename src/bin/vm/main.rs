@@ -38,7 +38,10 @@ pub fn run(memory: &mut Memory, debug_print: bool) -> i64 {
             println!("PC: {}, Opcode: {:X}", pc, opcode);
         }
         match opcode {
-            0x00 => memory.registers[constants::PC] += 1,
+            0x00 => {
+                exit(&mut exit_code, memory, debug_print);
+                break;
+            }
             0x01 => load(pc, memory, debug_print),
             0x02 => store(pc, memory, debug_print),
             0x03 => push(pc, memory, debug_print),
@@ -115,10 +118,7 @@ pub fn run(memory: &mut Memory, debug_print: bool) -> i64 {
             0x30 => ret(memory, debug_print),
             0x31 => read_stdin(pc, memory, debug_print),
             0x32 => write_stdout(pc, memory, debug_print),
-            0x33 => {
-                exit(&mut exit_code, memory, debug_print);
-                break;
-            }
+            0x33 => memory.registers[constants::PC] += 1,
             0x34 => sign_extend(pc, memory, debug_print),
             0x35 => lea(pc, memory, debug_print),
             0x36 => pushmem(pc, memory, debug_print),

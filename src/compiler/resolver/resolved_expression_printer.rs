@@ -17,7 +17,7 @@ fn print_function(printer: &mut Printer, function: &ResolvedFunction) {
 }
 
 fn print_expression(printer: &mut Printer, expr: &ResolvedExpression) {
-    printer.add_line(format!("Expr: {:?}, stack discard: {}", expr.value_location, expr.stack_discard));
+    printer.add_line(format!("Expr: {:?}, stack discard: {}", expr.value_data, expr.stack_discard));
     match &expr.kind {
         ResolvedExpressionKind::Literal(literal) => {
             match literal {
@@ -99,8 +99,11 @@ fn print_expression(printer: &mut Printer, expr: &ResolvedExpression) {
             print_expression(printer, value);
             printer.dedent();
         }
-        ResolvedExpressionKind::Variable(offset) => {
-            printer.add_line(format!("Variable (offset: {})", offset));
+        ResolvedExpressionKind::ValueOfAssignable(offset) => {
+            printer.add_line("ValueOfAssignable".to_string());
+            printer.indent();
+            print_assignable_expression(printer, offset);
+            printer.dedent();
         }
         ResolvedExpressionKind::Unary { op, expr } => {
             printer.add_line(format!("Unary {:?}", op));
@@ -136,17 +139,10 @@ fn print_expression(printer: &mut Printer, expr: &ResolvedExpression) {
             }
             printer.dedent();
         }
-        ResolvedExpressionKind::FieldAccess { expr, field_offset } => {
-            printer.add_line(format!("FieldAccess (offset: {})", field_offset));
+        ResolvedExpressionKind::FieldAccess { expr, field_offset, struct_size } => {
+            printer.add_line(format!("FieldAccess (offset: {}, struct size: {})", field_offset, struct_size));
             printer.indent();
             print_expression(printer, expr);
-            printer.dedent();
-        }
-        ResolvedExpressionKind::ArrayIndex { array, index, element_size } => {
-            printer.add_line(format!("ArrayIndex (element_size: {})", element_size));
-            printer.indent();
-            print_expression(printer, array);
-            print_expression(printer, index);
             printer.dedent();
         }
         ResolvedExpressionKind::Increment(expr, is_prefix) => {
@@ -184,7 +180,7 @@ fn print_assignable_expression(printer: &mut Printer, expr: &ResolvedAssignableE
         ResolvedAssignableExpression::ArrayIndex(array, index, element_size) => {
             printer.add_line(format!("ArrayIndex (element_size: {})", element_size));
             printer.indent();
-            print_assignable_expression(printer, array);
+            print_expression(printer, array);
             print_expression(printer, index);
             printer.dedent();
         }

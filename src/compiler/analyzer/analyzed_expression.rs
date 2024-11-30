@@ -43,11 +43,10 @@ pub enum AnalyzedExpressionKind {
         else_expr: Option<Box<AnalyzedExpression>>,
     },
     Declaration {
-        var_type: AnalyzedType,
         var_name: String,
         value: Box<AnalyzedExpression>,
     },
-    Variable(String),
+    ValueOfAssignable(AssignableExpression),
     Literal(AnalyzedLiteral),
     Unary {
         op: AnalyzedUnaryOp,
@@ -102,7 +101,7 @@ pub enum AssignableExpressionKind {
     LocalVariable(String),
     Dereference(Box<AnalyzedExpression>),
     FieldAccess(Box<AssignableExpression>, String),
-    ArrayIndex(Box<AssignableExpression>, Box<AnalyzedExpression>),
+    ArrayIndex(Box<AnalyzedExpression>, Box<AnalyzedExpression>),
 }
 
 
@@ -124,6 +123,5 @@ pub enum BinaryAssignOp {
 pub enum AnalyzedUnaryOp {
     Math(UnaryMathOp),
     LogicalNot,
-    Dereference,
     Cast,
 }

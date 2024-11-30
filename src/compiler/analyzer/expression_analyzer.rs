@@ -149,7 +149,6 @@ pub fn analyze_expression(context: &mut AnalyzerContext, expression: &ParsedExpr
             }
             Ok(AnalyzedExpression {
                 kind: AnalyzedExpressionKind::Declaration {
-                    var_type: analyzed_value.ty.clone(),
                     var_name: var_name.clone(),
                     value: Box::new(analyzed_value),
                 },
@@ -161,7 +160,10 @@ pub fn analyze_expression(context: &mut AnalyzerContext, expression: &ParsedExpr
                 anyhow::anyhow!("Variable '{}' not declared at {}.", var_name, expression.location)
             })?;
             Ok(AnalyzedExpression {
-                kind: AnalyzedExpressionKind::Variable(var_name.clone()),
+                kind: AnalyzedExpressionKind::ValueOfAssignable(AssignableExpression {
+                    kind: AssignableExpressionKind::LocalVariable(var_name.clone()),
+                    ty: local_var.ty.clone(),
+                }),
                 ty: local_var.ty.clone(),
             })
         }
@@ -299,13 +301,15 @@ pub fn analyze_expression(context: &mut AnalyzerContext, expression: &ParsedExpr
                 let analyzed_expr = analyze_expression(context, expr).with_context(|| format!("Failed to analyze type of dereference expression at {}.", expression.location))?;
                 match analyzed_expr.ty.clone() {
                     AnalyzedType::Pointer(inner) => Ok(AnalyzedExpression {
-                        kind: AnalyzedExpressionKind::Unary {
-                            op: AnalyzedUnaryOp::Dereference,
-                            expr: Box::new(analyzed_expr),
-                        },
+                        kind: AnalyzedExpressionKind::ValueOfAssignable(AssignableExpression {
+                            kind: AssignableExpressionKind::Dereference(Box::new(analyzed_expr)),
+                            ty: *inner.clone(),
+                        }),
                         ty: *inner,
                     }),
-                    _ => Err(anyhow::anyhow!("Dereference expression has non-pointer type '{}' at {}.", analyzed_expr.ty, expression.location))?,
+                    _ => Err(anyhow::anyhow!("Dereference expression has non-pointer type '{}' at {}.",
+                        analyzed_expr.ty,
+                        expression.location))?,
                 }
             }
             UnaryOp::Increment { is_prefix } => {
@@ -432,9 +436,8 @@ pub fn analyze_expression(context: &mut AnalyzerContext, expression: &ParsedExpr
                 };
                 match &analyzed_left.ty {
                     AnalyzedType::Integer(_) => {}
-                    _ => if needs_integers {
-                        Err(anyhow::anyhow!("Comparison binary left expression has non-integer type '{}' at {}.", analyzed_left.ty, left.location))?
-                    }
+                    AnalyzedType::Char | AnalyzedType::Bool if !needs_integers => {}
+                    _ => Err(anyhow::anyhow!("Comparison binary left expression has non-comparable type '{}' at {}.", analyzed_left.ty, left.location))?
                 }
                 if analyzed_left.ty != analyzed_right.ty {
                     Err(anyhow::anyhow!("Comparison binary left expression has type '{}', but right expression has type '{}' at {}.", analyzed_left.ty, analyzed_right.ty, right.location))?;
@@ -579,8 +582,8 @@ pub fn analyze_assignable_expression(context: &mut AnalyzerContext, expression: 
             })
         }
         ParsedExpressionKind::Unary { op: UnaryOp::Index(index), expr } => {
-            let analyzed_expr = analyze_assignable_expression(context, expr).with_context(|| format!("Failed to analyze assignable member expression at {}.", expression.location))?;
-            let analyzed_index = analyze_expression(context, index).with_context(|| format!("Failed to analyze assignable index expression at {}.", expression.location))?;
+            let analyzed_expr = analyze_expression(context, expr).with_context(|| format!("Failed to analyze array expression at {}.", expression.location))?;
+            let analyzed_index = analyze_expression(context, index).with_context(|| format!("Failed to analyze array index expression at {}.", expression.location))?;
             match &analyzed_index.ty {
                 AnalyzedType::Integer(_) => {}
                 _ => Err(anyhow::anyhow!("Index expression has non-integer type '{}' at {}.", analyzed_index.ty, index.location))?,

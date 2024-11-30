@@ -25,7 +25,7 @@ pub enum OpCode {
 impl OpCode {
     pub fn byte_code(&self) -> u8 {
         match self {
-            OpCode::Nop => 0x00,
+            OpCode::Exit => 0x00,
             OpCode::Load => 0x01,
             OpCode::Store => 0x02,
             OpCode::Push => 0x03,
@@ -39,7 +39,7 @@ impl OpCode {
             OpCode::Ret => 0x30,
             OpCode::ReadStdin => 0x31,
             OpCode::WriteStdout => 0x32,
-            OpCode::Exit => 0x33,
+            OpCode::Nop => 0x33,
             OpCode::SignExtend => 0x34,
             OpCode::Lea => 0x35,
             OpCode::PushMem => 0x36,

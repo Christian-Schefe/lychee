@@ -1,8 +1,11 @@
-use crate::compiler::lexer::token::{StaticToken, Token};
+use crate::compiler::lexer::token::{Keyword, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
-use crate::compiler::parser2::parsed_expression::{ParsedExpression, ParsedExpressionKind};
+use crate::compiler::parser2::parsed_expression::{ParsedExpression, ParsedExpressionKind, UnaryOp};
 use crate::compiler::parser2::parser_error::ParseResult;
 use crate::compiler::parser2::parsed_expression::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, BinaryOp};
+use crate::compiler::parser2::primary_expr_parser::parse_primary_expression;
+use crate::compiler::parser2::program_parser::{parse_expression, parse_identifier, pop_expected};
+use crate::compiler::parser2::type_parser::parse_type;
 use crate::compiler::parser2::unop_expr_parser::parse_unop_expression;
 
 fn parse_left_associative<F>(tokens: &mut TokenStack, op_tokens: &[(StaticToken, BinaryOp)], parse_lower: F) -> ParseResult<ParsedExpression>
@@ -97,5 +100,25 @@ fn parse_add_or_lower(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> 
 }
 
 fn parse_mul_or_lower(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
-    parse_left_associative(tokens, &[(StaticToken::Asterisk, BinaryOp::Math(BinaryMathOp::Mul)), (StaticToken::Slash, BinaryOp::Math(BinaryMathOp::Div)), (StaticToken::Percent, BinaryOp::Math(BinaryMathOp::Mod))], parse_unop_expression)
+    parse_left_associative(tokens, &[(StaticToken::Asterisk, BinaryOp::Math(BinaryMathOp::Mul)), (StaticToken::Slash, BinaryOp::Math(BinaryMathOp::Div)), (StaticToken::Percent, BinaryOp::Math(BinaryMathOp::Mod))], parse_cast_or_lower)
+}
+
+fn parse_cast_or_lower(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
+    let mut expr = parse_unop_expression(tokens)?;
+    let location = expr.location.clone();
+    loop {
+        let token = tokens.peek().clone();
+        match token.value {
+            Token::Keyword(Keyword::As) => {
+                tokens.pop();
+                let cast_type = parse_type(tokens)?;
+                expr = ParsedExpression::new(ParsedExpressionKind::Unary {
+                    expr: Box::new(expr),
+                    op: UnaryOp::Cast(cast_type),
+                }, location.clone());
+            }
+            _ => break,
+        }
+    }
+    Ok(expr)
 }

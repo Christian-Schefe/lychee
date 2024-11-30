@@ -1,10 +1,17 @@
 use crate::compiler::analyzer::analyzed_expression::{AnalyzedBinaryOp, BinaryAssignOp};
 use crate::compiler::analyzer::type_resolver::AnalyzedType;
 use crate::compiler::parser2::parsed_expression::{UnaryMathOp};
+use crate::compiler::resolver::program_resolver::ResolverContext;
 
 #[derive(Debug, Clone)]
 pub struct ResolvedProgram {
     pub functions: Vec<ResolvedFunction>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ValueData {
+    pub size: usize,
+    pub location: ValueLocation,
 }
 
 #[derive(Debug, Clone)]
@@ -14,28 +21,52 @@ pub enum ValueLocation {
     None,
 }
 
-impl ValueLocation {
-    pub fn from_type(ty: &AnalyzedType) -> ValueLocation {
+impl ValueData {
+    pub fn from_type(ty: &AnalyzedType, resolver_context: &ResolverContext) -> ValueData {
         match ty {
-            AnalyzedType::Unit => ValueLocation::None,
-            AnalyzedType::Struct(_) => ValueLocation::Stack,
-            _ => ValueLocation::Register,
+            AnalyzedType::Unit => ValueData { location: ValueLocation::None, size: 0 },
+            AnalyzedType::Struct(struct_name) => {
+                let size = resolver_context.resolved_types.struct_types.get(struct_name).unwrap().size;
+                ValueData { location: ValueLocation::Stack, size }
+            }
+            AnalyzedType::Bool => ValueData { location: ValueLocation::Register, size: 1 },
+            AnalyzedType::Char => ValueData { location: ValueLocation::Register, size: 1 },
+            AnalyzedType::Integer(size) => ValueData { location: ValueLocation::Register, size: *size },
+            AnalyzedType::Pointer(_) => ValueData { location: ValueLocation::Register, size: 8 },
+            AnalyzedType::Array(_) => ValueData { location: ValueLocation::Register, size: 8 },
         }
     }
+    pub fn discard_stack_size(&self, should_discard: bool) -> usize {
+        if let ValueLocation::Stack = self.location {
+            if should_discard { self.size } else { 0 }
+        } else {
+            0
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum FunctionReturnLocation {
+    Stack {
+        offset: isize,
+        size: usize,
+    },
+    Register,
+    None,
 }
 
 #[derive(Debug, Clone)]
 pub struct ResolvedFunction {
     pub name: String,
     pub body: ResolvedExpression,
-    pub value_location: ValueLocation,
+    pub value_location: FunctionReturnLocation,
     pub local_var_stack_size: usize,
 }
 
 #[derive(Debug, Clone)]
 pub struct ResolvedExpression {
     pub kind: ResolvedExpressionKind,
-    pub value_location: ValueLocation,
+    pub value_data: ValueData,
     pub stack_discard: usize,
 }
 
@@ -61,7 +92,7 @@ pub enum ResolvedExpressionKind {
         var_offset: isize,
         value: Box<ResolvedExpression>,
     },
-    Variable(isize),
+    ValueOfAssignable(ResolvedAssignableExpression),
     Literal(ResolvedLiteral),
     Unary {
         op: ResolvedUnaryOp,
@@ -87,11 +118,7 @@ pub enum ResolvedExpressionKind {
     FieldAccess {
         expr: Box<ResolvedExpression>,
         field_offset: usize,
-    },
-    ArrayIndex {
-        array: Box<ResolvedExpression>,
-        index: Box<ResolvedExpression>,
-        element_size: usize,
+        struct_size: usize,
     },
     Increment(ResolvedAssignableExpression, bool),
     Decrement(ResolvedAssignableExpression, bool),
@@ -112,7 +139,7 @@ pub enum ResolvedAssignableExpression {
     LocalVariable(isize),
     Dereference(Box<ResolvedExpression>),
     FieldAccess(Box<ResolvedAssignableExpression>, usize),
-    ArrayIndex(Box<ResolvedAssignableExpression>, Box<ResolvedExpression>, usize),
+    ArrayIndex(Box<ResolvedExpression>, Box<ResolvedExpression>, usize),
 }
 
 #[derive(Debug, Clone)]
@@ -120,9 +147,6 @@ pub enum ResolvedUnaryOp {
     Math(UnaryMathOp),
     LogicalNot,
     Dereference,
-    IntCast {
-        from: usize,
-        to: usize,
-    },
+    IntCast,
     BoolCast,
 }

@@ -1,9 +1,12 @@
 use crate::compiler::analyzer::analyzed_expression::{AnalyzedExpression, AnalyzedExpressionKind, AnalyzedLiteral, AnalyzedUnaryOp, AssignableExpression, AssignableExpressionKind};
 use crate::compiler::analyzer::type_resolver::AnalyzedType;
 use crate::compiler::resolver::program_resolver::ResolverContext;
-use crate::compiler::resolver::resolved_expression::{ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedLiteral, ResolvedUnaryOp, ValueLocation};
+use crate::compiler::resolver::resolved_expression::{ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedLiteral, ResolvedUnaryOp, ValueData};
 
 pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedExpression, should_discard: bool) -> ResolvedExpression {
+    let value_data = ValueData::from_type(&expression.ty, context);
+    let stack_discard = value_data.discard_stack_size(should_discard);
+
     match &expression.kind {
         AnalyzedExpressionKind::Block { expressions, returns_value } => {
             let old_local_vars = context.local_vars.clone();
@@ -14,19 +17,13 @@ pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedEx
                 let inner_should_discard = should_discard || !*returns_value || (i + 1 != expressions.len());
                 resolved_expressions.push(resolve_expression(context, expr, inner_should_discard));
             }
-            let value_location = ValueLocation::from_type(&expression.ty);
-            let stack_discard = if should_discard && matches!(value_location, ValueLocation::Stack) {
-                type_size(context, &expression.ty)
-            } else {
-                0
-            };
 
             context.local_vars = old_local_vars;
             context.current_local_var_stack_size = old_current_local_var_stack_size;
 
             ResolvedExpression {
                 kind: ResolvedExpressionKind::Block(resolved_expressions),
-                value_location,
+                value_data,
                 stack_discard,
             }
         }
@@ -34,77 +31,64 @@ pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedEx
             if let Some(expr) = expr {
                 let resolved_expr = resolve_expression(context, expr, false);
                 ResolvedExpression {
-                    value_location: resolved_expr.value_location.clone(),
                     kind: ResolvedExpressionKind::Return(Some(Box::new(resolved_expr))),
-                    stack_discard: 0,
+                    stack_discard,
+                    value_data,
                 }
             } else {
                 ResolvedExpression {
-                    value_location: ValueLocation::None,
                     kind: ResolvedExpressionKind::Return(None),
-                    stack_discard: 0,
+                    stack_discard,
+                    value_data,
                 }
             }
         }
         AnalyzedExpressionKind::Continue => {
-            let temp_stack_size = context.current_loop_temp_stack_size;
             ResolvedExpression {
                 kind: ResolvedExpressionKind::Continue,
-                value_location: ValueLocation::None,
-                stack_discard: temp_stack_size,
+                stack_discard,
+                value_data,
             }
         }
         AnalyzedExpressionKind::Break(expr) => {
-            let temp_stack_size = context.current_loop_temp_stack_size;
             if let Some(expr) = expr {
                 let resolved_expr = resolve_expression(context, expr, false);
                 ResolvedExpression {
-                    value_location: resolved_expr.value_location.clone(),
                     kind: ResolvedExpressionKind::Break {
                         maybe_expr: Some(Box::new(resolved_expr)),
                     },
-                    stack_discard: temp_stack_size,
+                    stack_discard,
+                    value_data,
                 }
             } else {
                 ResolvedExpression {
-                    value_location: ValueLocation::None,
                     kind: ResolvedExpressionKind::Break {
                         maybe_expr: None,
                     },
-                    stack_discard: temp_stack_size,
+                    stack_discard,
+                    value_data,
                 }
             }
         }
         AnalyzedExpressionKind::If { condition, then_block, else_expr } => {
             let resolved_condition = resolve_expression(context, condition, false);
-            let resolved_then_block = resolve_expression(context, then_block, should_discard);
-            let resolved_else_expr = else_expr.as_ref().map(|expr| resolve_expression(context, expr, should_discard));
-            let value_location = ValueLocation::from_type(&expression.ty);
+            let resolved_then_block = resolve_expression(context, then_block, false);
+            let resolved_else_expr = else_expr.as_ref().map(|expr| resolve_expression(context, expr, false));
+
             ResolvedExpression {
                 kind: ResolvedExpressionKind::If {
                     condition: Box::new(resolved_condition),
                     then_block: Box::new(resolved_then_block),
                     else_expr: resolved_else_expr.map(Box::new),
                 },
-                value_location,
-                stack_discard: 0,
+                stack_discard,
+                value_data,
             }
         }
         AnalyzedExpressionKind::While { condition, loop_body, else_expr } => {
             let resolved_condition = resolve_expression(context, condition, false);
-
-            let old_loop_temp_stack_size = context.current_loop_temp_stack_size;
-            context.current_loop_temp_stack_size = 0;
-            let resolved_loop_body = resolve_expression(context, loop_body, true);
-            context.current_loop_temp_stack_size = old_loop_temp_stack_size;
-
+            let resolved_loop_body = resolve_expression(context, loop_body, false);
             let resolved_else_expr = else_expr.as_ref().map(|expr| resolve_expression(context, expr, false));
-            let value_location = ValueLocation::from_type(&expression.ty);
-            let stack_discard = if should_discard && matches!(value_location, ValueLocation::Stack) {
-                type_size(context, &expression.ty)
-            } else {
-                0
-            };
 
             ResolvedExpression {
                 kind: ResolvedExpressionKind::While {
@@ -112,44 +96,33 @@ pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedEx
                     loop_body: Box::new(resolved_loop_body),
                     else_expr: resolved_else_expr.map(Box::new),
                 },
-                value_location,
                 stack_discard,
+                value_data,
             }
         }
-        AnalyzedExpressionKind::Declaration { var_type, var_name, value } => {
+        AnalyzedExpressionKind::Declaration { var_name, value } => {
             let resolved_value = resolve_expression(context, value, false);
-            let type_size = type_size(context, var_type);
-            let var_offset = context.add_local_var(var_name.clone(), type_size);
-            let stack_discard = if matches!(resolved_value.value_location, ValueLocation::Stack) {
-                type_size
-            } else {
-                0
-            };
+            let var_offset = context.add_local_var(var_name.clone(), resolved_value.value_data.size);
+
             ResolvedExpression {
                 kind: ResolvedExpressionKind::Declaration {
                     var_offset,
                     value: Box::new(resolved_value),
                 },
-                value_location: ValueLocation::None,
                 stack_discard,
+                value_data,
             }
         }
-        AnalyzedExpressionKind::Variable(name) => {
-            let var_offset = *context.local_vars.get(name).unwrap();
-            let value_location = ValueLocation::from_type(&expression.ty);
-            let stack_discard = if should_discard && matches!(value_location, ValueLocation::Stack) {
-                type_size(context, &expression.ty)
-            } else {
-                0
-            };
+        AnalyzedExpressionKind::ValueOfAssignable(assignable) => {
+            let resolved_assignable = resolve_assignable_expression(context, assignable);
+
             ResolvedExpression {
-                kind: ResolvedExpressionKind::Variable(var_offset),
-                value_location,
+                kind: ResolvedExpressionKind::ValueOfAssignable(resolved_assignable),
                 stack_discard,
+                value_data,
             }
         }
         AnalyzedExpressionKind::Literal(lit) => {
-            let value_location = ValueLocation::from_type(&expression.ty);
             let kind = match lit {
                 AnalyzedLiteral::Unit => ResolvedLiteral::Unit,
                 AnalyzedLiteral::Bool(b) => ResolvedLiteral::Bool(*b),
@@ -164,175 +137,138 @@ pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedEx
                     ResolvedLiteral::Array(resolved_values)
                 }
             };
-            let stack_discard = if should_discard && matches!(value_location, ValueLocation::Stack) {
-                type_size(context, &expression.ty)
-            } else {
-                0
-            };
+
             ResolvedExpression {
                 kind: ResolvedExpressionKind::Literal(kind),
-                value_location,
                 stack_discard,
+                value_data,
             }
         }
         AnalyzedExpressionKind::Unary { op, expr } => {
             let resolved_expr = resolve_expression(context, expr, false);
-            let value_location = ValueLocation::from_type(&expression.ty);
             let mapped_op = match op {
                 AnalyzedUnaryOp::Math(math_op) => ResolvedUnaryOp::Math(math_op.clone()),
                 AnalyzedUnaryOp::LogicalNot => ResolvedUnaryOp::LogicalNot,
-                AnalyzedUnaryOp::Dereference => ResolvedUnaryOp::Dereference,
                 AnalyzedUnaryOp::Cast => {
-                    let operand_size = type_size(context, &expr.ty);
-                    let result_size = type_size(context, &expression.ty);
                     match &expression.ty {
-                        AnalyzedType::Integer(_) => ResolvedUnaryOp::IntCast { from: operand_size, to: result_size },
+                        AnalyzedType::Integer(_) => ResolvedUnaryOp::IntCast,
                         AnalyzedType::Bool => ResolvedUnaryOp::BoolCast,
-                        AnalyzedType::Char => ResolvedUnaryOp::IntCast { from: operand_size, to: result_size },
+                        AnalyzedType::Char => ResolvedUnaryOp::IntCast,
                         _ => {
-                            println!("Unsupported cast: {:?}", expression.ty);
-                            unreachable!()
+                            panic!("Unsupported cast: {:?}", expression.ty)
                         }
                     }
                 }
             };
-            let stack_discard = if should_discard && matches!(value_location, ValueLocation::Stack) {
-                type_size(context, &expression.ty)
-            } else {
-                0
-            };
+
             ResolvedExpression {
                 kind: ResolvedExpressionKind::Unary {
                     op: mapped_op,
                     expr: Box::new(resolved_expr),
                 },
-                value_location,
                 stack_discard,
+                value_data,
             }
         }
         AnalyzedExpressionKind::Binary { op, left, right } => {
             let resolved_left = resolve_expression(context, left, false);
-            let temp_space = type_size(context, &left.ty);
-            context.current_loop_temp_stack_size += temp_space;
             let resolved_right = resolve_expression(context, right, false);
-            context.current_loop_temp_stack_size -= temp_space;
-            let value_location = ValueLocation::from_type(&expression.ty);
+
             ResolvedExpression {
                 kind: ResolvedExpressionKind::Binary {
                     op: op.clone(),
                     left: Box::new(resolved_left),
                     right: Box::new(resolved_right),
                 },
-                value_location,
-                stack_discard: 0,
+                stack_discard,
+                value_data,
             }
         }
         AnalyzedExpressionKind::Assign { op, lhs, rhs } => {
             let resolved_lhs = resolve_assignable_expression(context, lhs);
             let resolved_rhs = resolve_expression(context, rhs, false);
-            let value_location = ValueLocation::from_type(&expression.ty);
-            let stack_discard = if should_discard && matches!(value_location, ValueLocation::Stack) {
-                type_size(context, &expression.ty)
-            } else {
-                0
-            };
+
             ResolvedExpression {
                 kind: ResolvedExpressionKind::Assign {
                     op: op.clone(),
                     lhs: resolved_lhs,
                     rhs: Box::new(resolved_rhs),
                 },
-                value_location,
                 stack_discard,
+                value_data,
             }
         }
         AnalyzedExpressionKind::Borrow { expr } => {
             let resolved_expr = resolve_assignable_expression(context, expr);
-            let value_location = ValueLocation::from_type(&expression.ty);
             ResolvedExpression {
                 kind: ResolvedExpressionKind::Borrow { expr: resolved_expr },
-                value_location,
-                stack_discard: 0,
+                stack_discard,
+                value_data,
             }
         }
         AnalyzedExpressionKind::FunctionCall { function_name, args } => {
-            let old_loop_temp_stack_size = context.current_loop_temp_stack_size;
+            let mut arg_stack_size = 0;
             let resolved_args = args.iter().map(|expr| {
                 let resolved_expr = resolve_expression(context, expr, false);
-                context.current_loop_temp_stack_size += type_size(context, &expr.ty);
+                let arg_size = resolved_expr.value_data.size;
+                arg_stack_size += arg_size;
                 resolved_expr
             }).collect();
-            context.current_loop_temp_stack_size = old_loop_temp_stack_size;
 
-            let value_location = ValueLocation::from_type(&expression.ty);
-            let stack_discard = if should_discard && matches!(value_location, ValueLocation::Stack) {
-                type_size(context, &expression.ty)
-            } else {
-                0
-            };
+            let total_stack_discard = stack_discard + arg_stack_size;
             ResolvedExpression {
                 kind: ResolvedExpressionKind::FunctionCall {
                     function_name: function_name.clone(),
                     args: resolved_args,
                 },
-                value_location,
-                stack_discard,
+                stack_discard: total_stack_discard,
+                value_data,
             }
         }
         AnalyzedExpressionKind::FieldAccess { expr, field_name } => {
             let resolved_expr = resolve_expression(context, expr, false);
             let field_offset = field_offset(context, &expr.ty, field_name);
-            let value_location = ValueLocation::from_type(&expression.ty);
-            let stack_discard = if should_discard && matches!(value_location, ValueLocation::Stack) {
-                type_size(context, &expression.ty)
-            } else {
-                0
-            };
+            let struct_size = resolved_expr.value_data.size;
+            
             ResolvedExpression {
                 kind: ResolvedExpressionKind::FieldAccess {
                     expr: Box::new(resolved_expr),
                     field_offset,
+                    struct_size,
                 },
-                value_location,
                 stack_discard,
+                value_data,
             }
         }
         AnalyzedExpressionKind::ArrayIndex { array, index } => {
             let resolved_array = resolve_expression(context, array, false);
             let resolved_index = resolve_expression(context, index, false);
-            let element_size = array_element_size(context, &array.ty);
-            let value_location = ValueLocation::from_type(&expression.ty);
-            let stack_discard = if should_discard && matches!(value_location, ValueLocation::Stack) {
-                type_size(context, &expression.ty)
-            } else {
-                0
-            };
+            let element_size = value_data.size;
+            
             ResolvedExpression {
-                kind: ResolvedExpressionKind::ArrayIndex {
-                    array: Box::new(resolved_array),
-                    index: Box::new(resolved_index),
+                kind: ResolvedExpressionKind::ValueOfAssignable(ResolvedAssignableExpression::ArrayIndex(
+                    Box::new(resolved_array),
+                    Box::new(resolved_index),
                     element_size,
-                },
-                value_location,
+                )),
                 stack_discard,
+                value_data,
             }
         }
         AnalyzedExpressionKind::Increment(expr, is_prefix) => {
             let resolved_expr = resolve_assignable_expression(context, expr);
-            let value_location = ValueLocation::from_type(&expression.ty);
             ResolvedExpression {
                 kind: ResolvedExpressionKind::Increment(resolved_expr, *is_prefix),
-                value_location,
-                stack_discard: 0,
+                stack_discard,
+                value_data,
             }
         }
         AnalyzedExpressionKind::Decrement(expr, is_prefix) => {
             let resolved_expr = resolve_assignable_expression(context, expr);
-            let value_location = ValueLocation::from_type(&expression.ty);
             ResolvedExpression {
                 kind: ResolvedExpressionKind::Decrement(resolved_expr, *is_prefix),
-                value_location,
-                stack_discard: 0,
+                stack_discard,
+                value_data,
             }
         }
     }
@@ -354,7 +290,7 @@ fn resolve_assignable_expression(context: &mut ResolverContext, expr: &Assignabl
             ResolvedAssignableExpression::FieldAccess(Box::new(resolved_inner), field_offset)
         }
         AssignableExpressionKind::ArrayIndex(arr_expr, index_expr) => {
-            let resolved_arr_expr = resolve_assignable_expression(context, arr_expr);
+            let resolved_arr_expr = resolve_expression(context, arr_expr, false);
             let resolved_index_expr = resolve_expression(context, index_expr, false);
             let element_size = array_element_size(context, &arr_expr.ty);
             ResolvedAssignableExpression::ArrayIndex(Box::new(resolved_arr_expr), Box::new(resolved_index_expr), element_size)
