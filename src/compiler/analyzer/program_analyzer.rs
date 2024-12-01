@@ -6,7 +6,7 @@ use crate::compiler::analyzer::return_analyzer::always_calls_return;
 use crate::compiler::analyzer::type_resolver::{analyze_types, AnalyzedType, AnalyzedTypes};
 use crate::compiler::builtin::add_builtin_function_headers;
 use crate::compiler::lexer::location::Src;
-use crate::compiler::parser2::parsed_expression::{ParsedFunction, ParsedProgram};
+use crate::compiler::parser::parsed_expression::{ParsedFunction, ParsedProgram};
 
 pub struct AnalyzerContext<'a> {
     pub analyzed_types: &'a AnalyzedTypes,

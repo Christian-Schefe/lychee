@@ -1,9 +1,9 @@
 use crate::compiler::lexer::lexer_error::LocationError;
 use crate::compiler::lexer::token::{StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
-use crate::compiler::parser2::parsed_expression::{ParsedType, ParsedTypeKind};
-use crate::compiler::parser2::parser_error::ParseResult;
-use crate::compiler::parser2::program_parser::pop_expected;
+use crate::compiler::parser::parsed_expression::{ParsedType, ParsedTypeKind};
+use crate::compiler::parser::parser_error::ParseResult;
+use crate::compiler::parser::program_parser::pop_expected;
 
 pub fn parse_type(tokens: &mut TokenStack) -> ParseResult<ParsedType> {
     let token = tokens.pop().clone();

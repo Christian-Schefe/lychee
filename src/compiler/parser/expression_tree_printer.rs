@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use crate::compiler::parser2::parsed_expression::{ParsedExpression, ParsedExpressionKind, ParsedFunction, ParsedLiteral, ParsedProgram, ParsedStructDefinition};
+use crate::compiler::parser::parsed_expression::{ParsedExpression, ParsedExpressionKind, ParsedFunction, ParsedLiteral, ParsedProgram, ParsedStructDefinition};
 
 struct Line(usize, String);
 

@@ -5,10 +5,10 @@ use crate::compiler::lexer::location::Src;
 use crate::compiler::lexer::SrcToken;
 use crate::compiler::lexer::token::{Keyword, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
-use crate::compiler::parser2::binop_expr_parser::{parse_binop_expression};
-use crate::compiler::parser2::parsed_expression::{ParsedExpression, ParsedFunction, ParsedProgram, ParsedStructDefinition};
-use crate::compiler::parser2::parser_error::ParseResult;
-use crate::compiler::parser2::type_parser::parse_type;
+use crate::compiler::parser::binop_expr_parser::{parse_binop_expression};
+use crate::compiler::parser::parsed_expression::{ParsedExpression, ParsedFunction, ParsedProgram, ParsedStructDefinition};
+use crate::compiler::parser::parser_error::ParseResult;
+use crate::compiler::parser::type_parser::parse_type;
 
 pub fn pop_expected(tokens: &mut TokenStack, expected: Token) -> ParseResult<SrcToken> {
     let token = tokens.pop().clone();

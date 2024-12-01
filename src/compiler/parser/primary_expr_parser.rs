@@ -4,10 +4,10 @@ use crate::compiler::lexer::lexer_error::LocationError;
 use crate::compiler::lexer::location::Location;
 use crate::compiler::lexer::token::{Keyword, Literal, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
-use crate::compiler::parser2::parsed_expression::{ParsedExpression, ParsedExpressionKind, ParsedLiteral, ParsedType, ParsedTypeKind};
-use crate::compiler::parser2::parser_error::ParseResult;
-use crate::compiler::parser2::program_parser::{parse_expression, parse_identifier, pop_expected};
-use crate::compiler::parser2::type_parser::parse_type;
+use crate::compiler::parser::parsed_expression::{ParsedExpression, ParsedExpressionKind, ParsedLiteral, ParsedType, ParsedTypeKind};
+use crate::compiler::parser::parser_error::ParseResult;
+use crate::compiler::parser::program_parser::{parse_expression, parse_identifier, pop_expected};
+use crate::compiler::parser::type_parser::parse_type;
 
 pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
     let token = tokens.peek().clone();

@@ -3,7 +3,7 @@ mod expression_codegen;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use crate::compiler::codegen2::program_codegen::generate_program_code;
+use crate::compiler::codegen::program_codegen::generate_program_code;
 use crate::compiler::resolver::resolved_expression::ResolvedProgram;
 
 pub struct CodegenContext {

@@ -1,6 +1,6 @@
 use crate::compiler::lexer::token_stack::TokenStack;
-use crate::compiler::parser2::parsed_expression::ParsedProgram;
-use crate::compiler::parser2::program_parser::parse_program;
+use crate::compiler::parser::parsed_expression::ParsedProgram;
+use crate::compiler::parser::program_parser::parse_program;
 
 pub mod parsed_expression;
 mod program_parser;

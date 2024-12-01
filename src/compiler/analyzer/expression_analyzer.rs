@@ -4,7 +4,7 @@ use crate::compiler::analyzer::analyzed_expression::{AnalyzedBinaryOp, AnalyzedE
 use crate::compiler::analyzer::AnalyzerResult;
 use crate::compiler::analyzer::program_analyzer::{AnalyzerContext, LocalVariable, LoopData};
 use crate::compiler::analyzer::type_resolver::{AnalyzedType};
-use crate::compiler::parser2::parsed_expression::{BinaryComparisonOp, BinaryOp, ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryOp};
+use crate::compiler::parser::parsed_expression::{BinaryComparisonOp, BinaryOp, ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryOp};
 
 pub fn analyze_expression(context: &mut AnalyzerContext, expression: &ParsedExpression) -> AnalyzerResult<AnalyzedExpression> {
     match &expression.value {

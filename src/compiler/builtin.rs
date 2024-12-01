@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use crate::compiler::analyzer::program_analyzer::FunctionHeader;
 use crate::compiler::analyzer::type_resolver::AnalyzedType;
-use crate::compiler::codegen2::CodegenContext;
+use crate::compiler::codegen::CodegenContext;
 
 pub fn add_builtin_function_headers(function_headers: &mut HashMap<String, FunctionHeader>) {
     function_headers.insert("read_char".to_string(), FunctionHeader {

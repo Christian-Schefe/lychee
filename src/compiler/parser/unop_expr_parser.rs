@@ -1,9 +1,9 @@
 use crate::compiler::lexer::token::{StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
-use crate::compiler::parser2::parsed_expression::{ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryMathOp, UnaryOp};
-use crate::compiler::parser2::parser_error::ParseResult;
-use crate::compiler::parser2::primary_expr_parser::parse_primary_expression;
-use crate::compiler::parser2::program_parser::{parse_expression, parse_identifier, pop_expected};
+use crate::compiler::parser::parsed_expression::{ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryMathOp, UnaryOp};
+use crate::compiler::parser::parser_error::ParseResult;
+use crate::compiler::parser::primary_expr_parser::parse_primary_expression;
+use crate::compiler::parser::program_parser::{parse_expression, parse_identifier, pop_expected};
 
 fn parse_prefix_unary<F>(tokens: &mut TokenStack, op_tokens: &[(StaticToken, UnaryOp)], parse_lower: F) -> ParseResult<ParsedExpression>
 where

@@ -1,4 +1,4 @@
-use crate::compiler::parser2::expression_tree_printer::Printer;
+use crate::compiler::parser::expression_tree_printer::Printer;
 use crate::compiler::resolver::resolved_expression::{ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedFunction, ResolvedLiteral, ResolvedProgram};
 
 pub fn print_program(expr: &ResolvedProgram) {

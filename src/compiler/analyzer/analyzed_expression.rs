@@ -1,5 +1,5 @@
 use crate::compiler::analyzer::type_resolver::{AnalyzedType, AnalyzedTypes};
-use crate::compiler::parser2::parsed_expression::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, UnaryMathOp};
+use crate::compiler::parser::parsed_expression::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, UnaryMathOp};
 
 #[derive(Debug, Clone)]
 pub struct AnalyzedProgram {

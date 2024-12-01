@@ -1,6 +1,6 @@
 use crate::compiler::analyzer::analyzed_expression::{AnalyzedBinaryOp, BinaryAssignOp};
-use crate::compiler::codegen2::CodegenContext;
-use crate::compiler::parser2::parsed_expression::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, UnaryMathOp};
+use crate::compiler::codegen::CodegenContext;
+use crate::compiler::parser::parsed_expression::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, UnaryMathOp};
 use crate::compiler::resolver::resolved_expression::{ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedLiteral, ResolvedUnaryOp, ValueData, ValueLocation};
 
 pub fn generate_expression_code(context: &mut CodegenContext, expression: &ResolvedExpression) {

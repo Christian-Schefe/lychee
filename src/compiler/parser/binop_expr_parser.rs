@@ -1,10 +1,10 @@
 use crate::compiler::lexer::token::{Keyword, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
-use crate::compiler::parser2::parsed_expression::{ParsedExpression, ParsedExpressionKind, UnaryOp};
-use crate::compiler::parser2::parser_error::ParseResult;
-use crate::compiler::parser2::parsed_expression::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, BinaryOp};
-use crate::compiler::parser2::type_parser::parse_type;
-use crate::compiler::parser2::unop_expr_parser::parse_unop_expression;
+use crate::compiler::parser::parsed_expression::{ParsedExpression, ParsedExpressionKind, UnaryOp};
+use crate::compiler::parser::parser_error::ParseResult;
+use crate::compiler::parser::parsed_expression::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, BinaryOp};
+use crate::compiler::parser::type_parser::parse_type;
+use crate::compiler::parser::unop_expr_parser::parse_unop_expression;
 
 fn find_op(tokens: &TokenStack, op_tokens: &[(StaticToken, BinaryOp)]) -> Option<BinaryOp> {
     op_tokens.iter().find(|t| if let Token::Static(tkn) = &tokens.peek().value { *tkn == t.0 } else { false }).map(|t| t.1.clone())

@@ -1,6 +1,6 @@
 use crate::compiler::builtin::generate_builtin_function_code;
-use crate::compiler::codegen2::CodegenContext;
-use crate::compiler::codegen2::expression_codegen::generate_expression_code;
+use crate::compiler::codegen::CodegenContext;
+use crate::compiler::codegen::expression_codegen::generate_expression_code;
 use crate::compiler::resolver::resolved_expression::{FunctionReturnLocation, ResolvedFunction, ResolvedProgram};
 
 pub fn generate_program_code(context: &mut CodegenContext, program: &ResolvedProgram) {

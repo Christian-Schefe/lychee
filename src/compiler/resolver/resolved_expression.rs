@@ -1,6 +1,6 @@
 use crate::compiler::analyzer::analyzed_expression::{AnalyzedBinaryOp, BinaryAssignOp};
 use crate::compiler::analyzer::type_resolver::AnalyzedType;
-use crate::compiler::parser2::parsed_expression::{UnaryMathOp};
+use crate::compiler::parser::parsed_expression::{UnaryMathOp};
 use crate::compiler::resolver::program_resolver::ResolverContext;
 
 #[derive(Debug, Clone)]

@@ -4,7 +4,7 @@ use anyhow::Context;
 use crate::compiler::analyzer::AnalyzerResult;
 use crate::compiler::lexer::lexer_error::LocationError;
 use crate::compiler::lexer::location::Location;
-use crate::compiler::parser2::parsed_expression::{ParsedProgram, ParsedType, ParsedTypeKind};
+use crate::compiler::parser::parsed_expression::{ParsedProgram, ParsedType, ParsedTypeKind};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AnalyzedType {
