@@ -200,7 +200,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
                         format!("Failed to parse struct literal at {}.", token.location)
                     })
                 }
-                ParsedTypeKind::Array(_) => {
+                /*ParsedTypeKind::Pointer(_) => {
                     let (_, expressions, _) = parse_seperated_expressions(
                         tokens,
                         Token::Static(StaticToken::OpenBrace),
@@ -213,7 +213,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
                         ParsedExpressionKind::Literal(ParsedLiteral::Array(ty, expressions)),
                         token.location,
                     ))
-                }
+                }*/
                 _ => Err(LocationError::new(
                     "Expected named type or array type for new expression.".to_string(),
                     type_location,

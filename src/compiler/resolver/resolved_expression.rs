@@ -56,10 +56,6 @@ impl ValueData {
                 location: ValueLocation::Register,
                 size: 8,
             },
-            AnalyzedType::Array(_) => ValueData {
-                location: ValueLocation::Register,
-                size: 8,
-            },
         }
     }
     pub fn discard_stack_size(&self, should_discard: bool) -> usize {

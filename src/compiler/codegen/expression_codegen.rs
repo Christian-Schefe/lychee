@@ -51,7 +51,6 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
             let end_label = context.new_label("end");
 
             generate_expression_code(context, condition);
-            context.pop(1, "r0");
             context.cmpi("r0", 0);
             context.jz(&else_label);
 
@@ -346,8 +345,8 @@ fn generate_assignable_expression_value_code(
             generate_expression_code(context, array);
             context.pop(8, "r1");
             context.muli("r1", *element_size as isize);
-            context.add("r0", "r1");
-            load_from_value_data(context, data, "r1", "[r0]");
+            context.add("r1", "r0");
+            load_from_value_data(context, data, "r0", "[r1]");
         }
     }
 }

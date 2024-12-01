@@ -14,7 +14,6 @@ pub enum AnalyzedType {
     Integer(usize),
     Struct(String),
     Pointer(Box<AnalyzedType>),
-    Array(Box<AnalyzedType>),
 }
 
 impl Display for AnalyzedType {
@@ -26,7 +25,6 @@ impl Display for AnalyzedType {
             AnalyzedType::Integer(size) => write!(f, "int{}", size * 8),
             AnalyzedType::Struct(name) => write!(f, "{}", name),
             AnalyzedType::Pointer(inner) => write!(f, "&{}", inner),
-            AnalyzedType::Array(inner) => write!(f, "[{}]", inner),
         }
     }
 }
@@ -77,10 +75,6 @@ impl AnalyzedTypes {
                 value: ParsedTypeKind::Pointer(inner),
                 ..
             } => Ok(AnalyzedType::Pointer(Box::new(self.resolve_type(inner)?))),
-            ParsedType {
-                value: ParsedTypeKind::Array(inner),
-                ..
-            } => Ok(AnalyzedType::Array(Box::new(self.resolve_type(inner)?))),
         }
     }
 }
@@ -175,10 +169,6 @@ fn map_parsed_type(
             known_struct_names,
             inner,
         )?))),
-        ParsedTypeKind::Array(inner) => Ok(AnalyzedType::Array(Box::new(map_parsed_type(
-            known_struct_names,
-            inner,
-        )?))),
     }
 }
 
@@ -206,7 +196,6 @@ fn determine_struct_size(
                 struct_size += determine_struct_size(struct_types, name, visited)?
             }
             AnalyzedType::Pointer(_) => struct_size += 8,
-            AnalyzedType::Array(_) => struct_size += 8,
         }
     }
 

@@ -363,7 +363,6 @@ where
         AnalyzedType::Char => 1,
         AnalyzedType::Unit => 0,
         AnalyzedType::Pointer(_) => 8,
-        AnalyzedType::Array(_) => 8,
         AnalyzedType::Struct(name) => struct_sizes(name),
     }
 }
@@ -386,7 +385,7 @@ fn field_offset(context: &ResolverContext, struct_type: &AnalyzedType, field_nam
 
 fn array_element_size(context: &ResolverContext, ty: &AnalyzedType) -> usize {
     match ty {
-        AnalyzedType::Array(inner) => type_size(context, inner),
+        AnalyzedType::Pointer(inner) => type_size(context, inner),
         _ => unreachable!(),
     }
 }

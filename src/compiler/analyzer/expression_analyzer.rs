@@ -351,7 +351,7 @@ pub fn analyze_expression(
                     .collect();
                 Ok(AnalyzedExpression {
                     kind: AnalyzedExpressionKind::Literal(AnalyzedLiteral::Array(array_values)),
-                    ty: AnalyzedType::Array(Box::new(AnalyzedType::Char)),
+                    ty: AnalyzedType::Pointer(Box::new(AnalyzedType::Char)),
                 })
             }
             ParsedLiteral::Struct(ty, field_values) => {
@@ -429,7 +429,7 @@ pub fn analyze_expression(
                 let mut analyzed_values = Vec::new();
                 let array_type = context.analyzed_types.resolve_type(ty)?;
                 let element_type = match &array_type {
-                    AnalyzedType::Array(inner) => inner.as_ref().clone(),
+                    AnalyzedType::Pointer(inner) => inner.as_ref().clone(),
                     arr_type => Err(anyhow::anyhow!(
                         "Expected array type, found '{}' at {}.",
                         arr_type,
@@ -673,7 +673,7 @@ pub fn analyze_expression(
                     ))?,
                 }
                 match analyzed_expr.ty.clone() {
-                    AnalyzedType::Array(inner) => Ok(AnalyzedExpression {
+                    AnalyzedType::Pointer(inner) => Ok(AnalyzedExpression {
                         kind: AnalyzedExpressionKind::ArrayIndex {
                             array: Box::new(analyzed_expr),
                             index: Box::new(analyzed_index),
@@ -1087,7 +1087,7 @@ pub fn analyze_assignable_expression(
                 ))?,
             }
             match analyzed_expr.ty.clone() {
-                AnalyzedType::Array(inner) => Ok(AssignableExpression {
+                AnalyzedType::Pointer(inner) => Ok(AssignableExpression {
                     ty: *inner,
                     kind: AssignableExpressionKind::ArrayIndex(
                         Box::new(analyzed_expr),

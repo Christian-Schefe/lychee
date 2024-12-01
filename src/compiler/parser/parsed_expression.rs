@@ -70,7 +70,6 @@ pub type ParsedType = Src<ParsedTypeKind>;
 pub enum ParsedTypeKind {
     Named(String),
     Pointer(Box<ParsedType>),
-    Array(Box<ParsedType>),
 }
 
 #[derive(Debug, Clone)]
