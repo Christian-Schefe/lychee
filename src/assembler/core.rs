@@ -1,21 +1,32 @@
-use crate::assembler::instruction_type::InstructionType;
+use crate::assembler::instruction_type::{Instruction, InstructionKind};
 use lazy_static::lazy_static;
 use lychee_compiler::{BinopType, FlagConditionType, OpCode, RegisterCode, UnopType};
 use std::collections::HashMap;
 use std::iter::Iterator;
 
 #[derive(Debug)]
-pub enum Instruction {
+pub enum AssemblyInstruction {
     Label(String),
-    Instr(InstructionType),
+    Instr(Instruction),
+    Bytes(Vec<u8>),
 }
 
-pub(crate) fn convert_line(line: &str) -> Instruction {
+pub(crate) fn convert_line(line: &str) -> AssemblyInstruction {
     let parts = line.split_whitespace().collect::<Vec<&str>>();
 
     if parts[0].ends_with(":") {
         let label_str = parts[0].split(":").collect::<Vec<&str>>()[0];
-        return Instruction::Label(label_str.to_string());
+        return AssemblyInstruction::Label(label_str.to_string());
+    }
+
+    if parts[0] == "bytes" {
+        let mut bytes = Vec::new();
+        for part in parts[1..].iter() {
+            bytes.push(u8::from_str_radix(part, 10).unwrap_or_else(|_| {
+                panic!("Invalid byte value: {}", part);
+            }));
+        }
+        return AssemblyInstruction::Bytes(bytes);
     }
 
     let opcode = match OPCODE_MAP.get(parts[0]).cloned() {
@@ -23,37 +34,42 @@ pub(crate) fn convert_line(line: &str) -> Instruction {
         None => panic!("Invalid opcode: {}", parts[0]),
     };
 
-    let instruction = match &opcode {
-        OpCode::Ret | OpCode::Exit => InstructionType::parse_simple(opcode),
-        OpCode::Store | OpCode::Load => InstructionType::parse_register_size_address(opcode, parts),
+    let instruction_kind = match &opcode {
+        OpCode::Ret | OpCode::Exit => InstructionKind::parse_simple(),
+        OpCode::Store | OpCode::Load => InstructionKind::parse_register_size_address(parts),
         OpCode::Push | OpCode::Pop | OpCode::SignExtend => {
-            InstructionType::parse_size_register(opcode, parts)
+            InstructionKind::parse_size_register(parts)
         }
-        OpCode::Binop(_) | OpCode::Alloc => InstructionType::parse_two_registers(opcode, parts),
-        OpCode::BinopImmediate(_) => InstructionType::parse_register_immediate(opcode, parts),
-        OpCode::Call | OpCode::Jump(_) => InstructionType::parse_label(opcode, parts),
+        OpCode::Binop(_) | OpCode::Alloc => InstructionKind::parse_two_registers(parts),
+        OpCode::BinopImmediate(_) => InstructionKind::parse_register_immediate(parts),
+        OpCode::Call | OpCode::Jump(_) => InstructionKind::parse_address(parts),
         OpCode::Unop(_) | OpCode::Set(_) | OpCode::Free | OpCode::Rand => {
-            InstructionType::parse_register(opcode, parts)
+            InstructionKind::parse_register(parts)
         }
         OpCode::ReadStdin
         | OpCode::WriteStdout
         | OpCode::Lea
         | OpCode::PushMem
         | OpCode::PopMem
-        | OpCode::PeekMem => InstructionType::parse_register_address(opcode, parts),
+        | OpCode::PeekMem => InstructionKind::parse_register_address(parts),
     };
 
-    Instruction::Instr(instruction)
+    let instruction = Instruction {
+        opcode: opcode.byte_code(),
+        kind: instruction_kind,
+    };
+
+    AssemblyInstruction::Instr(instruction)
 }
 
-pub(crate) fn instructions_to_bytes(instructions: Vec<Instruction>) -> Vec<u8> {
+pub(crate) fn instructions_to_bytes(instructions: Vec<AssemblyInstruction>) -> Vec<u8> {
     let mut bytes = Vec::new();
     let mut labels: HashMap<String, u64> = HashMap::new();
     let mut label_placeholders: HashMap<String, Vec<u64>> = HashMap::new();
 
     for instruction in instructions {
         match instruction {
-            Instruction::Label(label) => {
+            AssemblyInstruction::Label(label) => {
                 let label_address = bytes.len() as u64;
                 if let Some(spots) = label_placeholders.get(&label) {
                     for &spot in spots {
@@ -68,8 +84,11 @@ pub(crate) fn instructions_to_bytes(instructions: Vec<Instruction>) -> Vec<u8> {
                     panic!("Label already exists");
                 }
             }
-            Instruction::Instr(instr) => {
+            AssemblyInstruction::Instr(instr) => {
                 instr.add_bytes(&mut bytes, &labels, &mut label_placeholders);
+            }
+            AssemblyInstruction::Bytes(mut b) => {
+                bytes.append(&mut b);
             }
         }
     }

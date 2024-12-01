@@ -1,5 +1,4 @@
 use crate::assembler::core::{REGISTER_MAP, SIZE_MAP};
-use lychee_compiler::OpCode;
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -8,6 +7,7 @@ pub enum MemoryAddress {
     Register(u8),
     RegisterOffset(u8, i64),
     RegisterScaledIndex(u8, u8, i64),
+    Label(String),
 }
 
 fn parse_i64(str: &str) -> i64 {
@@ -46,153 +46,11 @@ impl MemoryAddress {
             } else {
                 panic!("Invalid memory address format: {}", str);
             }
+        } else if str.starts_with("_") {
+            MemoryAddress::Label(str.to_string())
         } else {
             let address = parse_u64(str);
             MemoryAddress::Immediate(address)
-        }
-    }
-
-    pub fn to_bytes(&self) -> Vec<u8> {
-        match self {
-            MemoryAddress::Immediate(address) => {
-                let mut bytes = vec![0];
-                bytes.extend(&address.to_le_bytes());
-                bytes
-            }
-            MemoryAddress::Register(register) => vec![1u8 | (register << 4)],
-            MemoryAddress::RegisterOffset(register, offset) => {
-                let mut bytes = vec![2u8 | (register << 4)];
-                bytes.extend(&offset.to_le_bytes());
-                bytes
-            }
-            MemoryAddress::RegisterScaledIndex(register, index_register, scale) => {
-                let mut bytes = vec![3, register | (index_register << 4)];
-                bytes.extend(&scale.to_le_bytes());
-                bytes
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum InstructionType {
-    Simple {
-        opcode: u8,
-    },
-    Register {
-        opcode: u8,
-        register: u8,
-    },
-    SizeRegister {
-        opcode: u8,
-        size: u8,
-        register: u8,
-    },
-    Label {
-        opcode: u8,
-        label: String,
-    },
-    RegisterAddress {
-        opcode: u8,
-        register: u8,
-        address: MemoryAddress,
-    },
-    SizeRegisterAddress {
-        opcode: u8,
-        register: u8,
-        size: u8,
-        address: MemoryAddress,
-    },
-    RegisterImmediate {
-        opcode: u8,
-        register: u8,
-        immediate: i64,
-    },
-    TwoRegisters {
-        opcode: u8,
-        source_register: u8,
-        dest_register: u8,
-    },
-}
-
-impl InstructionType {
-    pub fn parse_simple(opcode: OpCode) -> Self {
-        InstructionType::Simple {
-            opcode: opcode.byte_code(),
-        }
-    }
-
-    pub fn parse_register(opcode: OpCode, parts: Vec<&str>) -> Self {
-        let register = REGISTER_MAP.get(parts[1]).cloned().unwrap();
-        InstructionType::Register {
-            opcode: opcode.byte_code(),
-            register: register as u8,
-        }
-    }
-
-    pub fn parse_size_register(opcode: OpCode, parts: Vec<&str>) -> Self {
-        let size = SIZE_MAP.get(parts[1]).cloned().unwrap_or_else(|| {
-            panic!("Invalid size: {}", parts[1]);
-        });
-        let register = REGISTER_MAP.get(parts[2]).cloned().unwrap();
-        InstructionType::SizeRegister {
-            opcode: opcode.byte_code(),
-            size,
-            register: register as u8,
-        }
-    }
-
-    pub fn parse_label(opcode: OpCode, parts: Vec<&str>) -> Self {
-        let address_str = parts[1];
-        InstructionType::Label {
-            opcode: opcode.byte_code(),
-            label: address_str.to_string(),
-        }
-    }
-
-    pub fn parse_register_address(opcode: OpCode, parts: Vec<&str>) -> Self {
-        let register = REGISTER_MAP.get(parts[1]).cloned().unwrap();
-        let address = MemoryAddress::from_str(parts[2]);
-        InstructionType::RegisterAddress {
-            opcode: opcode.byte_code(),
-            register: register as u8,
-            address,
-        }
-    }
-
-    pub fn parse_register_size_address(opcode: OpCode, parts: Vec<&str>) -> Self {
-        let size = SIZE_MAP.get(parts[1]).cloned().unwrap_or_else(|| {
-            panic!("Invalid size: {}", parts[1]);
-        });
-        let register = REGISTER_MAP.get(parts[2]).cloned().unwrap_or_else(|| {
-            panic!("Invalid register: {}", parts[2]);
-        });
-        let address = MemoryAddress::from_str(parts[3]);
-        InstructionType::SizeRegisterAddress {
-            opcode: opcode.byte_code(),
-            register: register as u8,
-            size,
-            address,
-        }
-    }
-
-    pub fn parse_register_immediate(opcode: OpCode, parts: Vec<&str>) -> Self {
-        let register = REGISTER_MAP.get(parts[1]).cloned().unwrap();
-        let immediate = parse_i64(parts[2]);
-        InstructionType::RegisterImmediate {
-            opcode: opcode.byte_code(),
-            register: register as u8,
-            immediate,
-        }
-    }
-
-    pub fn parse_two_registers(opcode: OpCode, parts: Vec<&str>) -> Self {
-        let dest_register = REGISTER_MAP.get(parts[1]).cloned().unwrap();
-        let src_register = REGISTER_MAP.get(parts[2]).cloned().unwrap();
-        InstructionType::TwoRegisters {
-            opcode: opcode.byte_code(),
-            source_register: src_register as u8,
-            dest_register: dest_register as u8,
         }
     }
 
@@ -202,17 +60,24 @@ impl InstructionType {
         labels: &HashMap<String, u64>,
         label_placeholders: &mut HashMap<String, Vec<u64>>,
     ) {
-        let bytes_to_add = match self {
-            InstructionType::Simple { opcode } => vec![*opcode],
-            InstructionType::Register { opcode, register } => vec![*opcode, *register],
-            InstructionType::SizeRegister {
-                opcode,
-                size,
-                register,
-            } => {
-                vec![*opcode, size | (register << 4)]
+        match self {
+            MemoryAddress::Immediate(address) => {
+                bytes.push(0);
+                bytes.extend(&address.to_le_bytes());
             }
-            InstructionType::Label { opcode, label } => {
+            MemoryAddress::Register(register) => {
+                bytes.push(1u8 | (register << 4));
+            }
+            MemoryAddress::RegisterOffset(register, offset) => {
+                bytes.push(2u8 | (register << 4));
+                bytes.extend(&offset.to_le_bytes());
+            }
+            MemoryAddress::RegisterScaledIndex(register, index_register, scale) => {
+                bytes.push(3);
+                bytes.push(*register | (*index_register << 4));
+                bytes.extend(&scale.to_le_bytes());
+            }
+            MemoryAddress::Label(label) => {
                 let address = labels.get(label).cloned().unwrap_or_else(|| {
                     label_placeholders
                         .entry(label.clone())
@@ -220,46 +85,165 @@ impl InstructionType {
                         .push((bytes.len() + 1) as u64);
                     0
                 });
-                let mut new_bytes = vec![*opcode];
-                new_bytes.extend(&address.to_le_bytes());
-                new_bytes
+                bytes.push(0);
+                bytes.extend(&address.to_le_bytes());
             }
-            InstructionType::RegisterAddress {
-                opcode,
-                register,
-                address,
-            } => {
-                let mut new_bytes = vec![*opcode, *register];
-                new_bytes.extend(&address.to_bytes());
-                new_bytes
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Instruction {
+    pub kind: InstructionKind,
+    pub opcode: u8,
+}
+
+#[derive(Debug)]
+pub enum InstructionKind {
+    Simple,
+    Register {
+        register: u8,
+    },
+    SizeRegister {
+        size: u8,
+        register: u8,
+    },
+    Address {
+        address: MemoryAddress,
+    },
+    RegisterAddress {
+        register: u8,
+        address: MemoryAddress,
+    },
+    SizeRegisterAddress {
+        register: u8,
+        size: u8,
+        address: MemoryAddress,
+    },
+    RegisterImmediate {
+        register: u8,
+        immediate: i64,
+    },
+    TwoRegisters {
+        left_register: u8,
+        right_register: u8,
+    },
+}
+
+impl InstructionKind {
+    pub fn parse_simple() -> Self {
+        InstructionKind::Simple
+    }
+
+    pub fn parse_register(parts: Vec<&str>) -> Self {
+        let register = parse_register_code(parts[1]);
+        InstructionKind::Register { register }
+    }
+
+    pub fn parse_size_register(parts: Vec<&str>) -> Self {
+        let size = parse_size_code(parts[1]);
+        let register = parse_register_code(parts[2]);
+        InstructionKind::SizeRegister { size, register }
+    }
+
+    pub fn parse_address(parts: Vec<&str>) -> Self {
+        let address = MemoryAddress::from_str(parts[1]);
+        InstructionKind::Address { address }
+    }
+
+    pub fn parse_register_address(parts: Vec<&str>) -> Self {
+        let register = parse_register_code(parts[1]);
+        let address = MemoryAddress::from_str(parts[2]);
+        InstructionKind::RegisterAddress { register, address }
+    }
+
+    pub fn parse_register_size_address(parts: Vec<&str>) -> Self {
+        let size = parse_size_code(parts[1]);
+        let register = parse_register_code(parts[2]);
+        let address = MemoryAddress::from_str(parts[3]);
+        InstructionKind::SizeRegisterAddress {
+            register,
+            size,
+            address,
+        }
+    }
+
+    pub fn parse_register_immediate(parts: Vec<&str>) -> Self {
+        let register = parse_register_code(parts[1]);
+        let immediate = parse_i64(parts[2]);
+        InstructionKind::RegisterImmediate {
+            register,
+            immediate,
+        }
+    }
+
+    pub fn parse_two_registers(parts: Vec<&str>) -> Self {
+        let left_register = parse_register_code(parts[1]);
+        let right_register = parse_register_code(parts[2]);
+        InstructionKind::TwoRegisters {
+            left_register,
+            right_register,
+        }
+    }
+}
+
+fn parse_register_code(part: &str) -> u8 {
+    let register = REGISTER_MAP.get(part).cloned().unwrap_or_else(|| {
+        panic!("Invalid register: {}", part);
+    });
+    register as u8
+}
+
+fn parse_size_code(part: &str) -> u8 {
+    SIZE_MAP.get(part).cloned().unwrap_or_else(|| {
+        panic!("Invalid size: {}", part);
+    })
+}
+
+impl Instruction {
+    pub fn add_bytes(
+        &self,
+        bytes: &mut Vec<u8>,
+        labels: &HashMap<String, u64>,
+        label_placeholders: &mut HashMap<String, Vec<u64>>,
+    ) {
+        bytes.push(self.opcode);
+        match &self.kind {
+            InstructionKind::Simple => {}
+            InstructionKind::Register { register } => {
+                bytes.push(*register);
             }
-            InstructionType::SizeRegisterAddress {
-                opcode,
+            InstructionKind::SizeRegister { size, register } => {
+                bytes.push((size << 4) | register);
+            }
+            InstructionKind::Address { address } => {
+                address.add_bytes(bytes, labels, label_placeholders);
+            }
+            InstructionKind::RegisterAddress { register, address } => {
+                bytes.push(*register);
+                address.add_bytes(bytes, labels, label_placeholders);
+            }
+            InstructionKind::SizeRegisterAddress {
                 register,
                 size,
                 address,
             } => {
-                let mut new_bytes = vec![*opcode, size | (register << 4)];
-                new_bytes.extend(&address.to_bytes());
-                new_bytes
+                bytes.push((size << 4) | register);
+                address.add_bytes(bytes, labels, label_placeholders);
             }
-            InstructionType::RegisterImmediate {
-                opcode,
+            InstructionKind::RegisterImmediate {
                 register,
                 immediate,
             } => {
-                let mut new_bytes = vec![*opcode, register << 4];
-                new_bytes.extend(&immediate.to_le_bytes());
-                new_bytes
+                bytes.push(*register);
+                bytes.extend(&immediate.to_le_bytes());
             }
-            InstructionType::TwoRegisters {
-                opcode,
-                source_register,
-                dest_register,
+            InstructionKind::TwoRegisters {
+                left_register,
+                right_register,
             } => {
-                vec![*opcode, source_register | (dest_register << 4)]
+                bytes.push(left_register | (right_register << 4));
             }
         };
-        bytes.extend(bytes_to_add);
     }
 }

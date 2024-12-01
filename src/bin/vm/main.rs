@@ -47,10 +47,10 @@ pub fn run(memory: &mut Memory, heap: &mut Heap, debug_print: bool) -> i64 {
                 exit(&mut exit_code, memory, debug_print);
                 break;
             }
-            0x01 => load(pc, memory, debug_print),
-            0x02 => store(pc, memory, debug_print),
-            0x03 => push(pc, memory, debug_print),
-            0x04 => pop(pc, memory, debug_print),
+            0x01 => load_or_store(pc, memory, true, debug_print),
+            0x02 => load_or_store(pc, memory, false, debug_print),
+            0x03 => push_or_pop(pc, memory, true, debug_print),
+            0x04 => push_or_pop(pc, memory, false, debug_print),
 
             0x05 => binop(pc, memory, BinopType::Mov, false, debug_print),
             0x06 => binop(pc, memory, BinopType::Add, false, debug_print),
@@ -186,95 +186,83 @@ fn read_address(pc: usize, memory: &mut Memory) -> u64 {
     address
 }
 
-fn load(pc: usize, memory: &mut Memory, debug_print: bool) {
+fn load_or_store(pc: usize, memory: &mut Memory, is_load: bool, debug_print: bool) {
     let byte1 = memory.data[pc + 1];
-
-    let data_size = 1 << (byte1 & 0b00000011);
-    let register = (byte1 & 0b11110000) >> 4;
-
+    let data_size = 1 << ((byte1 & 0x30) >> 4);
+    let register = (byte1 & 0x0F) as usize;
     let address = read_address(pc + 2, memory);
-    let value = memory.read_i64_le(address as usize, data_size);
 
-    memory.registers[register as usize] = value as u64;
+    if is_load {
+        let value = memory.read_i64_le(address as usize, data_size);
+        memory.registers[register] = value as u64;
+    } else {
+        let value = memory.registers[register] as i64;
+        memory.write_i64_le(address as usize, value, data_size);
+    }
+
     memory.registers[constants::PC] += 2;
 
     if debug_print {
-        println!(
-            "Loaded {} ({} bytes) from {} into register {}",
-            value, data_size, address, register
-        );
+        if is_load {
+            println!(
+                "Loaded {} bytes from address {} into register {}",
+                data_size, address, register
+            );
+        } else {
+            println!(
+                "Stored {} bytes from register {} into address {}",
+                data_size, register, address
+            );
+        }
     }
 }
 
-fn store(pc: usize, memory: &mut Memory, debug_print: bool) {
+fn push_or_pop(pc: usize, memory: &mut Memory, is_push: bool, debug_print: bool) {
     let byte1 = memory.data[pc + 1];
+    let data_size = 1 << ((byte1 & 0x30) >> 4);
+    let register = (byte1 & 0x0F) as usize;
 
-    let byte_count = 1 << (byte1 & 0b00000011);
-    let register = (byte1 & 0b11110000) >> 4;
-
-    let address = read_address(pc + 2, memory);
-    let value = memory.registers[register as usize] as i64;
-
-    memory.write_i64_le(address as usize, value, byte_count);
-    memory.registers[constants::PC] += 2;
-
-    if debug_print {
-        println!(
-            "Stored {} ({} bytes) from register {} into {}",
-            value, byte_count, register, address
-        );
+    if is_push {
+        memory.registers[constants::SP] -= data_size as u64;
+        let address = memory.registers[constants::SP];
+        let value = memory.registers[register] as i64;
+        memory.write_i64_le(address as usize, value, data_size);
+    } else {
+        let address = memory.registers[constants::SP];
+        let value = memory.read_i64_le(address as usize, data_size);
+        memory.registers[register] = value as u64;
+        memory.registers[constants::SP] += data_size as u64;
     }
-}
-
-fn push(pc: usize, memory: &mut Memory, debug_print: bool) {
-    let byte1 = memory.data[pc + 1];
-    let data_size = 1 << (byte1 & 0b00000011);
-    let register = (byte1 & 0b11110000) >> 4;
-
-    memory.registers[constants::SP] -= data_size;
-    let address = memory.registers[constants::SP];
-
-    let value = memory.registers[register as usize] as i64;
-    memory.write_i64_le(address as usize, value, data_size as u8);
     memory.registers[constants::PC] += 2;
 
     if debug_print {
-        println!(
-            "Pushed register {} with value {} ({} bytes) onto the stack",
-            register, value, data_size,
-        );
-    }
-}
-
-fn pop(pc: usize, memory: &mut Memory, debug_print: bool) {
-    let byte1 = memory.data[pc + 1];
-    let data_size = 1 << (byte1 & 0b00000011);
-    let register = (byte1 & 0b11110000) >> 4;
-
-    let address = memory.registers[constants::SP];
-    let value = memory.read_i64_le(address as usize, data_size);
-
-    memory.registers[register as usize] = value as u64;
-    memory.registers[constants::SP] += data_size as u64;
-    memory.registers[constants::PC] += 2;
-
-    if debug_print {
-        println!(
-            "Popped {} bytes from the stack into register {} with value {}",
-            data_size, register, value
-        );
+        if is_push {
+            println!(
+                "Pushed {} bytes from register {} onto the stack at address {}",
+                data_size,
+                register,
+                memory.registers[constants::SP]
+            );
+        } else {
+            println!(
+                "Popped {} bytes from the stack at address {} into register {}",
+                data_size,
+                memory.registers[constants::SP],
+                register
+            );
+        }
     }
 }
 
 fn binop(pc: usize, memory: &mut Memory, op_type: BinopType, immediate: bool, debug_print: bool) {
     let byte1 = memory.data[pc + 1];
-    let dest_register = ((byte1 & 0xF0) >> 4) as usize;
+    let dest_register = (byte1 & 0x0F) as usize;
     let left_value = memory.registers[dest_register] as i64;
 
     let right_value = if immediate {
         memory.read_i64_le(pc + 2, DATA_SIZE_64)
     } else {
-        let source_register = (byte1 & 0x0F) as usize;
+        let source_register = ((byte1 & 0xF0) >> 4) as usize;
         memory.registers[source_register] as i64
     };
 
@@ -321,7 +309,7 @@ fn binop(pc: usize, memory: &mut Memory, op_type: BinopType, immediate: bool, de
 }
 
 fn jump(pc: usize, memory: &mut Memory, should_jump: bool, debug_print: bool) {
-    let address = memory.read_u64_le(pc + 1, DATA_SIZE_64);
+    let address = read_address(pc + 1, memory);
 
     if should_jump {
         memory.registers[constants::PC] = address;
@@ -329,7 +317,7 @@ fn jump(pc: usize, memory: &mut Memory, should_jump: bool, debug_print: bool) {
             println!("Jumped to address {}", address);
         }
     } else {
-        memory.registers[constants::PC] += 9;
+        memory.registers[constants::PC] += 1;
         if debug_print {
             println!("Did not jump to address {}", address);
         }
@@ -337,8 +325,7 @@ fn jump(pc: usize, memory: &mut Memory, should_jump: bool, debug_print: bool) {
 }
 
 fn set(pc: usize, memory: &mut Memory, flag: bool, debug_print: bool) {
-    let byte1 = memory.data[pc + 1];
-    let register = (byte1 & 0x0F) as usize;
+    let register = memory.data[pc + 1] as usize;
     memory.registers[register] = flag as u64;
     memory.registers[constants::PC] += 2;
 
@@ -348,8 +335,7 @@ fn set(pc: usize, memory: &mut Memory, flag: bool, debug_print: bool) {
 }
 
 fn unop(pc: usize, memory: &mut Memory, op_type: UnopType, debug_print: bool) {
-    let byte1 = memory.data[pc + 1];
-    let register = (byte1 & 0x0F) as usize;
+    let register = memory.data[pc + 1] as usize;
     let value = memory.registers[register] as i64;
     let result = match op_type {
         UnopType::Not => !value,
@@ -371,9 +357,9 @@ fn unop(pc: usize, memory: &mut Memory, op_type: UnopType, debug_print: bool) {
 }
 
 fn call(pc: usize, memory: &mut Memory, debug_print: bool) {
-    let address = memory.read_u64_le(pc + 1, DATA_SIZE_64);
+    let address = read_address(pc + 1, memory);
     memory.registers[constants::SP] -= 8;
-    let return_pc = (pc + 9) as u64;
+    let return_pc = memory.registers[constants::PC] + 1;
     memory.write_u64_le(
         memory.registers[constants::SP] as usize,
         return_pc,
@@ -463,8 +449,8 @@ fn set_flags(memory: &mut Memory, value: i64) {
 
 fn sign_extend(pc: usize, memory: &mut Memory, debug_print: bool) {
     let byte1 = memory.data[pc + 1];
-    let data_size = 1 << (byte1 & 0b00000011);
-    let register = (byte1 & 0b11110000) >> 4;
+    let data_size = 1 << ((byte1 % 0x30) >> 4);
+    let register = byte1 & 0x0F;
 
     let value = memory.registers[register as usize] as i64;
 
@@ -550,10 +536,10 @@ fn popmem(pc: usize, memory: &mut Memory, is_peek: bool, debug_print: bool) {
 
 fn alloc(pc: usize, memory: &mut Memory, heap: &mut Heap, debug_print: bool) {
     let byte1 = memory.data[pc + 1];
-    let size_register = ((byte1 & 0xF0) >> 4) as usize;
+    let size_register = (byte1 & 0x0F) as usize;
     let size = memory.registers[size_register] as i64;
 
-    let address_register = (byte1 & 0x0F) as usize;
+    let address_register = ((byte1 & 0xF0) >> 4) as usize;
 
     let address = heap.malloc(memory, size as u64).unwrap();
     memory.registers[address_register] = address as u64;

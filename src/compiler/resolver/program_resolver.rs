@@ -1,5 +1,4 @@
 use crate::compiler::analyzer::analyzed_expression::{AnalyzedFunction, AnalyzedProgram};
-use crate::compiler::analyzer::type_resolver::AnalyzedTypes;
 use crate::compiler::resolver::expression_resolver::{resolve_expression, type_size};
 use crate::compiler::resolver::resolved_expression::{
     FunctionReturnLocation, ResolvedFunction, ResolvedProgram, ValueData, ValueLocation,
@@ -12,6 +11,7 @@ pub struct ResolverContext {
     pub local_vars: HashMap<String, isize>,
     pub maximum_local_var_stack_size: usize,
     pub current_local_var_stack_size: usize,
+    pub constants: Vec<Vec<u8>>,
 }
 
 impl ResolverContext {
@@ -30,18 +30,6 @@ impl ResolverContext {
 pub fn resolve_program(program: &AnalyzedProgram) -> ResolvedProgram {
     let mut resolved_functions = Vec::with_capacity(program.functions.len());
 
-    for function in &program.functions {
-        resolved_functions.push(resolve_function(&program.analyzed_types, function));
-    }
-    ResolvedProgram {
-        functions: resolved_functions,
-    }
-}
-
-fn resolve_function(
-    analyzed_types: &AnalyzedTypes,
-    function: &AnalyzedFunction,
-) -> ResolvedFunction {
     let mut context = ResolverContext {
         local_vars: HashMap::new(),
         maximum_local_var_stack_size: 0,
@@ -49,15 +37,33 @@ fn resolve_function(
         resolved_types: ResolvedTypes {
             struct_types: HashMap::new(),
         },
+        constants: Vec::new(),
     };
 
-    for (name, ty) in &analyzed_types.struct_types {
-        let resolved_type = ResolvedStructType::new(analyzed_types, ty);
+    for (name, ty) in &program.analyzed_types.struct_types {
+        let resolved_type = ResolvedStructType::new(&program.analyzed_types, ty);
         context
             .resolved_types
             .struct_types
             .insert(name.clone(), resolved_type);
     }
+
+    for function in &program.functions {
+        resolved_functions.push(resolve_function(&mut context, function));
+    }
+    ResolvedProgram {
+        functions: resolved_functions,
+        constants: context.constants,
+    }
+}
+
+fn resolve_function(
+    context: &mut ResolverContext,
+    function: &AnalyzedFunction,
+) -> ResolvedFunction {
+    context.local_vars.clear();
+    context.current_local_var_stack_size = 0;
+    context.maximum_local_var_stack_size = 0;
 
     let mut param_offset = 16;
     for (name, ty) in function.parameters.iter().rev() {
@@ -68,7 +74,7 @@ fn resolve_function(
         param_offset += type_size;
     }
 
-    let resolved_body = resolve_expression(&mut context, &function.body, false);
+    let resolved_body = resolve_expression(context, &function.body, false);
 
     let return_type_data = ValueData::from_type(&function.return_type, &context);
     let return_location = match return_type_data.location {

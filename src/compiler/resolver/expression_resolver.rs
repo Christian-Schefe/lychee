@@ -1,5 +1,5 @@
 use crate::compiler::analyzer::analyzed_expression::{
-    AnalyzedExpression, AnalyzedExpressionKind, AnalyzedLiteral, AnalyzedUnaryOp,
+    AnalyzedConstant, AnalyzedExpression, AnalyzedExpressionKind, AnalyzedLiteral, AnalyzedUnaryOp,
     AssignableExpression, AssignableExpressionKind,
 };
 use crate::compiler::analyzer::type_resolver::AnalyzedType;
@@ -295,6 +295,17 @@ pub fn resolve_expression(
                 value_data,
             }
         }
+        AnalyzedExpressionKind::ConstantPointer(constant) => match constant {
+            AnalyzedConstant::String(bytes) => {
+                let index = context.constants.len();
+                context.constants.push(bytes.clone());
+                ResolvedExpression {
+                    kind: ResolvedExpressionKind::ConstantPointer(index),
+                    stack_discard,
+                    value_data,
+                }
+            }
+        },
     }
 }
 

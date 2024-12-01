@@ -18,10 +18,7 @@ pub struct Src<T> {
 pub type SrcToken = Src<Token>;
 
 pub fn lex(input_path: &PathBuf) -> LexResult<Vec<SrcToken>> {
-    let input: Vec<char> = std::fs::read_to_string(input_path)
-        .unwrap()
-        .chars()
-        .collect();
+    let input: Vec<char> = std::fs::read_to_string(input_path)?.chars().collect();
     let mut offset = 0;
     let mut tokens = Vec::new();
     let mut location = Location::new();
@@ -80,7 +77,7 @@ fn read_string(
                 return Err(LocationError::new(
                     "Unterminated string.".to_string(),
                     location.clone(),
-                ));
+                ))?;
             }
             match input[i] {
                 'n' => string.push('\n'),
@@ -89,11 +86,12 @@ fn read_string(
                 '\\' => string.push('\\'),
                 '"' => string.push('"'),
                 '\'' => string.push('\''),
+                '0' => string.push('\0'),
                 _ => {
                     return Err(LocationError::new(
                         "Invalid escape sequence.".to_string(),
                         location.clone(),
-                    ))
+                    ))?
                 }
             }
         } else {
@@ -105,7 +103,7 @@ fn read_string(
     Err(LocationError::new(
         "Unterminated string.".to_string(),
         location.clone(),
-    ))
+    ))?
 }
 
 fn read_char(input: &Vec<char>, location: &Location, offset: usize) -> LexResult<(Token, usize)> {
@@ -116,21 +114,21 @@ fn read_char(input: &Vec<char>, location: &Location, offset: usize) -> LexResult
             return Err(LocationError::new(
                 "Invalid char literal.".to_string(),
                 location.clone(),
-            ))
+            ))?
         }
     };
     if str.len() != 1 {
         return Err(LocationError::new(
             "Invalid char literal.".to_string(),
             location.clone(),
-        ));
+        ))?;
     }
     let char = str.chars().next().unwrap();
     if char.len_utf8() != 1 {
         Err(LocationError::new(
             "Invalid char literal.".to_string(),
             location.clone(),
-        ))
+        ))?
     } else {
         Ok((Token::Literal(Literal::Char(char)), new_offset))
     }
@@ -160,7 +158,7 @@ fn read_token(input: &Vec<char>, location: &Location, offset: usize) -> LexResul
         0 => Err(LocationError::new(
             format!("Invalid token: '{}'", input[offset]),
             location.clone(),
-        )),
+        ))?,
         len => Ok((token, offset + len)),
     }
 }

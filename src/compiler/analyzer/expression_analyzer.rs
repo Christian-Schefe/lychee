@@ -1,6 +1,7 @@
 use crate::compiler::analyzer::analyzed_expression::{
-    AnalyzedBinaryOp, AnalyzedExpression, AnalyzedExpressionKind, AnalyzedLiteral, AnalyzedUnaryOp,
-    AssignableExpression, AssignableExpressionKind, BinaryAssignOp,
+    AnalyzedBinaryOp, AnalyzedConstant, AnalyzedExpression, AnalyzedExpressionKind,
+    AnalyzedLiteral, AnalyzedUnaryOp, AssignableExpression, AssignableExpressionKind,
+    BinaryAssignOp,
 };
 use crate::compiler::analyzer::program_analyzer::{AnalyzerContext, LocalVariable, LoopData};
 use crate::compiler::analyzer::type_resolver::AnalyzedType;
@@ -342,16 +343,10 @@ pub fn analyze_expression(
                 })
             }
             ParsedLiteral::String(val) => {
-                let bytes = val.as_bytes();
-                let array_values = bytes
-                    .iter()
-                    .map(|b| AnalyzedExpression {
-                        kind: AnalyzedExpressionKind::Literal(AnalyzedLiteral::Char(*b as i8)),
-                        ty: AnalyzedType::Char,
-                    })
-                    .collect();
+                let mut bytes = val.as_bytes().to_vec();
+                bytes.push(0);
                 Ok(AnalyzedExpression {
-                    kind: AnalyzedExpressionKind::Literal(AnalyzedLiteral::Array(array_values)),
+                    kind: AnalyzedExpressionKind::ConstantPointer(AnalyzedConstant::String(bytes)),
                     ty: AnalyzedType::Pointer(Box::new(AnalyzedType::Char)),
                 })
             }

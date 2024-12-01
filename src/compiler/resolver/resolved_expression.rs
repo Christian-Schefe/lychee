@@ -6,6 +6,7 @@ use crate::compiler::resolver::program_resolver::ResolverContext;
 #[derive(Debug, Clone)]
 pub struct ResolvedProgram {
     pub functions: Vec<ResolvedFunction>,
+    pub constants: Vec<Vec<u8>>,
 }
 
 #[derive(Debug, Clone)]
@@ -117,6 +118,7 @@ pub enum ResolvedExpressionKind {
     },
     ValueOfAssignable(ResolvedAssignableExpression),
     Literal(ResolvedLiteral),
+    ConstantPointer(usize),
     Unary {
         op: ResolvedUnaryOp,
         expr: Box<ResolvedExpression>,

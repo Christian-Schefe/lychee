@@ -285,6 +285,10 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
                 context.label(&short_circuit_label);
             }
         },
+        ResolvedExpressionKind::ConstantPointer(constant) => {
+            let label = context.constant_labels[*constant].clone();
+            context.lea("r0", &label);
+        }
     };
 
     do_stack_discard(context, expression);

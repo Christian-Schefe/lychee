@@ -48,6 +48,7 @@ pub enum AnalyzedExpressionKind {
     },
     ValueOfAssignable(AssignableExpression),
     Literal(AnalyzedLiteral),
+    ConstantPointer(AnalyzedConstant),
     Unary {
         op: AnalyzedUnaryOp,
         expr: Box<AnalyzedExpression>,
@@ -85,6 +86,11 @@ pub enum AnalyzedLiteral {
     Integer(i64),
     Struct(Vec<(String, AnalyzedExpression)>),
     Array(Vec<AnalyzedExpression>),
+}
+
+#[derive(Debug, Clone)]
+pub enum AnalyzedConstant {
+    String(Vec<u8>),
 }
 
 #[derive(Debug, Clone)]

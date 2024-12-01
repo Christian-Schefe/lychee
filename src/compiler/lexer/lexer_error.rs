@@ -1,8 +1,9 @@
 use crate::compiler::lexer::Location;
+use anyhow::Error;
 use std::fmt::Display;
 use thiserror::Error;
 
-pub type LexResult<T> = Result<T, LocationError>;
+pub type LexResult<T> = Result<T, Error>;
 
 #[derive(Clone, Debug, Error)]
 pub struct LocationError {

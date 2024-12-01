@@ -11,6 +11,11 @@ pub fn generate_program_code(context: &mut CodegenContext, program: &ResolvedPro
         context.function_labels.insert(x.name.clone(), label);
     });
 
+    program.constants.iter().enumerate().for_each(|x| {
+        let label = context.new_label(format!("constant_{}", x.0).as_str());
+        context.constant_labels.push(label);
+    });
+
     generate_program_prelude(context);
 
     BuiltinFunction::generate_builtin_function_code(context);
@@ -18,6 +23,12 @@ pub fn generate_program_code(context: &mut CodegenContext, program: &ResolvedPro
     for function in &program.functions {
         context.return_label = context.new_label(format!("{}_return", function.name).as_str());
         generate_function_code(context, function);
+    }
+
+    for (index, constant) in program.constants.iter().enumerate() {
+        let label = context.constant_labels[index].clone();
+        context.label(&label);
+        context.data(constant);
     }
 }
 

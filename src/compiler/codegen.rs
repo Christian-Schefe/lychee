@@ -10,6 +10,7 @@ pub struct CodegenContext {
     lines: Vec<String>,
     label_counter: usize,
     pub function_labels: HashMap<String, String>,
+    pub constant_labels: Vec<String>,
     pub return_label: String,
     pub break_label: String,
     pub continue_label: String,
@@ -24,6 +25,7 @@ impl CodegenContext {
             return_label: String::new(),
             break_label: String::new(),
             continue_label: String::new(),
+            constant_labels: Vec::new(),
         }
     }
     pub fn build(&self) -> String {
@@ -36,6 +38,14 @@ impl CodegenContext {
     }
     pub fn label(&mut self, label: &str) {
         self.lines.push(format!("{}:", label));
+    }
+    pub fn data(&mut self, data: &[u8]) {
+        let data = data
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>()
+            .join(" ");
+        self.lines.push(format!("bytes {}", data));
     }
     pub fn jmp(&mut self, label: &str) {
         self.lines.push(format!("jmp {}", label));

@@ -186,6 +186,9 @@ fn print_expression(printer: &mut Printer, expr: &ResolvedExpression) {
             print_assignable_expression(printer, expr);
             printer.dedent();
         }
+        ResolvedExpressionKind::ConstantPointer(constant) => {
+            printer.add_line(format!("Constant {}", constant));
+        }
     }
 }
 
