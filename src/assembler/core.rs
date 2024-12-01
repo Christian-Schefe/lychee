@@ -26,14 +26,21 @@ pub(crate) fn convert_line(line: &str) -> Instruction {
     let instruction = match &opcode {
         OpCode::Nop | OpCode::Ret | OpCode::Exit => InstructionType::parse_simple(opcode),
         OpCode::Store | OpCode::Load => InstructionType::parse_register_size_address(opcode, parts),
-        OpCode::Push | OpCode::Pop | OpCode::SignExtend => InstructionType::parse_size_register(opcode, parts),
-        OpCode::Binop(_) => InstructionType::parse_two_registers(opcode, parts),
+        OpCode::Push | OpCode::Pop | OpCode::SignExtend => {
+            InstructionType::parse_size_register(opcode, parts)
+        }
+        OpCode::Binop(_) | OpCode::Alloc => InstructionType::parse_two_registers(opcode, parts),
         OpCode::BinopImmediate(_) => InstructionType::parse_register_immediate(opcode, parts),
         OpCode::Call | OpCode::Jump(_) => InstructionType::parse_label(opcode, parts),
-        OpCode::Unop(_) | OpCode::Set(_) => InstructionType::parse_register(opcode, parts),
-        OpCode::ReadStdin | OpCode::WriteStdout | OpCode::Lea | OpCode::PushMem | OpCode::PopMem | OpCode::PeekMem => {
-            InstructionType::parse_register_address(opcode, parts)
+        OpCode::Unop(_) | OpCode::Set(_) | OpCode::Free => {
+            InstructionType::parse_register(opcode, parts)
         }
+        OpCode::ReadStdin
+        | OpCode::WriteStdout
+        | OpCode::Lea
+        | OpCode::PushMem
+        | OpCode::PopMem
+        | OpCode::PeekMem => InstructionType::parse_register_address(opcode, parts),
     };
 
     Instruction::Instr(instruction)
@@ -142,6 +149,8 @@ lazy_static! {
             ("pushmem".to_string(), OpCode::PushMem),
             ("popmem".to_string(), OpCode::PopMem),
             ("peekmem".to_string(), OpCode::PeekMem),
+            ("alloc".to_string(), OpCode::Alloc),
+            ("free".to_string(), OpCode::Free),
         ])
     };
     pub static ref REGISTER_MAP: HashMap<String, RegisterCode> = {

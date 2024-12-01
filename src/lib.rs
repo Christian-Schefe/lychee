@@ -20,6 +20,8 @@ pub enum OpCode {
     PushMem,
     PopMem,
     PeekMem,
+    Alloc,
+    Free,
 }
 
 impl OpCode {
@@ -45,6 +47,8 @@ impl OpCode {
             OpCode::PushMem => 0x36,
             OpCode::PopMem => 0x37,
             OpCode::PeekMem => 0x38,
+            OpCode::Alloc => 0x39,
+            OpCode::Free => 0x3A,
         }
     }
 }
@@ -109,3 +113,5 @@ pub enum RegisterCode {
 }
 
 pub const DATA_SIZE_64: u8 = 0x08;
+pub const DATA_SIZE_32: u8 = 0x04;
+pub const DATA_SIZE_8: u8 = 0x01;

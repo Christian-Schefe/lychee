@@ -1,3 +1,4 @@
+use crate::heap::Heap;
 use crate::memory::Memory;
 use clap::Parser;
 use lychee_compiler::{BinopType, UnopType, DATA_SIZE_64};
@@ -5,6 +6,7 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 
 mod constants;
+mod heap;
 mod input;
 mod memory;
 
@@ -22,14 +24,15 @@ fn main() {
 
     let size = 0x100000;
     let mut memory = Memory::new(size, program);
+    let mut heap = Heap::new(&mut memory, size, size);
     let start_instant = std::time::Instant::now();
-    let exit_code = run(&mut memory, args.debug_print);
+    let exit_code = run(&mut memory, &mut heap, args.debug_print);
     let elapsed = start_instant.elapsed();
     println!("Elapsed: {:?}", elapsed);
     println!("Main return value: {}", exit_code);
 }
 
-pub fn run(memory: &mut Memory, debug_print: bool) -> i64 {
+pub fn run(memory: &mut Memory, heap: &mut Heap, debug_print: bool) -> i64 {
     let mut exit_code = 0;
     loop {
         let pc = memory.registers[constants::PC] as usize;
@@ -124,6 +127,8 @@ pub fn run(memory: &mut Memory, debug_print: bool) -> i64 {
             0x36 => pushmem(pc, memory, debug_print),
             0x37 => popmem(pc, memory, false, debug_print),
             0x38 => popmem(pc, memory, true, debug_print),
+            0x39 => alloc(pc, memory, heap, debug_print),
+            0x3A => free(pc, memory, heap, debug_print),
             _ => panic!("Unknown opcode: {}", opcode),
         };
         if debug_print {
@@ -521,5 +526,33 @@ fn popmem(pc: usize, memory: &mut Memory, is_peek: bool, debug_print: bool) {
                 data_size, src_address, dest_address
             );
         }
+    }
+}
+
+fn alloc(pc: usize, memory: &mut Memory, heap: &mut Heap, debug_print: bool) {
+    let byte1 = memory.data[pc + 1];
+    let size_register = ((byte1 & 0xF0) >> 4) as usize;
+    let size = memory.registers[size_register] as i64;
+
+    let address_register = (byte1 & 0x0F) as usize;
+
+    let address = heap.malloc(memory, size as u64).unwrap();
+    memory.registers[address_register] = address as u64;
+    memory.registers[constants::PC] += 2;
+
+    if debug_print {
+        println!("Allocated {} bytes at address {}", size, address);
+    }
+}
+
+fn free(pc: usize, memory: &mut Memory, heap: &mut Heap, debug_print: bool) {
+    let address_register = memory.data[pc + 1] as usize;
+    let address = memory.registers[address_register] as usize;
+
+    heap.free(memory, address);
+    memory.registers[constants::PC] += 2;
+
+    if debug_print {
+        println!("Freed memory at address {}", address);
     }
 }
