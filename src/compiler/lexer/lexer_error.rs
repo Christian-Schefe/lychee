@@ -1,6 +1,6 @@
+use crate::compiler::lexer::Location;
 use std::fmt::Display;
 use thiserror::Error;
-use crate::compiler::lexer::Location;
 
 pub type LexResult<T> = Result<T, LocationError>;
 
@@ -12,10 +12,7 @@ pub struct LocationError {
 
 impl LocationError {
     pub fn new(message: String, location: Location) -> Self {
-        LocationError {
-            message,
-            location,
-        }
+        LocationError { message, location }
     }
 }
 

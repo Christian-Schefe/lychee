@@ -12,12 +12,21 @@ pub fn parse_type(tokens: &mut TokenStack) -> ParseResult<ParsedType> {
         Token::Static(StaticToken::OpenBracket) => {
             let inner = parse_type(tokens)?;
             pop_expected(tokens, Token::Static(StaticToken::CloseBracket))?;
-            Ok(ParsedType::new(ParsedTypeKind::Array(Box::new(inner)), token.location))
+            Ok(ParsedType::new(
+                ParsedTypeKind::Array(Box::new(inner)),
+                token.location,
+            ))
         }
         Token::Static(StaticToken::Ampersand) => {
             let inner = parse_type(tokens)?;
-            Ok(ParsedType::new(ParsedTypeKind::Pointer(Box::new(inner)), token.location))
+            Ok(ParsedType::new(
+                ParsedTypeKind::Pointer(Box::new(inner)),
+                token.location,
+            ))
         }
-        _ => Err(LocationError::new(format!("Expected type, found '{}'", token.value), token.location))?,
+        _ => Err(LocationError::new(
+            format!("Expected type, found '{}'", token.value),
+            token.location,
+        ))?,
     }
 }

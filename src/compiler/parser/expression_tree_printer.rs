@@ -1,5 +1,8 @@
+use crate::compiler::parser::parsed_expression::{
+    ParsedExpression, ParsedExpressionKind, ParsedFunction, ParsedLiteral, ParsedProgram,
+    ParsedStructDefinition,
+};
 use std::fmt::Display;
-use crate::compiler::parser::parsed_expression::{ParsedExpression, ParsedExpressionKind, ParsedFunction, ParsedLiteral, ParsedProgram, ParsedStructDefinition};
 
 struct Line(usize, String);
 
@@ -32,7 +35,11 @@ impl Printer {
         self.lines.push(Line(self.indent, line));
     }
     pub fn build(&self) -> String {
-        self.lines.iter().map(|line| line.to_string()).collect::<Vec<String>>().join("\n")
+        self.lines
+            .iter()
+            .map(|line| line.to_string())
+            .collect::<Vec<String>>()
+            .join("\n")
     }
 }
 
@@ -100,7 +107,10 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
         ParsedExpressionKind::Literal(lit) => {
             print_literal(printer, lit);
         }
-        ParsedExpressionKind::Block { expressions, returns_value: _ } => {
+        ParsedExpressionKind::Block {
+            expressions,
+            returns_value: _,
+        } => {
             printer.add_line("{".to_string());
             printer.indent();
             for expr in expressions {
@@ -117,7 +127,11 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
                 printer.dedent();
             }
         }
-        ParsedExpressionKind::While { condition, loop_body, else_expr: false_block } => {
+        ParsedExpressionKind::While {
+            condition,
+            loop_body,
+            else_expr: false_block,
+        } => {
             printer.add_line("While".to_string());
             printer.indent();
             print_expression(printer, condition);
@@ -127,13 +141,27 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
             }
             printer.dedent();
         }
-        ParsedExpressionKind::Declaration { var_type, var_name, value } => {
-            printer.add_line(format!("Declaration({}, {})", var_type.as_ref().map_or("var".to_string(), |x| format!("{:?}", x.value)), var_name));
+        ParsedExpressionKind::Declaration {
+            var_type,
+            var_name,
+            value,
+        } => {
+            printer.add_line(format!(
+                "Declaration({}, {})",
+                var_type
+                    .as_ref()
+                    .map_or("var".to_string(), |x| format!("{:?}", x.value)),
+                var_name
+            ));
             printer.indent();
             print_expression(printer, value);
             printer.dedent();
         }
-        ParsedExpressionKind::If { condition, then_block, else_expr: else_block } => {
+        ParsedExpressionKind::If {
+            condition,
+            then_block,
+            else_expr: else_block,
+        } => {
             printer.add_line("If".to_string());
             printer.indent();
             print_expression(printer, condition);
@@ -144,7 +172,10 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
             }
             printer.dedent();
         }
-        ParsedExpressionKind::FunctionCall { function_name, args } => {
+        ParsedExpressionKind::FunctionCall {
+            function_name,
+            args,
+        } => {
             printer.add_line(format!("FunctionCall({})", function_name));
             printer.indent();
             for arg in args {

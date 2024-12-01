@@ -8,10 +8,7 @@ pub struct Src<T> {
 
 impl<T> Src<T> {
     pub fn new(value: T, location: Location) -> Self {
-        Self {
-            value,
-            location,
-        }
+        Self { value, location }
     }
 }
 

@@ -1,5 +1,7 @@
 use crate::compiler::analyzer::type_resolver::{AnalyzedType, AnalyzedTypes};
-use crate::compiler::parser::parsed_expression::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, UnaryMathOp};
+use crate::compiler::parser::parsed_expression::{
+    BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, UnaryMathOp,
+};
 
 #[derive(Debug, Clone)]
 pub struct AnalyzedProgram {
@@ -20,7 +22,6 @@ pub struct AnalyzedExpression {
     pub kind: AnalyzedExpressionKind,
     pub ty: AnalyzedType,
 }
-
 
 #[derive(Debug, Clone)]
 pub enum AnalyzedExpressionKind {
@@ -102,7 +103,6 @@ pub enum AssignableExpressionKind {
     FieldAccess(Box<AssignableExpression>, String),
     ArrayIndex(Box<AnalyzedExpression>, Box<AnalyzedExpression>),
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AnalyzedBinaryOp {

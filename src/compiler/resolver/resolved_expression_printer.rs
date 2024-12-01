@@ -1,5 +1,8 @@
 use crate::compiler::parser::expression_tree_printer::Printer;
-use crate::compiler::resolver::resolved_expression::{ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedFunction, ResolvedLiteral, ResolvedProgram};
+use crate::compiler::resolver::resolved_expression::{
+    ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedFunction,
+    ResolvedLiteral, ResolvedProgram,
+};
 
 pub fn print_program(expr: &ResolvedProgram) {
     let mut printer = Printer::new();
@@ -10,41 +13,45 @@ pub fn print_program(expr: &ResolvedProgram) {
 }
 
 fn print_function(printer: &mut Printer, function: &ResolvedFunction) {
-    printer.add_line(format!("fn {} (stack: {}, return location: {:?})", function.name, function.local_var_stack_size, function.value_location));
+    printer.add_line(format!(
+        "fn {} (stack: {}, return location: {:?})",
+        function.name, function.local_var_stack_size, function.value_location
+    ));
     printer.indent();
     print_expression(printer, &function.body);
     printer.dedent();
 }
 
 fn print_expression(printer: &mut Printer, expr: &ResolvedExpression) {
-    printer.add_line(format!("Expr: {:?}, stack discard: {}", expr.value_data, expr.stack_discard));
+    printer.add_line(format!(
+        "Expr: {:?}, stack discard: {}",
+        expr.value_data, expr.stack_discard
+    ));
     match &expr.kind {
-        ResolvedExpressionKind::Literal(literal) => {
-            match literal {
-                ResolvedLiteral::Struct(fields) => {
-                    printer.add_line("StructLiteral".to_string());
+        ResolvedExpressionKind::Literal(literal) => match literal {
+            ResolvedLiteral::Struct(fields) => {
+                printer.add_line("StructLiteral".to_string());
+                printer.indent();
+                for field_expr in fields {
                     printer.indent();
-                    for field_expr in fields {
-                        printer.indent();
-                        print_expression(printer, field_expr);
-                        printer.dedent();
-                    }
+                    print_expression(printer, field_expr);
                     printer.dedent();
                 }
-                ResolvedLiteral::Unit => printer.add_line("Unit".to_string()),
-                ResolvedLiteral::Bool(b) => printer.add_line(format!("Bool({})", b)),
-                ResolvedLiteral::Char(c) => printer.add_line(format!("Char({})", c)),
-                ResolvedLiteral::Integer(i) => printer.add_line(format!("Int({})", i)),
-                ResolvedLiteral::Array(elements) => {
-                    printer.add_line("ArrayLiteral".to_string());
-                    printer.indent();
-                    for element in elements {
-                        print_expression(printer, element);
-                    }
-                    printer.dedent();
-                }
+                printer.dedent();
             }
-        }
+            ResolvedLiteral::Unit => printer.add_line("Unit".to_string()),
+            ResolvedLiteral::Bool(b) => printer.add_line(format!("Bool({})", b)),
+            ResolvedLiteral::Char(c) => printer.add_line(format!("Char({})", c)),
+            ResolvedLiteral::Integer(i) => printer.add_line(format!("Int({})", i)),
+            ResolvedLiteral::Array(elements) => {
+                printer.add_line("ArrayLiteral".to_string());
+                printer.indent();
+                for element in elements {
+                    print_expression(printer, element);
+                }
+                printer.dedent();
+            }
+        },
         ResolvedExpressionKind::Block(expressions) => {
             printer.add_line("{".to_string());
             printer.indent();
@@ -73,7 +80,11 @@ fn print_expression(printer: &mut Printer, expr: &ResolvedExpression) {
                 printer.dedent();
             }
         }
-        ResolvedExpressionKind::If { condition, then_block, else_expr } => {
+        ResolvedExpressionKind::If {
+            condition,
+            then_block,
+            else_expr,
+        } => {
             printer.add_line("If".to_string());
             printer.indent();
             print_expression(printer, condition);
@@ -83,7 +94,11 @@ fn print_expression(printer: &mut Printer, expr: &ResolvedExpression) {
             }
             printer.dedent();
         }
-        ResolvedExpressionKind::While { condition, loop_body, else_expr } => {
+        ResolvedExpressionKind::While {
+            condition,
+            loop_body,
+            else_expr,
+        } => {
             printer.add_line("While".to_string());
             printer.indent();
             print_expression(printer, condition);
@@ -131,16 +146,30 @@ fn print_expression(printer: &mut Printer, expr: &ResolvedExpression) {
             print_assignable_expression(printer, expr);
             printer.dedent();
         }
-        ResolvedExpressionKind::FunctionCall { function_name, args, return_stack_space } => {
-            printer.add_line(format!("FunctionCall {} (return on stack: {})", function_name, return_stack_space));
+        ResolvedExpressionKind::FunctionCall {
+            function_name,
+            args,
+            return_stack_space,
+        } => {
+            printer.add_line(format!(
+                "FunctionCall {} (return on stack: {})",
+                function_name, return_stack_space
+            ));
             printer.indent();
             for arg in args {
                 print_expression(printer, arg);
             }
             printer.dedent();
         }
-        ResolvedExpressionKind::FieldAccess { expr, field_offset, struct_size } => {
-            printer.add_line(format!("FieldAccess (offset: {}, struct size: {})", field_offset, struct_size));
+        ResolvedExpressionKind::FieldAccess {
+            expr,
+            field_offset,
+            struct_size,
+        } => {
+            printer.add_line(format!(
+                "FieldAccess (offset: {}, struct size: {})",
+                field_offset, struct_size
+            ));
             printer.indent();
             print_expression(printer, expr);
             printer.dedent();

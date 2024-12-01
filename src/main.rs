@@ -1,7 +1,7 @@
-use std::path::PathBuf;
-use clap::Parser;
 use crate::assembler::assemble;
 use crate::compiler::compile;
+use clap::Parser;
+use std::path::PathBuf;
 
 mod assembler;
 mod compiler;
@@ -20,12 +20,18 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let output = args.output.clone().unwrap_or_else(|| args.input.with_extension("o"));
+    let output = args
+        .output
+        .clone()
+        .unwrap_or_else(|| args.input.with_extension("o"));
 
     if args.assemble_only {
         assemble(&args.input, &output);
     } else {
-        let assembly_output = args.assembly_output.clone().unwrap_or_else(|| output.with_extension("bud"));
+        let assembly_output = args
+            .assembly_output
+            .clone()
+            .unwrap_or_else(|| output.with_extension("bud"));
         compile(&args.input, &assembly_output);
         assemble(&assembly_output, &output);
     }

@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::compiler::lexer::location::Src;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct ParsedProgram {
@@ -130,12 +130,8 @@ pub enum UnaryOp {
     LogicalNot,
     Borrow,
     Dereference,
-    Increment {
-        is_prefix: bool,
-    },
-    Decrement {
-        is_prefix: bool,
-    },
+    Increment { is_prefix: bool },
+    Decrement { is_prefix: bool },
     Cast(ParsedType),
     Member(String),
     Index(Box<ParsedExpression>),

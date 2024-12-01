@@ -1,6 +1,6 @@
 use crate::compiler::analyzer::analyzed_expression::{AnalyzedBinaryOp, BinaryAssignOp};
 use crate::compiler::analyzer::type_resolver::AnalyzedType;
-use crate::compiler::parser::parsed_expression::{UnaryMathOp};
+use crate::compiler::parser::parsed_expression::UnaryMathOp;
 use crate::compiler::resolver::program_resolver::ResolverContext;
 
 #[derive(Debug, Clone)]
@@ -24,21 +24,51 @@ pub enum ValueLocation {
 impl ValueData {
     pub fn from_type(ty: &AnalyzedType, resolver_context: &ResolverContext) -> ValueData {
         match ty {
-            AnalyzedType::Unit => ValueData { location: ValueLocation::None, size: 0 },
+            AnalyzedType::Unit => ValueData {
+                location: ValueLocation::None,
+                size: 0,
+            },
             AnalyzedType::Struct(struct_name) => {
-                let size = resolver_context.resolved_types.struct_types.get(struct_name).unwrap().size;
-                ValueData { location: ValueLocation::Stack, size }
+                let size = resolver_context
+                    .resolved_types
+                    .struct_types
+                    .get(struct_name)
+                    .unwrap()
+                    .size;
+                ValueData {
+                    location: ValueLocation::Stack,
+                    size,
+                }
             }
-            AnalyzedType::Bool => ValueData { location: ValueLocation::Register, size: 1 },
-            AnalyzedType::Char => ValueData { location: ValueLocation::Register, size: 1 },
-            AnalyzedType::Integer(size) => ValueData { location: ValueLocation::Register, size: *size },
-            AnalyzedType::Pointer(_) => ValueData { location: ValueLocation::Register, size: 8 },
-            AnalyzedType::Array(_) => ValueData { location: ValueLocation::Register, size: 8 },
+            AnalyzedType::Bool => ValueData {
+                location: ValueLocation::Register,
+                size: 1,
+            },
+            AnalyzedType::Char => ValueData {
+                location: ValueLocation::Register,
+                size: 1,
+            },
+            AnalyzedType::Integer(size) => ValueData {
+                location: ValueLocation::Register,
+                size: *size,
+            },
+            AnalyzedType::Pointer(_) => ValueData {
+                location: ValueLocation::Register,
+                size: 8,
+            },
+            AnalyzedType::Array(_) => ValueData {
+                location: ValueLocation::Register,
+                size: 8,
+            },
         }
     }
     pub fn discard_stack_size(&self, should_discard: bool) -> usize {
         if let ValueLocation::Stack = self.location {
-            if should_discard { self.size } else { 0 }
+            if should_discard {
+                self.size
+            } else {
+                0
+            }
         } else {
             0
         }
@@ -47,10 +77,7 @@ impl ValueData {
 
 #[derive(Debug, Clone)]
 pub enum FunctionReturnLocation {
-    Stack {
-        offset: isize,
-        size: usize,
-    },
+    Stack { offset: isize, size: usize },
     Register,
     None,
 }

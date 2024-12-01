@@ -1,12 +1,12 @@
-use std::path::PathBuf;
 use crate::compiler::lexer::token_stack::TokenStack;
+use std::path::PathBuf;
 
+mod analyzer;
+mod builtin;
+mod codegen;
 mod lexer;
 mod parser;
-mod analyzer;
 mod resolver;
-mod codegen;
-mod builtin;
 
 pub fn compile(source_input_path: &PathBuf, assembly_output_path: &PathBuf) {
     let tokens = lexer::lex(source_input_path).unwrap();
