@@ -5,6 +5,7 @@ use crate::compiler::analyzer::analyzed_expression::{
 use crate::compiler::analyzer::program_analyzer::{AnalyzerContext, LocalVariable, LoopData};
 use crate::compiler::analyzer::type_resolver::AnalyzedType;
 use crate::compiler::analyzer::AnalyzerResult;
+use crate::compiler::lexer::location::Location;
 use crate::compiler::parser::parsed_expression::{
     BinaryComparisonOp, BinaryOp, ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryOp,
 };
@@ -617,39 +618,82 @@ pub fn analyze_expression(
                         expression.location
                     )
                 })?;
-                let struct_type = match &analyzed_expr.ty {
-                    AnalyzedType::Struct(str_name) => context
-                        .analyzed_types
-                        .struct_types
-                        .get(str_name)
-                        .ok_or_else(|| {
+                match &analyzed_expr.ty {
+                    AnalyzedType::Struct(str_name) => {
+                        let struct_type = context
+                            .analyzed_types
+                            .struct_types
+                            .get(str_name)
+                            .ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "Struct type '{}' not found at {}.",
+                                    str_name,
+                                    expr.location
+                                )
+                            })?;
+                        let field_type = struct_type.fields.get(member).ok_or_else(|| {
                             anyhow::anyhow!(
-                                "Struct type '{}' not found at {}.",
-                                str_name,
+                                "Struct type '{}' does not have field '{}' at {}.",
+                                analyzed_expr.ty,
+                                member,
                                 expr.location
                             )
-                        })?,
+                        })?;
+                        Ok(AnalyzedExpression {
+                            kind: AnalyzedExpressionKind::FieldAccess {
+                                field_name: member.clone(),
+                                expr: Box::new(analyzed_expr),
+                            },
+                            ty: field_type.clone(),
+                        })
+                    }
+                    AnalyzedType::Pointer(inner) => {
+                        if let AnalyzedType::Struct(str_name) = inner.as_ref() {
+                            let struct_type = context
+                                .analyzed_types
+                                .struct_types
+                                .get(str_name)
+                                .ok_or_else(|| {
+                                    anyhow::anyhow!(
+                                        "Struct type '{}' not found at {}.",
+                                        str_name,
+                                        expr.location
+                                    )
+                                })?;
+                            let field_type = struct_type.fields.get(member).ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "Struct type '{}' does not have field '{}' at {}.",
+                                    inner,
+                                    member,
+                                    expr.location
+                                )
+                            })?;
+                            Ok(AnalyzedExpression {
+                                kind: AnalyzedExpressionKind::ValueOfAssignable(
+                                    AssignableExpression {
+                                        kind: AssignableExpressionKind::PointerFieldAccess(
+                                            Box::new(analyzed_expr),
+                                            member.clone(),
+                                        ),
+                                        ty: field_type.clone(),
+                                    },
+                                ),
+                                ty: field_type.clone(),
+                            })
+                        } else {
+                            Err(anyhow::anyhow!(
+                                "Expected struct type, found '{}' at {}.",
+                                analyzed_expr.ty,
+                                expr.location
+                            ))?
+                        }
+                    }
                     _ => Err(anyhow::anyhow!(
                         "Expected struct type, found '{}' at {}.",
                         analyzed_expr.ty,
                         expr.location
                     ))?,
-                };
-                let field_type = struct_type.fields.get(member).ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "Struct type '{}' does not have field '{}' at {}.",
-                        analyzed_expr.ty,
-                        member,
-                        expr.location
-                    )
-                })?;
-                Ok(AnalyzedExpression {
-                    kind: AnalyzedExpressionKind::FieldAccess {
-                        field_name: member.clone(),
-                        expr: Box::new(analyzed_expr),
-                    },
-                    ty: field_type.clone(),
-                })
+                }
             }
             UnaryOp::Index(index) => {
                 let analyzed_expr = analyze_expression(context, expr).with_context(|| {
@@ -674,10 +718,13 @@ pub fn analyze_expression(
                 }
                 match analyzed_expr.ty.clone() {
                     AnalyzedType::Pointer(inner) => Ok(AnalyzedExpression {
-                        kind: AnalyzedExpressionKind::ArrayIndex {
-                            array: Box::new(analyzed_expr),
-                            index: Box::new(analyzed_index),
-                        },
+                        kind: AnalyzedExpressionKind::ValueOfAssignable(AssignableExpression {
+                            kind: AssignableExpressionKind::ArrayIndex(
+                                Box::new(analyzed_expr),
+                                Box::new(analyzed_index),
+                            ),
+                            ty: *inner.clone(),
+                        }),
                         ty: *inner,
                     }),
                     _ => Err(anyhow::anyhow!(
@@ -1018,50 +1065,7 @@ pub fn analyze_assignable_expression(
         ParsedExpressionKind::Unary {
             op: UnaryOp::Member(member),
             expr,
-        } => {
-            let analyzed_expr =
-                analyze_assignable_expression(context, expr).with_context(|| {
-                    format!(
-                        "Failed to analyze assignable member expression at {}.",
-                        expression.location
-                    )
-                })?;
-            let field_ty = match &analyzed_expr.ty {
-                AnalyzedType::Struct(str_name) => {
-                    let struct_type = context
-                        .analyzed_types
-                        .struct_types
-                        .get(str_name)
-                        .ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "Struct type '{}' not found at {}.",
-                                str_name,
-                                expr.location
-                            )
-                        })?;
-                    struct_type.fields.get(member).ok_or_else(|| {
-                        anyhow::anyhow!(
-                            "Struct type '{}' does not have field '{}' at {}.",
-                            analyzed_expr.ty,
-                            member,
-                            expr.location
-                        )
-                    })?
-                }
-                _ => Err(anyhow::anyhow!(
-                    "Expected struct type, found '{}' at {}.",
-                    analyzed_expr.ty,
-                    expr.location
-                ))?,
-            };
-            Ok(AssignableExpression {
-                ty: field_ty.clone(),
-                kind: AssignableExpressionKind::FieldAccess(
-                    Box::new(analyzed_expr),
-                    member.clone(),
-                ),
-            })
-        }
+        } => try_as_assignable_field_access(context, member.clone(), expr, &expression.location),
         ParsedExpressionKind::Unary {
             op: UnaryOp::Index(index),
             expr,
@@ -1104,6 +1108,97 @@ pub fn analyze_assignable_expression(
         ParsedExpressionKind::Unary { .. } => Err(anyhow::anyhow!(
             "Unary expression cannot be assigned to at {}.",
             expression.location
+        )),
+    }
+}
+
+fn try_as_assignable_field_access(
+    context: &mut AnalyzerContext,
+    member: String,
+    inner: &ParsedExpression,
+    location: &Location,
+) -> AnalyzerResult<AssignableExpression> {
+    let maybe_assignable_expr = analyze_assignable_expression(context, inner);
+    if let Ok(analyzed_expr) = maybe_assignable_expr {
+        match &analyzed_expr.ty {
+            AnalyzedType::Struct(str_name) => {
+                let struct_type = context
+                    .analyzed_types
+                    .struct_types
+                    .get(str_name)
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("Struct type '{}' not found at {}.", str_name, location)
+                    })?;
+                let field_type = struct_type.fields.get(&member).ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Struct type '{}' does not have field '{}' at {}.",
+                        analyzed_expr.ty,
+                        member,
+                        location
+                    )
+                })?;
+                return Ok(AssignableExpression {
+                    kind: AssignableExpressionKind::FieldAccess(
+                        Box::new(analyzed_expr),
+                        member.clone(),
+                    ),
+                    ty: field_type.clone(),
+                });
+            }
+            AnalyzedType::Pointer(_) => {}
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "Expected struct type, found '{}' at {}.",
+                    analyzed_expr.ty,
+                    location
+                ))?
+            }
+        }
+    };
+
+    let analyzed_expr = analyze_expression(context, inner).with_context(|| {
+        format!(
+            "Failed to analyze assignable member expression at {}.",
+            location
+        )
+    })?;
+    match &analyzed_expr.ty {
+        AnalyzedType::Pointer(inner) => {
+            if let AnalyzedType::Struct(str_name) = inner.as_ref() {
+                let struct_type = context
+                    .analyzed_types
+                    .struct_types
+                    .get(str_name)
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("Struct type '{}' not found at {}.", str_name, location)
+                    })?;
+                let field_type = struct_type.fields.get(&member).ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Struct type '{}' does not have field '{}' at {}.",
+                        inner,
+                        member,
+                        location
+                    )
+                })?;
+                Ok(AssignableExpression {
+                    kind: AssignableExpressionKind::PointerFieldAccess(
+                        Box::new(analyzed_expr),
+                        member.clone(),
+                    ),
+                    ty: field_type.clone(),
+                })
+            } else {
+                Err(anyhow::anyhow!(
+                    "Expected struct type, found '{}' at {}.",
+                    analyzed_expr.ty,
+                    location
+                ))?
+            }
+        }
+        _ => Err(anyhow::anyhow!(
+            "Expected struct type, found '{}' at {}.",
+            analyzed_expr.ty,
+            location
         )),
     }
 }

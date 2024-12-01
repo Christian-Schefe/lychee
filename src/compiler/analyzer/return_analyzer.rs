@@ -63,9 +63,6 @@ pub fn always_calls_return(expression: &AnalyzedExpression) -> bool {
             expr,
             field_name: _,
         } => always_calls_return(expr),
-        AnalyzedExpressionKind::ArrayIndex { array, index } => {
-            always_calls_return(array) || always_calls_return(index)
-        }
         AnalyzedExpressionKind::Increment(inner, _) => always_calls_return_assignable(inner),
         AnalyzedExpressionKind::Decrement(inner, _) => always_calls_return_assignable(inner),
     }
@@ -79,5 +76,6 @@ fn always_calls_return_assignable(expression: &AssignableExpression) -> bool {
         AssignableExpressionKind::ArrayIndex(arr_expr, index_expr) => {
             always_calls_return(arr_expr) || always_calls_return(index_expr)
         }
+        AssignableExpressionKind::PointerFieldAccess(expr, _) => always_calls_return(expr),
     }
 }

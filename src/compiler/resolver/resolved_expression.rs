@@ -163,6 +163,7 @@ pub enum ResolvedAssignableExpression {
     LocalVariable(isize),
     Dereference(Box<ResolvedExpression>),
     FieldAccess(Box<ResolvedAssignableExpression>, usize),
+    PointerFieldAccess(Box<ResolvedExpression>, usize),
     ArrayIndex(Box<ResolvedExpression>, Box<ResolvedExpression>, usize),
 }
 

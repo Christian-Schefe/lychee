@@ -73,10 +73,6 @@ pub enum AnalyzedExpressionKind {
         expr: Box<AnalyzedExpression>,
         field_name: String,
     },
-    ArrayIndex {
-        array: Box<AnalyzedExpression>,
-        index: Box<AnalyzedExpression>,
-    },
     Increment(AssignableExpression, bool),
     Decrement(AssignableExpression, bool),
 }
@@ -101,6 +97,7 @@ pub enum AssignableExpressionKind {
     LocalVariable(String),
     Dereference(Box<AnalyzedExpression>),
     FieldAccess(Box<AssignableExpression>, String),
+    PointerFieldAccess(Box<AnalyzedExpression>, String),
     ArrayIndex(Box<AnalyzedExpression>, Box<AnalyzedExpression>),
 }
 

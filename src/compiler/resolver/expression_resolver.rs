@@ -279,23 +279,6 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        AnalyzedExpressionKind::ArrayIndex { array, index } => {
-            let resolved_array = resolve_expression(context, array, false);
-            let resolved_index = resolve_expression(context, index, false);
-            let element_size = value_data.size;
-
-            ResolvedExpression {
-                kind: ResolvedExpressionKind::ValueOfAssignable(
-                    ResolvedAssignableExpression::ArrayIndex(
-                        Box::new(resolved_array),
-                        Box::new(resolved_index),
-                        element_size,
-                    ),
-                ),
-                stack_discard,
-                value_data,
-            }
-        }
         AnalyzedExpressionKind::Increment(expr, is_prefix) => {
             let resolved_expr = resolve_assignable_expression(context, expr);
             ResolvedExpression {
@@ -343,6 +326,11 @@ fn resolve_assignable_expression(
                 element_size,
             )
         }
+        AssignableExpressionKind::PointerFieldAccess(inner, field_name) => {
+            let resolved_inner = resolve_expression(context, inner, false);
+            let field_offset = field_offset(context, &inner.ty, field_name);
+            ResolvedAssignableExpression::PointerFieldAccess(Box::new(resolved_inner), field_offset)
+        }
     }
 }
 
@@ -370,6 +358,10 @@ where
 fn field_offset(context: &ResolverContext, struct_type: &AnalyzedType, field_name: &str) -> usize {
     let struct_name = match struct_type {
         AnalyzedType::Struct(name) => name,
+        AnalyzedType::Pointer(inner) => match &**inner {
+            AnalyzedType::Struct(name) => name,
+            _ => unreachable!(),
+        },
         _ => unreachable!(),
     };
     context
