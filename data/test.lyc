@@ -1,46 +1,85 @@
 int main() {
-    let var arr = newIntArray(5);
-    set(&arr, 0, 5);
-    set(&arr, 1, -8);
-    set(&arr, 2, random() as int);
-    printArray(&arr);
-    0
+    let var str = newString(100);
+    readString(&str);
+    printString(&str);
+    let int num = stringToInt(&str);
+    let int numToGuess = rand(10);
+    write_num(numToGuess);
+    write_char('\n');
+    if num == numToGuess {
+        write_char('Y');
+        write_char('e');
+        write_char('s');
+    } else {
+        write_char('N');
+        write_char('o');
+    };
+    write_char('\n');
+    num
 }
 
-struct IntArray {
-    &int data;
+struct String {
+    &char data;
     int size;
 }
 
-IntArray newIntArray(int size) {
-    let IntArray arr = new IntArray {
-        data: malloc(size * 4) as &int,
+String newString(int size) {
+    let String str = new String {
+        data: malloc(size) as &char,
         size: size
     };
-    arr
+    str
 }
 
-int get(&IntArray arr, int index) {
-    return arr.data[index];
+int rand(int max) {
+    let long r = random();
+    ((r % max as long) as int + max) % max
 }
 
-unit set(&IntArray arr, int index, int value) {
-    arr.data[index] = value;
-}
-
-unit printArray(&IntArray arr) {
+unit readString(&String str) {
     let int i = 0;
-    write_char('[');
-    while (i < arr.size) {
-        if i > 0 {
-            write_char(',');
-            write_char(' ');
+    while (i < str.size) {
+        let char c = read_char();
+        if c == '\n' || c == '\r' {
+            break;
         };
-        write_num(arr.data[i]);
+        set(str, i, c);
         i++;
     };
-    write_char(']');
+}
+
+char get(&String str, int index) {
+    return str.data[index];
+}
+
+unit set(&String str, int index, char value) {
+    str.data[index] = value;
+}
+
+unit printString(&String str) {
+    let int i = 0;
+    write_char('"');
+    while (i < str.size) {
+        write_char(get(str, i));
+        i++;
+    };
+    write_char('"');
     write_char('\n');
+}
+
+int stringToInt(&String str) {
+    let int i = 0;
+    let int num = 0;
+    let int sign = 1;
+    if get(str, 0) == '-' {
+        sign = -1;
+        i++;
+    };
+    while (i < str.size) {
+        num = num * 10 + (get(str, i) as int - '0' as int);
+        i++;
+    };
+    num * sign
 }
 
 unit write_num(int num) {

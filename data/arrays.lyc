@@ -1,0 +1,59 @@
+int main() {
+    let var arr = newIntArray(5);
+    set(&arr, 0, 5);
+    set(&arr, 1, -8);
+    set(&arr, 2, random() as int);
+    printArray(&arr);
+    0
+}
+
+struct IntArray {
+    &int data;
+    int size;
+}
+
+IntArray newIntArray(int size) {
+    let IntArray arr = new IntArray {
+        data: malloc(size * 4) as &int,
+        size: size
+    };
+    arr
+}
+
+int get(&IntArray arr, int index) {
+    return arr.data[index];
+}
+
+unit set(&IntArray arr, int index, int value) {
+    arr.data[index] = value;
+}
+
+unit printArray(&IntArray arr) {
+    let int i = 0;
+    write_char('[');
+    while (i < arr.size) {
+        if i > 0 {
+            write_char(',');
+            write_char(' ');
+        };
+        write_num(arr.data[i]);
+        i++;
+    };
+    write_char(']');
+    write_char('\n');
+}
+
+unit write_num(int num) {
+    if num == 0 {
+        write_char((num % 10 + '0' as int) as char);
+        return;
+    } else if num < 0 {
+        write_char('-');
+        num = -num;
+    };
+
+    if num >= 10 {
+        write_num(num / 10);
+    };
+    write_char((num % 10 + '0' as int) as char);
+}

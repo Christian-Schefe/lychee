@@ -30,7 +30,6 @@ fn main() {
     let start_instant = std::time::Instant::now();
     let exit_code = run(&mut memory, &mut heap, args.debug_print);
     let elapsed = start_instant.elapsed();
-    heap.print_blocks(&memory);
     println!("Elapsed: {:?}", elapsed);
     println!("Main return value: {}", exit_code);
 }
@@ -139,6 +138,9 @@ pub fn run(memory: &mut Memory, heap: &mut Heap, debug_print: bool) -> i64 {
             memory.print_stack();
             println!();
         }
+    }
+    if debug_print {
+        heap.print_blocks(&memory);
     }
     exit_code
 }
