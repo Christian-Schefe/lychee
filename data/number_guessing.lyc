@@ -1,19 +1,21 @@
 int main() {
-    print_literal("Hello, World!\n");
+    print_literal("Guess a number between 0-9!\n");
     let var str = newString(100);
     readString(&str);
+    print_literal("Your input:\n");
     printString(&str);
     let int num = stringToInt(&str);
+    print_literal("You guessed:\n");
+    write_num(num);
+    write_char('\n');
     let int numToGuess = rand(10);
+    print_literal("The answer was:\n");
     write_num(numToGuess);
     write_char('\n');
     if num == numToGuess {
-        write_char('Y');
-        write_char('e');
-        write_char('s');
+        print_literal("You won!:\n");
     } else {
-        write_char('N');
-        write_char('o');
+        print_literal("You lost!:\n");
     };
     write_char('\n');
     num
@@ -74,12 +76,10 @@ unit set(&String str, int index, char value) {
 
 unit printString(&String str) {
     let int i = 0;
-    write_char('"');
     while (i < str.size) {
         write_char(get(str, i));
         i++;
     };
-    write_char('"');
     write_char('\n');
 }
 
