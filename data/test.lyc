@@ -1,41 +1,4 @@
 int main() {
-    let Point a = new_point(1, 2);
-    let Point b = new_point(3, 4);
-    let Point c = add(a, b);
-    let Point d = sub(a, b);
-    let Point e = mul(c, d);
-    return e.y;
-}
-
-Point new_point(int x, int y) {
-    new Point {
-        x: x,
-        y: y
-    }
-}
-
-struct Point {
-    int x;
-    int y;
-}
-
-Point add(Point a, Point b) {
-    new Point {
-        x: a.x + b.x,
-        y: a.y + b.y
-    }
-}
-
-Point sub(Point a, Point b) {
-    new Point {
-        x: a.x - b.x,
-        y: a.y - b.y
-    }
-}
-
-Point mul(Point a, Point b) {
-    new Point {
-        x: a.x * b.x,
-        y: a.y * b.y
-    }
+    let long random = random();
+    random as int
 }

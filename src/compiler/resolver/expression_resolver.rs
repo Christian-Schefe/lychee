@@ -1,20 +1,34 @@
-use crate::compiler::analyzer::analyzed_expression::{AnalyzedExpression, AnalyzedExpressionKind, AnalyzedLiteral, AnalyzedUnaryOp, AssignableExpression, AssignableExpressionKind};
+use crate::compiler::analyzer::analyzed_expression::{
+    AnalyzedExpression, AnalyzedExpressionKind, AnalyzedLiteral, AnalyzedUnaryOp,
+    AssignableExpression, AssignableExpressionKind,
+};
 use crate::compiler::analyzer::type_resolver::AnalyzedType;
 use crate::compiler::resolver::program_resolver::ResolverContext;
-use crate::compiler::resolver::resolved_expression::{ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedLiteral, ResolvedUnaryOp, ValueData};
+use crate::compiler::resolver::resolved_expression::{
+    ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedLiteral,
+    ResolvedUnaryOp, ValueData,
+};
 
-pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedExpression, should_discard: bool) -> ResolvedExpression {
+pub fn resolve_expression(
+    context: &mut ResolverContext,
+    expression: &AnalyzedExpression,
+    should_discard: bool,
+) -> ResolvedExpression {
     let value_data = ValueData::from_type(&expression.ty, context);
     let stack_discard = value_data.discard_stack_size(should_discard);
 
     match &expression.kind {
-        AnalyzedExpressionKind::Block { expressions, returns_value } => {
+        AnalyzedExpressionKind::Block {
+            expressions,
+            returns_value,
+        } => {
             let old_local_vars = context.local_vars.clone();
             let old_current_local_var_stack_size = context.current_local_var_stack_size;
 
             let mut resolved_expressions = Vec::with_capacity(expressions.len());
             for (i, expr) in expressions.iter().enumerate() {
-                let inner_should_discard = should_discard || !*returns_value || (i + 1 != expressions.len());
+                let inner_should_discard =
+                    should_discard || !*returns_value || (i + 1 != expressions.len());
                 resolved_expressions.push(resolve_expression(context, expr, inner_should_discard));
             }
 
@@ -43,13 +57,11 @@ pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedEx
                 }
             }
         }
-        AnalyzedExpressionKind::Continue => {
-            ResolvedExpression {
-                kind: ResolvedExpressionKind::Continue,
-                stack_discard,
-                value_data,
-            }
-        }
+        AnalyzedExpressionKind::Continue => ResolvedExpression {
+            kind: ResolvedExpressionKind::Continue,
+            stack_discard,
+            value_data,
+        },
         AnalyzedExpressionKind::Break(expr) => {
             if let Some(expr) = expr {
                 let resolved_expr = resolve_expression(context, expr, false);
@@ -62,18 +74,22 @@ pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedEx
                 }
             } else {
                 ResolvedExpression {
-                    kind: ResolvedExpressionKind::Break {
-                        maybe_expr: None,
-                    },
+                    kind: ResolvedExpressionKind::Break { maybe_expr: None },
                     stack_discard,
                     value_data,
                 }
             }
         }
-        AnalyzedExpressionKind::If { condition, then_block, else_expr } => {
+        AnalyzedExpressionKind::If {
+            condition,
+            then_block,
+            else_expr,
+        } => {
             let resolved_condition = resolve_expression(context, condition, false);
             let resolved_then_block = resolve_expression(context, then_block, false);
-            let resolved_else_expr = else_expr.as_ref().map(|expr| resolve_expression(context, expr, false));
+            let resolved_else_expr = else_expr
+                .as_ref()
+                .map(|expr| resolve_expression(context, expr, false));
 
             ResolvedExpression {
                 kind: ResolvedExpressionKind::If {
@@ -85,10 +101,16 @@ pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedEx
                 value_data,
             }
         }
-        AnalyzedExpressionKind::While { condition, loop_body, else_expr } => {
+        AnalyzedExpressionKind::While {
+            condition,
+            loop_body,
+            else_expr,
+        } => {
             let resolved_condition = resolve_expression(context, condition, false);
             let resolved_loop_body = resolve_expression(context, loop_body, false);
-            let resolved_else_expr = else_expr.as_ref().map(|expr| resolve_expression(context, expr, false));
+            let resolved_else_expr = else_expr
+                .as_ref()
+                .map(|expr| resolve_expression(context, expr, false));
 
             ResolvedExpression {
                 kind: ResolvedExpressionKind::While {
@@ -102,7 +124,8 @@ pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedEx
         }
         AnalyzedExpressionKind::Declaration { var_name, value } => {
             let resolved_value = resolve_expression(context, value, false);
-            let var_offset = context.add_local_var(var_name.clone(), resolved_value.value_data.size);
+            let var_offset =
+                context.add_local_var(var_name.clone(), resolved_value.value_data.size);
 
             ResolvedExpression {
                 kind: ResolvedExpressionKind::Declaration {
@@ -129,11 +152,17 @@ pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedEx
                 AnalyzedLiteral::Char(c) => ResolvedLiteral::Char(*c),
                 AnalyzedLiteral::Integer(i) => ResolvedLiteral::Integer(*i),
                 AnalyzedLiteral::Struct(fields) => {
-                    let resolved_fields = fields.iter().map(|(_, expr)| resolve_expression(context, expr, false)).collect();
+                    let resolved_fields = fields
+                        .iter()
+                        .map(|(_, expr)| resolve_expression(context, expr, false))
+                        .collect();
                     ResolvedLiteral::Struct(resolved_fields)
                 }
                 AnalyzedLiteral::Array(values) => {
-                    let resolved_values = values.iter().map(|expr| resolve_expression(context, expr, false)).collect();
+                    let resolved_values = values
+                        .iter()
+                        .map(|expr| resolve_expression(context, expr, false))
+                        .collect();
                     ResolvedLiteral::Array(resolved_values)
                 }
             };
@@ -149,16 +178,15 @@ pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedEx
             let mapped_op = match op {
                 AnalyzedUnaryOp::Math(math_op) => ResolvedUnaryOp::Math(math_op.clone()),
                 AnalyzedUnaryOp::LogicalNot => ResolvedUnaryOp::LogicalNot,
-                AnalyzedUnaryOp::Cast => {
-                    match &expression.ty {
-                        AnalyzedType::Integer(_) => ResolvedUnaryOp::IntCast,
-                        AnalyzedType::Bool => ResolvedUnaryOp::BoolCast,
-                        AnalyzedType::Char => ResolvedUnaryOp::IntCast,
-                        _ => {
-                            panic!("Unsupported cast: {:?}", expression.ty)
-                        }
+                AnalyzedUnaryOp::Cast => match &expression.ty {
+                    AnalyzedType::Integer(_) => ResolvedUnaryOp::IntCast,
+                    AnalyzedType::Bool => ResolvedUnaryOp::BoolCast,
+                    AnalyzedType::Char => ResolvedUnaryOp::IntCast,
+                    AnalyzedType::Pointer(_) => ResolvedUnaryOp::PointerCast,
+                    _ => {
+                        panic!("Unsupported cast: {:?}", expression.ty)
                     }
-                }
+                },
             };
 
             ResolvedExpression {
@@ -201,19 +229,27 @@ pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedEx
         AnalyzedExpressionKind::Borrow { expr } => {
             let resolved_expr = resolve_assignable_expression(context, expr);
             ResolvedExpression {
-                kind: ResolvedExpressionKind::Borrow { expr: resolved_expr },
+                kind: ResolvedExpressionKind::Borrow {
+                    expr: resolved_expr,
+                },
                 stack_discard,
                 value_data,
             }
         }
-        AnalyzedExpressionKind::FunctionCall { function_name, args } => {
+        AnalyzedExpressionKind::FunctionCall {
+            function_name,
+            args,
+        } => {
             let mut arg_stack_size = 0;
-            let resolved_args = args.iter().map(|expr| {
-                let resolved_expr = resolve_expression(context, expr, false);
-                let arg_size = resolved_expr.value_data.size;
-                arg_stack_size += arg_size;
-                resolved_expr
-            }).collect();
+            let resolved_args = args
+                .iter()
+                .map(|expr| {
+                    let resolved_expr = resolve_expression(context, expr, false);
+                    let arg_size = resolved_expr.value_data.size;
+                    arg_stack_size += arg_size;
+                    resolved_expr
+                })
+                .collect();
 
             let total_stack_discard = stack_discard + arg_stack_size;
             let return_stack_space = value_data.discard_stack_size(true);
@@ -249,11 +285,13 @@ pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedEx
             let element_size = value_data.size;
 
             ResolvedExpression {
-                kind: ResolvedExpressionKind::ValueOfAssignable(ResolvedAssignableExpression::ArrayIndex(
-                    Box::new(resolved_array),
-                    Box::new(resolved_index),
-                    element_size,
-                )),
+                kind: ResolvedExpressionKind::ValueOfAssignable(
+                    ResolvedAssignableExpression::ArrayIndex(
+                        Box::new(resolved_array),
+                        Box::new(resolved_index),
+                        element_size,
+                    ),
+                ),
                 stack_discard,
                 value_data,
             }
@@ -277,7 +315,10 @@ pub fn resolve_expression(context: &mut ResolverContext, expression: &AnalyzedEx
     }
 }
 
-fn resolve_assignable_expression(context: &mut ResolverContext, expr: &AssignableExpression) -> ResolvedAssignableExpression {
+fn resolve_assignable_expression(
+    context: &mut ResolverContext,
+    expr: &AssignableExpression,
+) -> ResolvedAssignableExpression {
     match &expr.kind {
         AssignableExpressionKind::LocalVariable(name) => {
             let var_offset = *context.local_vars.get(name).unwrap();
@@ -296,13 +337,20 @@ fn resolve_assignable_expression(context: &mut ResolverContext, expr: &Assignabl
             let resolved_arr_expr = resolve_expression(context, arr_expr, false);
             let resolved_index_expr = resolve_expression(context, index_expr, false);
             let element_size = array_element_size(context, &arr_expr.ty);
-            ResolvedAssignableExpression::ArrayIndex(Box::new(resolved_arr_expr), Box::new(resolved_index_expr), element_size)
+            ResolvedAssignableExpression::ArrayIndex(
+                Box::new(resolved_arr_expr),
+                Box::new(resolved_index_expr),
+                element_size,
+            )
         }
     }
 }
 
 pub fn type_size(context: &ResolverContext, ty: &AnalyzedType) -> usize {
-    type_size_fn(|name| context.resolved_types.struct_types.get(name).unwrap().size, ty)
+    type_size_fn(
+        |name| context.resolved_types.struct_types.get(name).unwrap().size,
+        ty,
+    )
 }
 
 pub fn type_size_fn<F>(struct_sizes: F, ty: &AnalyzedType) -> usize
@@ -325,7 +373,15 @@ fn field_offset(context: &ResolverContext, struct_type: &AnalyzedType, field_nam
         AnalyzedType::Struct(name) => name,
         _ => unreachable!(),
     };
-    context.resolved_types.struct_types.get(struct_name).unwrap().field_offsets.get(field_name).unwrap().clone()
+    context
+        .resolved_types
+        .struct_types
+        .get(struct_name)
+        .unwrap()
+        .field_offsets
+        .get(field_name)
+        .unwrap()
+        .clone()
 }
 
 fn array_element_size(context: &ResolverContext, ty: &AnalyzedType) -> usize {

@@ -147,6 +147,7 @@ pub enum ResolvedAssignableExpression {
 pub enum ResolvedUnaryOp {
     Math(UnaryMathOp),
     LogicalNot,
+    PointerCast,
     IntCast,
     BoolCast,
 }

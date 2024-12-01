@@ -24,7 +24,7 @@ pub(crate) fn convert_line(line: &str) -> Instruction {
     };
 
     let instruction = match &opcode {
-        OpCode::Nop | OpCode::Ret | OpCode::Exit => InstructionType::parse_simple(opcode),
+        OpCode::Ret | OpCode::Exit => InstructionType::parse_simple(opcode),
         OpCode::Store | OpCode::Load => InstructionType::parse_register_size_address(opcode, parts),
         OpCode::Push | OpCode::Pop | OpCode::SignExtend => {
             InstructionType::parse_size_register(opcode, parts)
@@ -32,7 +32,7 @@ pub(crate) fn convert_line(line: &str) -> Instruction {
         OpCode::Binop(_) | OpCode::Alloc => InstructionType::parse_two_registers(opcode, parts),
         OpCode::BinopImmediate(_) => InstructionType::parse_register_immediate(opcode, parts),
         OpCode::Call | OpCode::Jump(_) => InstructionType::parse_label(opcode, parts),
-        OpCode::Unop(_) | OpCode::Set(_) | OpCode::Free => {
+        OpCode::Unop(_) | OpCode::Set(_) | OpCode::Free | OpCode::Rand => {
             InstructionType::parse_register(opcode, parts)
         }
         OpCode::ReadStdin
@@ -80,7 +80,7 @@ pub(crate) fn instructions_to_bytes(instructions: Vec<Instruction>) -> Vec<u8> {
 lazy_static! {
     pub static ref OPCODE_MAP: HashMap<String, OpCode> = {
         HashMap::from([
-            ("nop".to_string(), OpCode::Nop),
+            ("rand".to_string(), OpCode::Rand),
             ("load".to_string(), OpCode::Load),
             ("store".to_string(), OpCode::Store),
             ("push".to_string(), OpCode::Push),

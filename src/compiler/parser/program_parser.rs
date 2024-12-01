@@ -8,6 +8,7 @@ use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::binop_expr_parser::{parse_binop_expression};
 use crate::compiler::parser::parsed_expression::{ParsedExpression, ParsedFunction, ParsedProgram, ParsedStructDefinition};
 use crate::compiler::parser::parser_error::ParseResult;
+use crate::compiler::parser::primary_expr_parser::parse_block_expression;
 use crate::compiler::parser::type_parser::parse_type;
 
 pub fn pop_expected(tokens: &mut TokenStack, expected: Token) -> ParseResult<SrcToken> {
@@ -112,7 +113,7 @@ pub fn parse_function(tokens: &mut TokenStack) -> ParseResult<Src<ParsedFunction
     pop_expected(tokens, Token::Static(StaticToken::CloseParen))?;
 
     let body_location = tokens.location().clone();
-    let body = parse_expression(tokens).with_context(|| format!("Failed to parse function body at {}.", body_location))?;
+    let body = parse_block_expression(tokens).with_context(|| format!("Failed to parse function body at {}.", body_location))?;
 
     Ok(Src::new(ParsedFunction {
         function_name,

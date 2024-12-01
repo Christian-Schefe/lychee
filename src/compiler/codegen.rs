@@ -1,10 +1,10 @@
-mod program_codegen;
 mod expression_codegen;
+mod program_codegen;
 
-use std::collections::HashMap;
-use std::path::PathBuf;
 use crate::compiler::codegen::program_codegen::generate_program_code;
 use crate::compiler::resolver::resolved_expression::ResolvedProgram;
+use std::collections::HashMap;
+use std::path::PathBuf;
 
 pub struct CodegenContext {
     lines: Vec<String>,
@@ -56,7 +56,8 @@ impl CodegenContext {
         self.lines.push(format!("pushmem {register} {address}"));
     }
     pub fn mov(&mut self, dest_register: &str, source_register: &str) {
-        self.lines.push(format!("mov {dest_register} {source_register}"));
+        self.lines
+            .push(format!("mov {dest_register} {source_register}"));
     }
     pub fn movi(&mut self, register: &str, value: isize) {
         self.lines.push(format!("movi {register} {value}"));
@@ -68,37 +69,48 @@ impl CodegenContext {
         self.lines.push(format!("addi {register} {value}"));
     }
     pub fn add(&mut self, dest_register: &str, source_register: &str) {
-        self.lines.push(format!("add {dest_register} {source_register}"));
+        self.lines
+            .push(format!("add {dest_register} {source_register}"));
     }
     pub fn sub(&mut self, dest_register: &str, source_register: &str) {
-        self.lines.push(format!("sub {dest_register} {source_register}"));
+        self.lines
+            .push(format!("sub {dest_register} {source_register}"));
     }
     pub fn mul(&mut self, dest_register: &str, source_register: &str) {
-        self.lines.push(format!("mul {dest_register} {source_register}"));
+        self.lines
+            .push(format!("mul {dest_register} {source_register}"));
     }
     pub fn div(&mut self, dest_register: &str, source_register: &str) {
-        self.lines.push(format!("div {dest_register} {source_register}"));
+        self.lines
+            .push(format!("div {dest_register} {source_register}"));
     }
     pub fn modulo(&mut self, dest_register: &str, source_register: &str) {
-        self.lines.push(format!("mod {dest_register} {source_register}"));
+        self.lines
+            .push(format!("mod {dest_register} {source_register}"));
     }
     pub fn and(&mut self, dest_register: &str, source_register: &str) {
-        self.lines.push(format!("and {dest_register} {source_register}"));
+        self.lines
+            .push(format!("and {dest_register} {source_register}"));
     }
     pub fn or(&mut self, dest_register: &str, source_register: &str) {
-        self.lines.push(format!("or {dest_register} {source_register}"));
+        self.lines
+            .push(format!("or {dest_register} {source_register}"));
     }
     pub fn xor(&mut self, dest_register: &str, source_register: &str) {
-        self.lines.push(format!("xor {dest_register} {source_register}"));
+        self.lines
+            .push(format!("xor {dest_register} {source_register}"));
     }
     pub fn shl(&mut self, dest_register: &str, source_register: &str) {
-        self.lines.push(format!("shl {dest_register} {source_register}"));
+        self.lines
+            .push(format!("shl {dest_register} {source_register}"));
     }
     pub fn shr(&mut self, dest_register: &str, source_register: &str) {
-        self.lines.push(format!("shr {dest_register} {source_register}"));
+        self.lines
+            .push(format!("shr {dest_register} {source_register}"));
     }
     pub fn cmp(&mut self, dest_register: &str, source_register: &str) {
-        self.lines.push(format!("cmp {dest_register} {source_register}"));
+        self.lines
+            .push(format!("cmp {dest_register} {source_register}"));
     }
     pub fn inc(&mut self, register: &str) {
         self.lines.push(format!("inc {register}"));
@@ -125,10 +137,12 @@ impl CodegenContext {
         self.lines.push(format!("jnz {}", label));
     }
     pub fn store(&mut self, bytes: usize, register: &str, address: &str) {
-        self.lines.push(format!("store #{} {register} {address}", bytes * 8));
+        self.lines
+            .push(format!("store #{} {register} {address}", bytes * 8));
     }
     pub fn load(&mut self, bytes: usize, register: &str, address: &str) {
-        self.lines.push(format!("load #{} {register} {address}", bytes * 8));
+        self.lines
+            .push(format!("load #{} {register} {address}", bytes * 8));
     }
     pub fn lea(&mut self, register: &str, address: &str) {
         self.lines.push(format!("lea {register} {address}"));
@@ -158,7 +172,8 @@ impl CodegenContext {
         self.lines.push(format!("setge {register}"));
     }
     pub fn signext(&mut self, to_bytes: usize, register: &str) {
-        self.lines.push(format!("signext #{} {register}", to_bytes * 8));
+        self.lines
+            .push(format!("signext #{} {register}", to_bytes * 8));
     }
     pub fn call(&mut self, function: &str) {
         let label = self.function_labels.get(function).unwrap();
@@ -169,6 +184,16 @@ impl CodegenContext {
     }
     pub fn write(&mut self, register: &str, address: &str) {
         self.lines.push(format!("write {register} {address}"));
+    }
+    pub fn alloc(&mut self, size_register: &str, address_register: &str) {
+        self.lines
+            .push(format!("alloc {size_register} {address_register}"));
+    }
+    pub fn free(&mut self, address_register: &str) {
+        self.lines.push(format!("free {address_register}"));
+    }
+    pub fn rand(&mut self, register: &str) {
+        self.lines.push(format!("rand {register}"));
     }
 }
 

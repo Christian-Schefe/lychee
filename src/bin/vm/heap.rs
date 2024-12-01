@@ -8,17 +8,17 @@ pub struct Heap {
     pub block_size: usize,
 }
 
-pub struct Block {
+/*pub struct Block {
     pub size: u64,
     pub next: u32,
     pub prev: u32,
-}
+}*/
 
 impl Heap {
     pub fn new(memory: &mut Memory, offset: usize, size: usize) -> Heap {
         memory.write_i64_le(offset, size as i64, DATA_SIZE_64);
-        memory.write_i64_le(offset, -1, DATA_SIZE_32);
-        memory.write_i64_le(offset, -1, DATA_SIZE_32);
+        memory.write_i64_le(offset + 8, -1, DATA_SIZE_32);
+        memory.write_i64_le(offset + 12, -1, DATA_SIZE_32);
         Heap {
             offset,
             size,
@@ -36,6 +36,7 @@ impl Heap {
     pub fn free(&mut self, memory: &mut Memory, address: usize) {
         let block_address = address - self.block_size;
         self.toggle_free(memory, block_address);
+        self.merge_blocks(memory, block_address);
     }
 
     fn find_free_block(&self, memory: &Memory, size: u64) -> Option<usize> {
@@ -70,8 +71,65 @@ impl Heap {
         memory.write_i64_le(new_block_address + 12, block_address as i64, DATA_SIZE_32);
     }
 
+    fn merge_blocks(&self, memory: &mut Memory, block_address: usize) {
+        let block_size = memory.read_i64_le(block_address, DATA_SIZE_64);
+        let next = memory.read_i64_le(block_address + 8, DATA_SIZE_32);
+        if next != -1 {
+            let next_block_address = next as usize;
+            let next_block_size = memory.read_i64_le(next_block_address, DATA_SIZE_64);
+            if next_block_size > 0 {
+                memory.write_i64_le(block_address, block_size + next_block_size, DATA_SIZE_64);
+                let new_next = memory.read_i64_le(next_block_address + 8, DATA_SIZE_32);
+                memory.write_i64_le(block_address + 8, new_next, DATA_SIZE_32);
+                if new_next != -1 {
+                    memory.write_i64_le(new_next as usize + 12, block_address as i64, DATA_SIZE_32);
+                }
+            }
+        }
+
+        let block_size = memory.read_i64_le(block_address, DATA_SIZE_64);
+        let prev = memory.read_i64_le(block_address + 12, DATA_SIZE_32);
+        if prev != -1 {
+            let prev_block_address = prev as usize;
+            let prev_block_size = memory.read_i64_le(prev_block_address, DATA_SIZE_64);
+            if prev_block_size > 0 {
+                memory.write_i64_le(
+                    prev_block_address,
+                    prev_block_size + block_size,
+                    DATA_SIZE_64,
+                );
+                let new_next = memory.read_i64_le(block_address + 8, DATA_SIZE_32);
+                memory.write_i64_le(prev_block_address + 8, new_next, DATA_SIZE_32);
+                if new_next != -1 {
+                    memory.write_i64_le(
+                        new_next as usize + 12,
+                        prev_block_address as i64,
+                        DATA_SIZE_32,
+                    );
+                }
+            }
+        }
+    }
+
     fn toggle_free(&mut self, memory: &mut Memory, block_address: usize) {
         let block_size = memory.read_i64_le(block_address, DATA_SIZE_64);
         memory.write_i64_le(block_address, -block_size, DATA_SIZE_64);
+    }
+
+    pub fn print_blocks(&self, memory: &Memory) {
+        let mut current = self.offset;
+        loop {
+            let block_size = memory.read_i64_le(current, DATA_SIZE_64);
+            let next = memory.read_i64_le(current + 8, DATA_SIZE_32);
+            let prev = memory.read_i64_le(current + 12, DATA_SIZE_32);
+            println!(
+                "Block: {:?}, Size: {:?}, Next: {:?}, Prev: {:?}",
+                current, block_size, next, prev
+            );
+            if next == -1 {
+                break;
+            }
+            current = next as usize;
+        }
     }
 }

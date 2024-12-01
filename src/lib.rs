@@ -1,6 +1,6 @@
 #[derive(Clone, Debug)]
 pub enum OpCode {
-    Nop,
+    Exit,
     Load,
     Store,
     Push,
@@ -14,7 +14,7 @@ pub enum OpCode {
     Ret,
     ReadStdin,
     WriteStdout,
-    Exit,
+    Rand,
     SignExtend,
     Lea,
     PushMem,
@@ -41,7 +41,7 @@ impl OpCode {
             OpCode::Ret => 0x30,
             OpCode::ReadStdin => 0x31,
             OpCode::WriteStdout => 0x32,
-            OpCode::Nop => 0x33,
+            OpCode::Rand => 0x33,
             OpCode::SignExtend => 0x34,
             OpCode::Lea => 0x35,
             OpCode::PushMem => 0x36,

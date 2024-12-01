@@ -22,12 +22,15 @@ fn main() {
     let args = Args::parse();
     let program = input::read_obj_file(&args.input);
 
-    let size = 0x100000;
+    let size = 0x200000;
+    let heap_size = 0x100000;
+    let heap_offset = program.len();
     let mut memory = Memory::new(size, program);
-    let mut heap = Heap::new(&mut memory, size, size);
+    let mut heap = Heap::new(&mut memory, heap_offset, heap_size);
     let start_instant = std::time::Instant::now();
     let exit_code = run(&mut memory, &mut heap, args.debug_print);
     let elapsed = start_instant.elapsed();
+    heap.print_blocks(&memory);
     println!("Elapsed: {:?}", elapsed);
     println!("Main return value: {}", exit_code);
 }
@@ -121,7 +124,7 @@ pub fn run(memory: &mut Memory, heap: &mut Heap, debug_print: bool) -> i64 {
             0x30 => ret(memory, debug_print),
             0x31 => read_stdin(pc, memory, debug_print),
             0x32 => write_stdout(pc, memory, debug_print),
-            0x33 => memory.registers[constants::PC] += 1,
+            0x33 => rand(pc, memory, debug_print),
             0x34 => sign_extend(pc, memory, debug_print),
             0x35 => lea(pc, memory, debug_print),
             0x36 => pushmem(pc, memory, debug_print),
@@ -424,6 +427,20 @@ fn write_stdout(pc: usize, memory: &mut Memory, debug_print: bool) {
         println!(
             "Wrote '{}' ({} bytes) to stdout from address {}",
             str, write_bytes, address
+        );
+    }
+}
+
+fn rand(pc: usize, memory: &mut Memory, debug_print: bool) {
+    let register = memory.data[pc + 1];
+    let value = rand::random::<u64>();
+    memory.registers[register as usize] = value;
+    memory.registers[constants::PC] += 2;
+
+    if debug_print {
+        println!(
+            "Generated random number {} and stored it in register {}",
+            value, register
         );
     }
 }

@@ -1,7 +1,9 @@
-use crate::compiler::builtin::generate_builtin_function_code;
-use crate::compiler::codegen::CodegenContext;
+use crate::compiler::builtin::BuiltinFunction;
 use crate::compiler::codegen::expression_codegen::generate_expression_code;
-use crate::compiler::resolver::resolved_expression::{FunctionReturnLocation, ResolvedFunction, ResolvedProgram};
+use crate::compiler::codegen::CodegenContext;
+use crate::compiler::resolver::resolved_expression::{
+    FunctionReturnLocation, ResolvedFunction, ResolvedProgram,
+};
 
 pub fn generate_program_code(context: &mut CodegenContext, program: &ResolvedProgram) {
     program.functions.iter().for_each(|x| {
@@ -11,7 +13,7 @@ pub fn generate_program_code(context: &mut CodegenContext, program: &ResolvedPro
 
     generate_program_prelude(context);
 
-    generate_builtin_function_code(context);
+    BuiltinFunction::generate_builtin_function_code(context);
 
     for function in &program.functions {
         context.return_label = context.new_label(format!("{}_return", function.name).as_str());
