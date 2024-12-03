@@ -1,55 +1,13 @@
 int main() {
-    let int i = 5;
-    let int k = while i > 0 {
-        i--;
-
-        let Big3 val = new Big3 {
-            a: new Big2 {
-                a: new Big1 {
-                    a: 1,
-                    b: 2
-                },
-                b: new Big1 {
-                    a: 3,
-                    b: 4
-                }
-            },
-            b: new Big2 {
-                a: new Big1 {
-                    a: 5,
-                    b: 6
-                },
-                b: new Big1 {
-                    a: 7,
-                    b: 8
-                }
-            }
-        };
-
-        if i == 3 {
-            test(5, break i);
+    for (let int i = 0; i < 10; i++) {
+        let int i = 3;
+        if (i % 2 == 0) {
+            write_char('0');
+        } else {
+            write_char('1');
+            continue;
         }
-    } else {
-        0
     };
-    k
-}
-
-unit test(int a, unit b) {
-    b
-}
-
-struct Big1 {
-    int a;
-    int b;
-}
-
-struct Big2 {
-    Big1 a;
-    Big1 b;
-}
-
-struct Big3 {
-    Big2 a;
-    Big2 b;
+    i = 11;
+    i
 }

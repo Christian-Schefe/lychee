@@ -42,6 +42,13 @@ pub enum AnalyzedExpressionKind {
         loop_body: Box<AnalyzedExpression>,
         else_expr: Option<Box<AnalyzedExpression>>,
     },
+    For {
+        init: Box<AnalyzedExpression>,
+        condition: Box<AnalyzedExpression>,
+        step: Box<AnalyzedExpression>,
+        loop_body: Box<AnalyzedExpression>,
+        else_expr: Option<Box<AnalyzedExpression>>,
+    },
     Declaration {
         var_name: String,
         value: Box<AnalyzedExpression>,

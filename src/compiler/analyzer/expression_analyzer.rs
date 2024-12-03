@@ -221,10 +221,11 @@ pub fn analyze_expression(
                     )
                 })?;
 
-            let old_loop_data = context.loop_data.clone();
             let return_ty = analyzed_else
                 .as_ref()
                 .map_or(AnalyzedType::Unit, |e| e.ty.clone());
+
+            let old_loop_data = context.loop_data.clone();
             context.loop_data = Some(LoopData {
                 break_return_type: return_ty.clone(),
             });
@@ -248,6 +249,99 @@ pub fn analyze_expression(
             Ok(AnalyzedExpression {
                 kind: AnalyzedExpressionKind::While {
                     condition: Box::new(analyzed_condition),
+                    loop_body: Box::new(analyzed_body),
+                    else_expr: analyzed_else.map(Box::new),
+                },
+                ty: return_ty,
+            })
+        }
+        ParsedExpressionKind::For {
+            init,
+            condition,
+            step,
+            loop_body,
+            else_expr,
+        } => {
+            let analyzed_init = analyze_expression(context, init).with_context(|| {
+                format!("Failed to analyze type of for init at {}.", init.location)
+            })?;
+            if analyzed_init.ty != AnalyzedType::Unit {
+                Err(anyhow::anyhow!(
+                    "For init has non-unit type '{}' at {}.",
+                    analyzed_init.ty,
+                    init.location
+                ))?;
+            }
+
+            let analyzed_condition = analyze_expression(context, condition).with_context(|| {
+                format!(
+                    "Failed to analyze type of for condition at {}.",
+                    condition.location
+                )
+            })?;
+            if analyzed_condition.ty != AnalyzedType::Bool {
+                Err(anyhow::anyhow!(
+                    "For condition has non-bool type at {}.",
+                    condition.location
+                ))?;
+            }
+
+            let analyzed_step = analyze_expression(context, step).with_context(|| {
+                format!("Failed to analyze type of for step at {}.", step.location)
+            })?;
+            match analyzed_step.ty {
+                AnalyzedType::Unit => {}
+                AnalyzedType::Integer(_) => {}
+                _ => {
+                    return Err(anyhow::anyhow!(
+                        "For step has non-unit/non-integer type '{}' at {}.",
+                        analyzed_step.ty,
+                        step.location
+                    ))?
+                }
+            }
+
+            let analyzed_else = else_expr
+                .as_ref()
+                .map(|e| analyze_expression(context, e))
+                .transpose()
+                .with_context(|| {
+                    format!(
+                        "Failed to analyze type of for else block at {}.",
+                        expression.location
+                    )
+                })?;
+
+            let return_ty = analyzed_else
+                .as_ref()
+                .map_or(AnalyzedType::Unit, |e| e.ty.clone());
+
+            let old_loop_data = context.loop_data.clone();
+            context.loop_data = Some(LoopData {
+                break_return_type: return_ty.clone(),
+            });
+
+            let analyzed_body = analyze_expression(context, loop_body).with_context(|| {
+                format!(
+                    "Failed to analyze type of for loop body at {}.",
+                    loop_body.location
+                )
+            })?;
+            if analyzed_body.ty != AnalyzedType::Unit {
+                Err(anyhow::anyhow!(
+                    "For loop body has non-unit type '{}' at {}.",
+                    analyzed_body.ty,
+                    loop_body.location
+                ))?;
+            }
+
+            context.loop_data = old_loop_data;
+
+            Ok(AnalyzedExpression {
+                kind: AnalyzedExpressionKind::For {
+                    init: Box::new(analyzed_init),
+                    condition: Box::new(analyzed_condition),
+                    step: Box::new(analyzed_step),
                     loop_body: Box::new(analyzed_body),
                     else_expr: analyzed_else.map(Box::new),
                 },
@@ -970,6 +1064,10 @@ pub fn analyze_assignable_expression(
         )),
         ParsedExpressionKind::While { .. } => Err(anyhow::anyhow!(
             "While expression cannot be assigned to at {}.",
+            expression.location
+        )),
+        ParsedExpressionKind::For { .. } => Err(anyhow::anyhow!(
+            "For expression cannot be assigned to at {}.",
             expression.location
         )),
         ParsedExpressionKind::Declaration { .. } => Err(anyhow::anyhow!(

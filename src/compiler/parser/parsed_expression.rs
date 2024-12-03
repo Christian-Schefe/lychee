@@ -42,6 +42,13 @@ pub enum ParsedExpressionKind {
         loop_body: Box<ParsedExpression>,
         else_expr: Option<Box<ParsedExpression>>,
     },
+    For {
+        init: Box<ParsedExpression>,
+        condition: Box<ParsedExpression>,
+        step: Box<ParsedExpression>,
+        loop_body: Box<ParsedExpression>,
+        else_expr: Option<Box<ParsedExpression>>,
+    },
     Declaration {
         var_type: Option<ParsedType>,
         var_name: String,

@@ -189,6 +189,50 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
                 token.location,
             ))
         }
+        Token::Keyword(Keyword::For) => {
+            tokens.pop();
+            pop_expected(tokens, Token::Static(StaticToken::OpenParen))?;
+            let init_location = tokens.location().clone();
+            let init = Box::new(
+                parse_expression(tokens)
+                    .with_context(|| format!("Failed to parse for init at {}.", init_location))?,
+            );
+            pop_expected(tokens, Token::Static(StaticToken::Semicolon))?;
+            let condition_location = tokens.location().clone();
+            let condition = Box::new(parse_expression(tokens).with_context(|| {
+                format!("Failed to parse for condition at {}.", condition_location)
+            })?);
+            pop_expected(tokens, Token::Static(StaticToken::Semicolon))?;
+            let step_location = tokens.location().clone();
+            let step = Box::new(
+                parse_expression(tokens)
+                    .with_context(|| format!("Failed to parse for step at {}.", step_location))?,
+            );
+            pop_expected(tokens, Token::Static(StaticToken::CloseParen))?;
+            let loop_body_location = tokens.location().clone();
+            let loop_body = Box::new(parse_block_expression(tokens).with_context(|| {
+                format!("Failed to parse for loop body at {}.", loop_body_location)
+            })?);
+            let false_block = if let Token::Keyword(Keyword::Else) = tokens.peek().value {
+                tokens.pop();
+                let else_location = tokens.location().clone();
+                Some(Box::new(parse_expression(tokens).with_context(|| {
+                    format!("Failed to parse else block at {}.", else_location)
+                })?))
+            } else {
+                None
+            };
+            Ok(ParsedExpression::new(
+                ParsedExpressionKind::For {
+                    init,
+                    condition,
+                    step,
+                    loop_body,
+                    else_expr: false_block,
+                },
+                token.location,
+            ))
+        }
         Token::Keyword(Keyword::New) => {
             tokens.pop();
             let type_location = tokens.location().clone();
@@ -200,20 +244,6 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
                         format!("Failed to parse struct literal at {}.", token.location)
                     })
                 }
-                /*ParsedTypeKind::Pointer(_) => {
-                    let (_, expressions, _) = parse_seperated_expressions(
-                        tokens,
-                        Token::Static(StaticToken::OpenBrace),
-                        Token::Static(StaticToken::CloseBrace),
-                        Token::Static(StaticToken::Comma),
-                        false,
-                        "array",
-                    )?;
-                    Ok(ParsedExpression::new(
-                        ParsedExpressionKind::Literal(ParsedLiteral::Array(ty, expressions)),
-                        token.location,
-                    ))
-                }*/
                 _ => Err(LocationError::new(
                     "Expected named type or array type for new expression.".to_string(),
                     type_location,

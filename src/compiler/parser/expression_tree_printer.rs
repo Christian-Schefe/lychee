@@ -141,6 +141,24 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
             }
             printer.dedent();
         }
+        ParsedExpressionKind::For {
+            init,
+            condition,
+            step,
+            loop_body,
+            else_expr,
+        } => {
+            printer.add_line("For".to_string());
+            printer.indent();
+            print_expression(printer, init);
+            print_expression(printer, condition);
+            print_expression(printer, step);
+            print_expression(printer, loop_body);
+            if let Some(else_expr) = else_expr {
+                print_expression(printer, else_expr);
+            }
+            printer.dedent();
+        }
         ParsedExpressionKind::Declaration {
             var_type,
             var_name,

@@ -112,6 +112,13 @@ pub enum ResolvedExpressionKind {
         loop_body: Box<ResolvedExpression>,
         else_expr: Option<Box<ResolvedExpression>>,
     },
+    For {
+        init: Box<ResolvedExpression>,
+        condition: Box<ResolvedExpression>,
+        step: Box<ResolvedExpression>,
+        loop_body: Box<ResolvedExpression>,
+        else_expr: Option<Box<ResolvedExpression>>,
+    },
     Declaration {
         var_offset: isize,
         value: Box<ResolvedExpression>,

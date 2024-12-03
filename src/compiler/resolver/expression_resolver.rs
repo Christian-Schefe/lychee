@@ -122,6 +122,33 @@ pub fn resolve_expression(
                 value_data,
             }
         }
+        AnalyzedExpressionKind::For {
+            init,
+            condition,
+            step,
+            loop_body,
+            else_expr,
+        } => {
+            let resolved_init = resolve_expression(context, init, false);
+            let resolved_condition = resolve_expression(context, condition, false);
+            let resolved_step = resolve_expression(context, step, false);
+            let resolved_loop_body = resolve_expression(context, loop_body, false);
+            let resolved_else_expr = else_expr
+                .as_ref()
+                .map(|expr| resolve_expression(context, expr, false));
+
+            ResolvedExpression {
+                kind: ResolvedExpressionKind::For {
+                    init: Box::new(resolved_init),
+                    condition: Box::new(resolved_condition),
+                    step: Box::new(resolved_step),
+                    loop_body: Box::new(resolved_loop_body),
+                    else_expr: resolved_else_expr.map(Box::new),
+                },
+                stack_discard,
+                value_data,
+            }
+        }
         AnalyzedExpressionKind::Declaration { var_name, value } => {
             let resolved_value = resolve_expression(context, value, false);
             let var_offset =
