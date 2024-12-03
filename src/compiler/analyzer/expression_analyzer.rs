@@ -117,7 +117,7 @@ pub fn analyze_expression(
             let loop_data = context.loop_data.as_ref().unwrap();
             if break_return_type != loop_data.break_return_type {
                 Err(anyhow::anyhow!(
-                    "Break type '{}' does not match loop break type '{}' at {}.",
+                    "Break type '{}' does not match loop else type '{}' at {}.",
                     break_return_type,
                     loop_data.break_return_type,
                     expression.location

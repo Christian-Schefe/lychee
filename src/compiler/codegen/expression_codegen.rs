@@ -9,11 +9,6 @@ use crate::compiler::resolver::resolved_expression::{
 };
 
 pub fn generate_expression_code(context: &mut CodegenContext, expression: &ResolvedExpression) {
-    println!(
-        "Visit {} for {:?}",
-        context.current_stack_size, expression.kind
-    );
-
     match &expression.kind {
         ResolvedExpressionKind::Block(expressions) => {
             for expr in expressions {
@@ -142,8 +137,8 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
                     generate_expression_code(context, field);
                     if let ValueLocation::Register = field.value_data.location {
                         context.push(field.value_data.size, "r0");
+                        context.current_stack_size += field.value_data.size;
                     }
-                    context.current_stack_size += field.value_data.size;
                 }
             }
         },
@@ -189,12 +184,8 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
                 generate_expression_code(context, arg);
                 if let ValueLocation::Register = arg.value_data.location {
                     context.push(arg.value_data.size, "r0");
+                    context.current_stack_size += arg.value_data.size;
                 }
-                context.current_stack_size += arg.value_data.size;
-                println!(
-                    "Pushed Arg: {} to {}",
-                    arg.value_data.size, context.current_stack_size
-                );
             }
             context.call(function_name);
         }

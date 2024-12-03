@@ -131,8 +131,9 @@ pub fn analyze_types(program: &ParsedProgram) -> AnalyzerResult<AnalyzedTypes> {
 
     let mut struct_types = HashMap::with_capacity(raw_struct_types.len());
     for (name, (fields, field_order, location)) in &raw_struct_types {
-        let mut visited = HashSet::new();
-        let size = determine_struct_size(&raw_struct_types, name, &mut visited)
+        let mut visited = HashMap::new();
+        let mut visiting = HashSet::new();
+        let size = determine_struct_size(&raw_struct_types, name, &mut visited, &mut visiting)
             .with_context(|| format!("Failed to analyze struct type '{name}' at {location}."))?;
         struct_types.insert(
             name.clone(),
@@ -175,14 +176,19 @@ fn map_parsed_type(
 fn determine_struct_size(
     struct_types: &HashMap<String, (HashMap<String, AnalyzedType>, Vec<String>, Location)>,
     struct_name: &str,
-    visited: &mut HashSet<String>,
+    visited: &mut HashMap<String, usize>,
+    visiting: &mut HashSet<String>,
 ) -> AnalyzerResult<usize> {
     let (struct_fields, _, location) = struct_types.get(struct_name).unwrap();
-    if !visited.insert(struct_name.to_string()) {
-        return Err(LocationError::new(
-            format!("Struct {} contains a cycle", struct_name),
+
+    if visiting.contains(struct_name) {
+        Err(LocationError::new(
+            format!(
+                "Struct '{struct_name}' contains a cycle.",
+                struct_name = struct_name
+            ),
             location.clone(),
-        ))?;
+        ))?
     }
 
     let mut struct_size = 0;
@@ -193,7 +199,16 @@ fn determine_struct_size(
             AnalyzedType::Char => struct_size += 1,
             AnalyzedType::Integer(size) => struct_size += size,
             AnalyzedType::Struct(name) => {
-                struct_size += determine_struct_size(struct_types, name, visited)?
+                let size = if let Some(size) = visited.get(name) {
+                    *size
+                } else {
+                    visiting.insert(struct_name.to_string());
+                    let size = determine_struct_size(struct_types, name, visited, visiting)?;
+                    visiting.remove(struct_name);
+                    visited.insert(name.clone(), size);
+                    size
+                };
+                struct_size += size;
             }
             AnalyzedType::Pointer(_) => struct_size += 8,
         }

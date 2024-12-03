@@ -269,7 +269,7 @@ fn binop(pc: usize, memory: &mut Memory, op_type: BinopType, immediate: bool, de
     let result = match op_type {
         BinopType::Mov => right_value,
         BinopType::Add => left_value + right_value,
-        BinopType::Sub => left_value - right_value,
+        BinopType::Sub | BinopType::Cmp => left_value - right_value,
         BinopType::Mul => left_value * right_value,
         BinopType::Div => left_value / right_value,
         BinopType::Mod => left_value % right_value,
@@ -278,7 +278,6 @@ fn binop(pc: usize, memory: &mut Memory, op_type: BinopType, immediate: bool, de
         BinopType::Xor => left_value ^ right_value,
         BinopType::Shl => left_value << right_value,
         BinopType::Shr => left_value >> right_value,
-        BinopType::Cmp => left_value - right_value,
     };
 
     set_flags(memory, result);
