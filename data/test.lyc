@@ -1,122 +1,12 @@
 int main() {
-    print_literal("Guess a number between 0-9!\n");
-    let var str = newString(100);
-    readString(&str);
-    print_literal("Your input:\n");
-    printString(&str);
-    let int num = stringToInt(&str);
-    print_literal("You guessed:\n");
-    write_num(num);
-    write_char('\n');
-    let int numToGuess = rand(10);
-    print_literal("The answer was:\n");
-    write_num(numToGuess);
-    write_char('\n');
-    if num == numToGuess {
-        print_literal("You won!:\n");
-    } else {
-        print_literal("You lost!:\n");
-    };
-    write_char('\n');
-    num
-}
-
-struct String {
-    &char data;
-    int size;
-}
-
-String newString(int size) {
-    let String str = new String {
-        data: malloc(size) as &char,
-        size: size
-    };
-    str
-}
-
-String fromLiteral(&char literal) {
-    let int size = 0;
-    while (literal[size] != '\0') {
-        size++;
-    };
-    let String str = newString(size);
     let int i = 0;
-    while (i < size) {
-        set(&str, i, literal[i]);
+    while i < 1000 {
         i++;
+        test_fun('a', continue);
     };
-    str
+    0
 }
 
-int rand(int max) {
-    let long r = random();
-    ((r % max as long) as int + max) % max
-}
-
-unit readString(&String str) {
-    let int i = 0;
-    while (i < str.size) {
-        let char c = read_char();
-        if c == '\n' || c == '\r' {
-            break;
-        };
-        set(str, i, c);
-        i++;
-    };
-    str.size = i;
-}
-
-char get(&String str, int index) {
-    return str.data[index];
-}
-
-unit set(&String str, int index, char value) {
-    str.data[index] = value;
-}
-
-unit printString(&String str) {
-    let int i = 0;
-    while (i < str.size) {
-        write_char(get(str, i));
-        i++;
-    };
-    write_char('\n');
-}
-
-int stringToInt(&String str) {
-    let int i = 0;
-    let int num = 0;
-    let int sign = 1;
-    if get(str, 0) == '-' {
-        sign = -1;
-        i++;
-    };
-    while (i < str.size) {
-        num = num * 10 + (get(str, i) as int - '0' as int);
-        i++;
-    };
-    num * sign
-}
-
-unit write_num(int num) {
-    if num == 0 {
-        write_char((num % 10 + '0' as int) as char);
-        return;
-    } else if num < 0 {
-        write_char('-');
-        num = -num;
-    };
-
-    if num >= 10 {
-        write_num(num / 10);
-    };
-    write_char((num % 10 + '0' as int) as char);
-}
-
-unit print_literal(&char literal) {
-    let int i = 0;
-    while (literal[i] != '\0') {
-        write_char(literal[i]);
-        i++;
-    };
+unit test_fun(char val, unit empty) {
+    write_char(val);
 }

@@ -9,6 +9,11 @@ use crate::compiler::resolver::resolved_expression::{
 };
 
 pub fn generate_expression_code(context: &mut CodegenContext, expression: &ResolvedExpression) {
+    println!(
+        "Visit {} for {:?}",
+        context.current_stack_size, expression.kind
+    );
+
     match &expression.kind {
         ResolvedExpressionKind::Block(expressions) => {
             for expr in expressions {
@@ -19,28 +24,33 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
             if let Some(expr) = maybe_expr {
                 generate_expression_code(context, expr);
             }
-            do_stack_discard(context, expression);
 
             let return_label = context.return_label.clone();
             context.jmp(&return_label);
-            return;
         }
         ResolvedExpressionKind::Continue => {
-            do_stack_discard(context, expression);
+            do_stack_discard(
+                context,
+                context.current_stack_size - context.last_loop_stack_size,
+                false,
+            );
 
             let continue_label = context.continue_label.clone();
             context.jmp(&continue_label);
-            return;
         }
         ResolvedExpressionKind::Break { maybe_expr } => {
+            do_stack_discard(
+                context,
+                context.current_stack_size - context.last_loop_stack_size,
+                false,
+            );
+
             if let Some(expr) = maybe_expr {
                 generate_expression_code(context, expr);
             }
-            do_stack_discard(context, expression);
 
             let break_label = context.break_label.clone();
             context.jmp(&break_label);
-            return;
         }
         ResolvedExpressionKind::If {
             condition,
@@ -84,7 +94,12 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
             context.break_label = break_label.clone();
             context.continue_label = continue_label.clone();
 
+            let old_loop_stack_size = context.last_loop_stack_size;
+            context.last_loop_stack_size = context.current_stack_size;
+
             generate_expression_code(context, loop_body);
+
+            context.last_loop_stack_size = old_loop_stack_size;
 
             context.break_label = old_break_label;
             context.continue_label = old_continue_label;
@@ -128,6 +143,7 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
                     if let ValueLocation::Register = field.value_data.location {
                         context.push(field.value_data.size, "r0");
                     }
+                    context.current_stack_size += field.value_data.size;
                 }
             }
             ResolvedLiteral::Array(_) => unimplemented!(),
@@ -168,12 +184,18 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
         } => {
             if *return_stack_space > 0 {
                 context.subi("sp", *return_stack_space as isize);
+                context.current_stack_size += *return_stack_space;
             }
             for arg in args {
                 generate_expression_code(context, arg);
                 if let ValueLocation::Register = arg.value_data.location {
                     context.push(arg.value_data.size, "r0");
                 }
+                context.current_stack_size += arg.value_data.size;
+                println!(
+                    "Pushed Arg: {} to {}",
+                    arg.value_data.size, context.current_stack_size
+                );
             }
             context.call(function_name);
         }
@@ -183,7 +205,7 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
             struct_size,
         } => {
             generate_expression_code(context, expr);
-            context.addi("sp", *struct_size as isize);
+            do_stack_discard(context, *struct_size, true);
             load_from_value_data(
                 context,
                 &expression.value_data,
@@ -221,9 +243,11 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
             AnalyzedBinaryOp::Math(math_op) => {
                 generate_expression_code(context, left);
                 context.push(left.value_data.size, "r0");
+                context.current_stack_size += left.value_data.size;
                 generate_expression_code(context, right);
                 context.mov("r1", "r0");
                 context.pop(left.value_data.size, "r0");
+                context.current_stack_size -= left.value_data.size;
                 do_math_op(context, math_op, "r0", "r1");
             }
             AnalyzedBinaryOp::Logical(logical_op) => {
@@ -240,9 +264,11 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
             AnalyzedBinaryOp::Comparison(comp_op) => {
                 generate_expression_code(context, left);
                 context.push(left.value_data.size, "r0");
+                context.current_stack_size += left.value_data.size;
                 generate_expression_code(context, right);
                 context.mov("r1", "r0");
                 context.pop(left.value_data.size, "r0");
+                context.current_stack_size -= left.value_data.size;
                 do_comp_op(context, comp_op, "r0", "r1");
             }
         },
@@ -254,20 +280,25 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
                     store_from_value_data(context, &rhs.value_data, "r1", "[r0]", false);
                 } else {
                     context.push(8, "r0");
+                    context.current_stack_size += 8;
                     generate_assignable_expression_pointer_code(context, lhs);
                     context.mov("r1", "r0");
                     context.pop(8, "r0");
-                    store_from_value_data(context, &rhs.value_data, "r0", "[r1]", false);
+                    context.current_stack_size -= 8;
+                    context.store(expression.value_data.size, "r0", "[r1]");
                 }
             }
             BinaryAssignOp::MathAssign(math_op) => {
                 generate_expression_code(context, rhs);
                 context.push(expression.value_data.size, "r0");
+                context.current_stack_size += expression.value_data.size;
                 generate_assignable_expression_pointer_code(context, lhs);
-                context.load(expression.value_data.size, "r1", "[r0]");
-                context.pop(expression.value_data.size, "r2");
-                do_math_op(context, math_op, "r1", "r2");
-                context.store(expression.value_data.size, "r1", "[r0]");
+                context.mov("r1", "r0");
+                context.load(expression.value_data.size, "r2", "[r1]");
+                context.pop(expression.value_data.size, "r0");
+                context.current_stack_size -= expression.value_data.size;
+                do_math_op(context, math_op, "r0", "r2");
+                context.store(expression.value_data.size, "r0", "[r1]");
             }
             BinaryAssignOp::LogicAssign(logic_op) => {
                 let short_circuit_label = context.new_label("short_circuit");
@@ -279,8 +310,10 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
                     BinaryLogicOp::Or => context.jnz(&short_circuit_label),
                 }
                 context.push(8, "r0");
+                context.current_stack_size += 8;
                 generate_expression_code(context, rhs);
                 context.pop(8, "r1");
+                context.current_stack_size -= 8;
                 context.store(expression.value_data.size, "r0", "[r1]");
                 context.label(&short_circuit_label);
             }
@@ -291,7 +324,7 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
         }
     };
 
-    do_stack_discard(context, expression);
+    do_stack_discard(context, expression.stack_discard, true);
 }
 
 fn generate_assignable_expression_pointer_code(
@@ -312,8 +345,10 @@ fn generate_assignable_expression_pointer_code(
         ResolvedAssignableExpression::ArrayIndex(array, index, element_size) => {
             generate_expression_code(context, index);
             context.push(8, "r0");
+            context.current_stack_size += 8;
             generate_expression_code(context, array);
             context.pop(8, "r1");
+            context.current_stack_size -= 8;
             context.muli("r1", *element_size as isize);
             context.add("r0", "r1");
         }
@@ -350,8 +385,10 @@ fn generate_assignable_expression_value_code(
         ResolvedAssignableExpression::ArrayIndex(array, index, element_size) => {
             generate_expression_code(context, index);
             context.push(8, "r0");
+            context.current_stack_size += 8;
             generate_expression_code(context, array);
             context.pop(8, "r1");
+            context.current_stack_size -= 8;
             context.muli("r1", *element_size as isize);
             context.add("r1", "r0");
             load_from_value_data(context, data, "r0", "[r1]");
@@ -366,9 +403,12 @@ fn generate_assignable_expression_value_code(
     }
 }
 
-fn do_stack_discard(context: &mut CodegenContext, expression: &ResolvedExpression) {
-    if expression.stack_discard > 0 {
-        context.addi("sp", expression.stack_discard as isize);
+fn do_stack_discard(context: &mut CodegenContext, amount: usize, tracked: bool) {
+    if amount > 0 {
+        context.addi("sp", amount as isize);
+        if tracked {
+            context.current_stack_size -= amount;
+        }
     }
 }
 
@@ -453,6 +493,7 @@ fn store_from_value_data(
             context.movi(value_register, value_data.size as isize);
             if do_pop {
                 context.popmem(value_register, address);
+                context.current_stack_size -= value_data.size;
             } else {
                 context.peekmem(value_register, address);
             }
@@ -474,6 +515,7 @@ fn load_from_value_data(
         ValueLocation::Stack => {
             context.movi(value_register, value_data.size as isize);
             context.pushmem(value_register, address);
+            context.current_stack_size += value_data.size;
         }
         ValueLocation::Register => {
             context.load(value_data.size, value_register, address);

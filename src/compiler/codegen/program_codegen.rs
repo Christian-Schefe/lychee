@@ -21,6 +21,7 @@ pub fn generate_program_code(context: &mut CodegenContext, program: &ResolvedPro
     BuiltinFunction::generate_builtin_function_code(context);
 
     for function in &program.functions {
+        context.function_reset();
         context.return_label = context.new_label(format!("{}_return", function.name).as_str());
         generate_function_code(context, function);
     }

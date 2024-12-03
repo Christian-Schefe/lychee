@@ -14,6 +14,8 @@ pub struct CodegenContext {
     pub return_label: String,
     pub break_label: String,
     pub continue_label: String,
+    pub current_stack_size: usize,
+    pub last_loop_stack_size: usize,
 }
 
 impl CodegenContext {
@@ -26,7 +28,16 @@ impl CodegenContext {
             break_label: String::new(),
             continue_label: String::new(),
             constant_labels: Vec::new(),
+            current_stack_size: 0,
+            last_loop_stack_size: 0,
         }
+    }
+    pub fn function_reset(&mut self) {
+        self.return_label = String::new();
+        self.break_label = String::new();
+        self.continue_label = String::new();
+        self.current_stack_size = 0;
+        self.last_loop_stack_size = 0;
     }
     pub fn build(&self) -> String {
         self.lines.join("\n")
