@@ -43,14 +43,6 @@ fn print_expression(printer: &mut Printer, expr: &ResolvedExpression) {
             ResolvedLiteral::Bool(b) => printer.add_line(format!("Bool({})", b)),
             ResolvedLiteral::Char(c) => printer.add_line(format!("Char({})", c)),
             ResolvedLiteral::Integer(i) => printer.add_line(format!("Int({})", i)),
-            ResolvedLiteral::Array(elements) => {
-                printer.add_line("ArrayLiteral".to_string());
-                printer.indent();
-                for element in elements {
-                    print_expression(printer, element);
-                }
-                printer.dedent();
-            }
         },
         ResolvedExpressionKind::Block(expressions) => {
             printer.add_line("{".to_string());

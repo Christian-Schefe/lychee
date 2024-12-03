@@ -1,4 +1,4 @@
-use crate::assembler::core::{convert_line, instructions_to_bytes, AssemblyInstruction};
+use crate::assembler::core::{convert_line, instructions_to_bytes};
 use std::path::PathBuf;
 
 mod core;

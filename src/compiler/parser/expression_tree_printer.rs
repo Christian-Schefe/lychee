@@ -212,13 +212,5 @@ fn print_literal(printer: &mut Printer, lit: &ParsedLiteral) {
             }
             printer.dedent();
         }
-        ParsedLiteral::Array(ty, values) => {
-            printer.add_line(format!("Array({:?})", ty.value));
-            printer.indent();
-            for value in values {
-                print_expression(printer, value);
-            }
-            printer.dedent();
-        }
     }
 }

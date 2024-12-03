@@ -421,40 +421,6 @@ pub fn analyze_expression(
                     ty: analyzed_ty,
                 })
             }
-            ParsedLiteral::Array(ty, values) => {
-                let mut analyzed_values = Vec::new();
-                let array_type = context.analyzed_types.resolve_type(ty)?;
-                let element_type = match &array_type {
-                    AnalyzedType::Pointer(inner) => inner.as_ref().clone(),
-                    arr_type => Err(anyhow::anyhow!(
-                        "Expected array type, found '{}' at {}.",
-                        arr_type,
-                        expression.location
-                    ))?,
-                };
-                for value in values {
-                    let analyzed_value = analyze_expression(context, value).with_context(|| {
-                        format!(
-                            "Failed to analyze type of array value at {}.",
-                            value.location
-                        )
-                    })?;
-                    if analyzed_value.ty != element_type {
-                        Err(anyhow::anyhow!(
-                            "Array value has type '{}', but expected '{}' at {}.",
-                            analyzed_value.ty,
-                            element_type,
-                            value.location
-                        ))?;
-                    }
-
-                    analyzed_values.push(analyzed_value);
-                }
-                Ok(AnalyzedExpression {
-                    kind: AnalyzedExpressionKind::Literal(AnalyzedLiteral::Array(analyzed_values)),
-                    ty: array_type,
-                })
-            }
         },
         ParsedExpressionKind::Unary { expr, op } => match op {
             UnaryOp::Math(math_op) => {

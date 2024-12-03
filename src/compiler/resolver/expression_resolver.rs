@@ -158,13 +158,6 @@ pub fn resolve_expression(
                         .collect();
                     ResolvedLiteral::Struct(resolved_fields)
                 }
-                AnalyzedLiteral::Array(values) => {
-                    let resolved_values = values
-                        .iter()
-                        .map(|expr| resolve_expression(context, expr, false))
-                        .collect();
-                    ResolvedLiteral::Array(resolved_values)
-                }
             };
 
             ResolvedExpression {

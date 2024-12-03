@@ -85,7 +85,6 @@ pub enum AnalyzedLiteral {
     Char(i8),
     Integer(i64),
     Struct(Vec<(String, AnalyzedExpression)>),
-    Array(Vec<AnalyzedExpression>),
 }
 
 #[derive(Debug, Clone)]

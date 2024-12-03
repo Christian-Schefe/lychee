@@ -42,7 +42,6 @@ pub fn always_calls_return(expression: &AnalyzedExpression) -> bool {
             AnalyzedLiteral::Struct(fields) => {
                 fields.iter().any(|(_, value)| always_calls_return(value))
             }
-            AnalyzedLiteral::Array(values) => values.iter().any(always_calls_return),
             _ => false,
         },
         AnalyzedExpressionKind::Unary { op: _, expr } => always_calls_return(expr),

@@ -146,7 +146,6 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
                     context.current_stack_size += field.value_data.size;
                 }
             }
-            ResolvedLiteral::Array(_) => unimplemented!(),
         },
         ResolvedExpressionKind::Unary { op, expr } => {
             generate_expression_code(context, expr);

@@ -157,7 +157,6 @@ pub enum ResolvedLiteral {
     Char(i8),
     Integer(i64),
     Struct(Vec<ResolvedExpression>),
-    Array(Vec<ResolvedExpression>),
 }
 
 #[derive(Debug, Clone)]
