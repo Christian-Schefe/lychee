@@ -4,16 +4,10 @@ pub mod token;
 pub mod token_stack;
 
 use crate::compiler::lexer::lexer_error::{LexResult, LocationError};
-use crate::compiler::lexer::location::Location;
+use crate::compiler::lexer::location::{Location, Src};
 use crate::compiler::lexer::token::{Literal, StaticToken, Token, STATIC_TOKEN_MAP};
 use std::path::PathBuf;
 use std::string::String;
-
-#[derive(Debug, Clone)]
-pub struct Src<T> {
-    pub value: T,
-    pub location: Location,
-}
 
 pub type SrcToken = Src<Token>;
 
@@ -21,7 +15,7 @@ pub fn lex(input_path: &PathBuf) -> LexResult<Vec<SrcToken>> {
     let input: Vec<char> = std::fs::read_to_string(input_path)?.chars().collect();
     let mut offset = 0;
     let mut tokens = Vec::new();
-    let mut location = Location::new();
+    let mut location = Location::new(input_path.clone());
 
     while offset < input.len() {
         if input[offset] == '/' && offset + 1 < input.len() && input[offset + 1] == '/' {

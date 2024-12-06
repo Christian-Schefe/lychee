@@ -7,7 +7,7 @@ use crate::compiler::parser::parsed_expression::{
 };
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::program_parser::{parse_expression, parse_identifier, pop_expected};
-use crate::compiler::parser::type_parser::parse_type;
+use crate::compiler::parser::type_parser::{parse_module_path, parse_type};
 use anyhow::Context;
 use std::collections::HashMap;
 
@@ -17,28 +17,34 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
         Token::Identifier(name) => {
             tokens.pop();
             match tokens.peek().value {
-                Token::Static(StaticToken::OpenParen) => {
-                    let (_, args, _) = parse_seperated_expressions(
-                        tokens,
-                        Token::Static(StaticToken::OpenParen),
-                        Token::Static(StaticToken::CloseParen),
-                        Token::Static(StaticToken::Comma),
-                        false,
-                        "function call arguments",
-                    )?;
-                    Ok(ParsedExpression::new(
-                        ParsedExpressionKind::FunctionCall {
-                            function_name: name,
-                            args,
-                        },
+                Token::Static(StaticToken::OpenParen) => {}
+                Token::Static(StaticToken::DoubleColon) => {}
+                _ => {
+                    return Ok(ParsedExpression::new(
+                        ParsedExpressionKind::Variable(name),
                         token.location,
                     ))
                 }
-                _ => Ok(ParsedExpression::new(
-                    ParsedExpressionKind::Variable(name),
-                    token.location,
-                )),
             }
+
+            let module_id = parse_module_path(tokens, name)
+                .with_context(|| format!("Failed to parse module path at {}.", token.location))?;
+
+            let (_, args, _) = parse_seperated_expressions(
+                tokens,
+                Token::Static(StaticToken::OpenParen),
+                Token::Static(StaticToken::CloseParen),
+                Token::Static(StaticToken::Comma),
+                false,
+                "function call arguments",
+            )?;
+            Ok(ParsedExpression::new(
+                ParsedExpressionKind::FunctionCall {
+                    function_id: module_id,
+                    args,
+                },
+                token.location,
+            ))
         }
         Token::Literal(lit) => {
             tokens.pop();

@@ -15,7 +15,7 @@ pub(crate) fn convert_line(line: &str) -> AssemblyInstruction {
     let parts = line.split_whitespace().collect::<Vec<&str>>();
 
     if parts[0].ends_with(":") {
-        let label_str = parts[0].split(":").collect::<Vec<&str>>()[0];
+        let label_str = &parts[0][..parts[0].len() - 1];
         return AssemblyInstruction::Label(label_str.to_string());
     }
 

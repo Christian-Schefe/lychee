@@ -1,5 +1,5 @@
 use crate::compiler::analyzer::analyzed_expression::{AnalyzedBinaryOp, BinaryAssignOp};
-use crate::compiler::analyzer::type_resolver::AnalyzedType;
+use crate::compiler::merger::merged_expression::TypeId;
 use crate::compiler::parser::parsed_expression::UnaryMathOp;
 use crate::compiler::resolver::program_resolver::ResolverContext;
 
@@ -23,39 +23,20 @@ pub enum ValueLocation {
 }
 
 impl ValueData {
-    pub fn from_type(ty: &AnalyzedType, resolver_context: &ResolverContext) -> ValueData {
+    pub fn from_type(ty: &TypeId, resolver_context: &ResolverContext) -> ValueData {
+        let size = resolver_context.resolved_types.get_type_size(ty);
         match ty {
-            AnalyzedType::Unit => ValueData {
+            TypeId::Unit => ValueData {
                 location: ValueLocation::None,
-                size: 0,
+                size,
             },
-            AnalyzedType::Struct(struct_name) => {
-                let size = resolver_context
-                    .resolved_types
-                    .struct_types
-                    .get(struct_name)
-                    .unwrap()
-                    .size;
-                ValueData {
-                    location: ValueLocation::Stack,
-                    size,
-                }
-            }
-            AnalyzedType::Bool => ValueData {
-                location: ValueLocation::Register,
-                size: 1,
+            TypeId::StructType(_) => ValueData {
+                location: ValueLocation::Stack,
+                size,
             },
-            AnalyzedType::Char => ValueData {
+            TypeId::Bool | TypeId::Char | TypeId::Integer(_) | TypeId::Pointer(_) => ValueData {
                 location: ValueLocation::Register,
-                size: 1,
-            },
-            AnalyzedType::Integer(size) => ValueData {
-                location: ValueLocation::Register,
-                size: *size,
-            },
-            AnalyzedType::Pointer(_) => ValueData {
-                location: ValueLocation::Register,
-                size: 8,
+                size,
             },
         }
     }

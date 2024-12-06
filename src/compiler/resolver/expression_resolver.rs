@@ -2,7 +2,7 @@ use crate::compiler::analyzer::analyzed_expression::{
     AnalyzedConstant, AnalyzedExpression, AnalyzedExpressionKind, AnalyzedLiteral, AnalyzedUnaryOp,
     AssignableExpression, AssignableExpressionKind,
 };
-use crate::compiler::analyzer::type_resolver::AnalyzedType;
+use crate::compiler::merger::merged_expression::TypeId;
 use crate::compiler::resolver::program_resolver::ResolverContext;
 use crate::compiler::resolver::resolved_expression::{
     ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedLiteral,
@@ -199,10 +199,10 @@ pub fn resolve_expression(
                 AnalyzedUnaryOp::Math(math_op) => ResolvedUnaryOp::Math(math_op.clone()),
                 AnalyzedUnaryOp::LogicalNot => ResolvedUnaryOp::LogicalNot,
                 AnalyzedUnaryOp::Cast => match &expression.ty {
-                    AnalyzedType::Integer(_) => ResolvedUnaryOp::IntCast,
-                    AnalyzedType::Bool => ResolvedUnaryOp::BoolCast,
-                    AnalyzedType::Char => ResolvedUnaryOp::IntCast,
-                    AnalyzedType::Pointer(_) => ResolvedUnaryOp::PointerCast,
+                    TypeId::Integer(_) => ResolvedUnaryOp::IntCast,
+                    TypeId::Bool => ResolvedUnaryOp::BoolCast,
+                    TypeId::Char => ResolvedUnaryOp::IntCast,
+                    TypeId::Pointer(_) => ResolvedUnaryOp::PointerCast,
                     _ => {
                         panic!("Unsupported cast: {:?}", expression.ty)
                     }
@@ -276,7 +276,7 @@ pub fn resolve_expression(
 
             ResolvedExpression {
                 kind: ResolvedExpressionKind::FunctionCall {
-                    function_name: function_name.clone(),
+                    function_name: function_name.to_string(),
                     args: resolved_args,
                     return_stack_space,
                 },
@@ -350,7 +350,7 @@ fn resolve_assignable_expression(
         AssignableExpressionKind::ArrayIndex(arr_expr, index_expr) => {
             let resolved_arr_expr = resolve_expression(context, arr_expr, false);
             let resolved_index_expr = resolve_expression(context, index_expr, false);
-            let element_size = array_element_size(context, &arr_expr.ty);
+            let element_size = context.resolved_types.get_type_size(&arr_expr.ty);
             ResolvedAssignableExpression::ArrayIndex(
                 Box::new(resolved_arr_expr),
                 Box::new(resolved_index_expr),
@@ -365,50 +365,19 @@ fn resolve_assignable_expression(
     }
 }
 
-pub fn type_size(context: &ResolverContext, ty: &AnalyzedType) -> usize {
-    type_size_fn(
-        |name| context.resolved_types.struct_types.get(name).unwrap().size,
-        ty,
-    )
-}
-
-pub fn type_size_fn<F>(struct_sizes: F, ty: &AnalyzedType) -> usize
-where
-    F: Fn(&str) -> usize,
-{
-    match ty {
-        AnalyzedType::Integer(size) => *size,
-        AnalyzedType::Bool => 1,
-        AnalyzedType::Char => 1,
-        AnalyzedType::Unit => 0,
-        AnalyzedType::Pointer(_) => 8,
-        AnalyzedType::Struct(name) => struct_sizes(name),
-    }
-}
-
-fn field_offset(context: &ResolverContext, struct_type: &AnalyzedType, field_name: &str) -> usize {
-    let struct_name = match struct_type {
-        AnalyzedType::Struct(name) => name,
-        AnalyzedType::Pointer(inner) => match &**inner {
-            AnalyzedType::Struct(name) => name,
-            _ => unreachable!(),
-        },
-        _ => unreachable!(),
+fn field_offset(context: &ResolverContext, type_id: &TypeId, field_name: &str) -> usize {
+    let struct_type = match type_id {
+        TypeId::StructType(_) => type_id,
+        TypeId::Pointer(inner) => inner,
+        _ => panic!("Expected struct type: {:?}", type_id),
     };
     context
         .resolved_types
-        .struct_types
-        .get(struct_name)
-        .unwrap()
+        .structs
+        .get(struct_type)
+        .unwrap_or_else(|| panic!("Unknown struct type: {:?}", struct_type))
         .field_offsets
         .get(field_name)
         .unwrap()
         .clone()
-}
-
-fn array_element_size(context: &ResolverContext, ty: &AnalyzedType) -> usize {
-    match ty {
-        AnalyzedType::Pointer(inner) => type_size(context, inner),
-        _ => unreachable!(),
-    }
 }

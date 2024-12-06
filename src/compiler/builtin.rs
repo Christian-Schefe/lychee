@@ -1,20 +1,20 @@
-use crate::compiler::analyzer::program_analyzer::FunctionHeader;
-use crate::compiler::analyzer::type_resolver::AnalyzedType;
 use crate::compiler::codegen::CodegenContext;
+use crate::compiler::merger::merged_expression::{ModuleId, ResolvedFunctionHeader, TypeId};
+use crate::compiler::parser::ModulePath;
 use std::collections::HashMap;
 
 pub struct BuiltinFunction {
     pub name: String,
-    pub return_type: AnalyzedType,
-    pub parameters: Vec<AnalyzedType>,
+    pub return_type: TypeId,
+    pub parameters: Vec<(String, TypeId)>,
     pub code: Box<dyn Fn(&mut CodegenContext)>,
 }
 
 impl BuiltinFunction {
     fn new(
         name: String,
-        return_type: AnalyzedType,
-        parameters: Vec<AnalyzedType>,
+        return_type: TypeId,
+        parameters: Vec<(String, TypeId)>,
         code: Box<dyn Fn(&mut CodegenContext)>,
     ) -> BuiltinFunction {
         BuiltinFunction {
@@ -28,7 +28,7 @@ impl BuiltinFunction {
     pub fn read_char() -> BuiltinFunction {
         BuiltinFunction::new(
             "read_char".to_string(),
-            AnalyzedType::Char,
+            TypeId::Char,
             vec![],
             Box::new(|context| {
                 context.movi("r0", 1);
@@ -43,8 +43,8 @@ impl BuiltinFunction {
     pub fn write_char() -> BuiltinFunction {
         BuiltinFunction::new(
             "write_char".to_string(),
-            AnalyzedType::Unit,
-            vec![AnalyzedType::Char],
+            TypeId::Unit,
+            vec![("ch".to_string(), TypeId::Char)],
             Box::new(|context| {
                 context.movi("r0", 1);
                 context.write("r0", "[sp;8]");
@@ -56,8 +56,8 @@ impl BuiltinFunction {
     pub fn malloc() -> BuiltinFunction {
         BuiltinFunction::new(
             "malloc".to_string(),
-            AnalyzedType::Pointer(Box::new(AnalyzedType::Unit)),
-            vec![AnalyzedType::Integer(4)],
+            TypeId::Pointer(Box::new(TypeId::Unit)),
+            vec![("size".to_string(), TypeId::Integer(4))],
             Box::new(|context| {
                 context.load(4, "r1", "[sp;8]");
                 context.alloc("r1", "r0");
@@ -69,8 +69,11 @@ impl BuiltinFunction {
     pub fn free() -> BuiltinFunction {
         BuiltinFunction::new(
             "free".to_string(),
-            AnalyzedType::Unit,
-            vec![AnalyzedType::Pointer(Box::new(AnalyzedType::Unit))],
+            TypeId::Unit,
+            vec![(
+                "pointer".to_string(),
+                TypeId::Pointer(Box::new(TypeId::Unit)),
+            )],
             Box::new(|context| {
                 context.load(8, "r0", "[sp;8]");
                 context.free("r0");
@@ -82,7 +85,7 @@ impl BuiltinFunction {
     pub fn random() -> BuiltinFunction {
         BuiltinFunction::new(
             "random".to_string(),
-            AnalyzedType::Integer(8),
+            TypeId::Integer(8),
             vec![],
             Box::new(|context| {
                 context.rand("r0");
@@ -101,13 +104,28 @@ impl BuiltinFunction {
         ]
     }
 
-    pub fn add_builtin_function_headers(function_headers: &mut HashMap<String, FunctionHeader>) {
+    pub fn add_builtin_function_headers(
+        function_headers: &mut HashMap<ModuleId, ResolvedFunctionHeader>,
+    ) {
         for function in BuiltinFunction::all_functions() {
+            let mut parameter_order = Vec::new();
+            let mut parameter_types = HashMap::new();
+            for (name, ty) in &function.parameters {
+                parameter_order.push(name.clone());
+                parameter_types.insert(name.clone(), ty.clone());
+            }
+
+            let id = ModuleId {
+                name: function.name.clone(),
+                module_path: ModulePath(vec!["builtin".to_string()]),
+            };
             function_headers.insert(
-                function.name.clone(),
-                FunctionHeader {
+                id.clone(),
+                ResolvedFunctionHeader {
+                    id,
                     return_type: function.return_type,
-                    parameters: function.parameters,
+                    parameter_types,
+                    parameter_order,
                 },
             );
         }
@@ -115,10 +133,9 @@ impl BuiltinFunction {
 
     pub fn generate_builtin_function_code(context: &mut CodegenContext) {
         for function in BuiltinFunction::all_functions() {
-            let label = context.new_label(&function.name);
-            context
-                .function_labels
-                .insert(function.name.clone(), label.clone());
+            let id = format!("builtin::{}", function.name);
+            let label = context.new_label(&id);
+            context.function_labels.insert(id, label.clone());
             context.label(&label);
             (function.code)(context);
         }

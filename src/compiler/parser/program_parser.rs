@@ -1,3 +1,4 @@
+use crate::compiler::lexer;
 use crate::compiler::lexer::lexer_error::LocationError;
 use crate::compiler::lexer::location::Src;
 use crate::compiler::lexer::token::{Keyword, StaticToken, Token};
@@ -5,13 +6,15 @@ use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::lexer::SrcToken;
 use crate::compiler::parser::binop_expr_parser::parse_binop_expression;
 use crate::compiler::parser::parsed_expression::{
-    ParsedExpression, ParsedFunction, ParsedProgram, ParsedStructDefinition,
+    ParsedExpression, ParsedFunction, ParsedModule, ParsedStructDefinition,
 };
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::primary_expr_parser::parse_block_expression;
 use crate::compiler::parser::type_parser::parse_type;
+use crate::compiler::parser::ModulePath;
 use anyhow::Context;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 
 pub fn pop_expected(tokens: &mut TokenStack, expected: Token) -> ParseResult<SrcToken> {
     let token = tokens.pop().clone();
@@ -62,31 +65,77 @@ pub fn parse_identifier(tokens: &mut TokenStack) -> ParseResult<Src<String>> {
     )
 }
 
-pub fn parse_program(tokens: &mut TokenStack) -> ParseResult<ParsedProgram> {
+pub fn parse_module(
+    visited_paths: &mut HashSet<PathBuf>,
+    module_tree: &mut HashMap<ModulePath, ParsedModule>,
+    root_path: &PathBuf,
+    module_path: ModulePath,
+) -> ParseResult<()> {
+    let path = module_path.get_path(root_path);
+    if !visited_paths.insert(path.clone()) {
+        return Err(anyhow::anyhow!(
+            "Cyclic module dependency in file '{}'.",
+            path.to_str().unwrap()
+        ))?;
+    }
+
+    println!("Parsing module: {}", module_path.get_identifier());
+
+    let tokens = lexer::lex(&path)?;
+    let mut tokens = TokenStack::new(tokens);
+
     let mut functions = Vec::new();
     let mut struct_definitions = Vec::new();
+    let mut submodule_declarations = Vec::new();
 
     while tokens.peek().value != Token::EOF {
         let token = tokens.peek().clone();
         match token.value {
             Token::Keyword(Keyword::Struct) => {
-                let struct_def = parse_struct_definition(tokens).with_context(|| {
+                let struct_def = parse_struct_definition(&mut tokens).with_context(|| {
                     format!("Failed to parse struct definition at {}.", token.location)
                 })?;
                 struct_definitions.push(struct_def);
             }
+            Token::Keyword(Keyword::Module) => {
+                let submodule = parse_module_declaration(&mut tokens)
+                    .with_context(|| format!("Failed to parse submodule at {}.", token.location))?;
+                submodule_declarations.push((token.location, submodule));
+            }
             _ => {
-                let func = parse_function(tokens)
+                let func = parse_function(&mut tokens)
                     .with_context(|| format!("Failed to parse function at {}.", token.location))?;
                 functions.push(func);
             }
         }
     }
 
-    Ok(ParsedProgram {
+    let mut submodules = Vec::new();
+
+    for (location, submodule) in submodule_declarations {
+        let mut child_module = module_path.clone();
+        child_module.push(submodule.clone());
+        parse_module(visited_paths, module_tree, root_path, child_module).with_context(|| {
+            format!("Failed to parse submodule '{}' at {}.", submodule, location)
+        })?;
+        submodules.push(submodule);
+    }
+
+    let module = ParsedModule {
+        module_path: module_path.clone(),
         functions,
         struct_definitions,
-    })
+    };
+
+    module_tree.insert(module_path, module);
+    Ok(())
+}
+
+pub fn parse_module_declaration(tokens: &mut TokenStack) -> ParseResult<String> {
+    pop_expected(tokens, Token::Keyword(Keyword::Module))?;
+    let module_name = parse_identifier(tokens)?.value;
+    pop_expected(tokens, Token::Static(StaticToken::Semicolon))?;
+    Ok(module_name)
 }
 
 pub fn parse_struct_definition(

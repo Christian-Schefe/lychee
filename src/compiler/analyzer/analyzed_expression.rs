@@ -1,26 +1,27 @@
-use crate::compiler::analyzer::type_resolver::{AnalyzedType, AnalyzedTypes};
+use crate::compiler::merger::merged_expression::{
+    ModuleId, ResolvedFunctions, ResolvedTypes, TypeId,
+};
 use crate::compiler::parser::parsed_expression::{
     BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, UnaryMathOp,
 };
 
 #[derive(Debug, Clone)]
 pub struct AnalyzedProgram {
-    pub analyzed_types: AnalyzedTypes,
+    pub resolved_types: ResolvedTypes,
+    pub resolved_functions: ResolvedFunctions,
     pub functions: Vec<AnalyzedFunction>,
 }
 
 #[derive(Debug, Clone)]
 pub struct AnalyzedFunction {
-    pub name: String,
-    pub return_type: AnalyzedType,
-    pub parameters: Vec<(String, AnalyzedType)>,
+    pub name: ModuleId,
     pub body: AnalyzedExpression,
 }
 
 #[derive(Debug, Clone)]
 pub struct AnalyzedExpression {
     pub kind: AnalyzedExpressionKind,
-    pub ty: AnalyzedType,
+    pub ty: TypeId,
 }
 
 #[derive(Debug, Clone)]
@@ -74,7 +75,7 @@ pub enum AnalyzedExpressionKind {
         expr: AssignableExpression,
     },
     FunctionCall {
-        function_name: String,
+        function_name: ModuleId,
         args: Vec<AnalyzedExpression>,
     },
     FieldAccess {
@@ -102,7 +103,7 @@ pub enum AnalyzedConstant {
 #[derive(Debug, Clone)]
 pub struct AssignableExpression {
     pub kind: AssignableExpressionKind,
-    pub ty: AnalyzedType,
+    pub ty: TypeId,
 }
 #[derive(Debug, Clone)]
 pub enum AssignableExpressionKind {

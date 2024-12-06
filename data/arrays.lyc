@@ -3,6 +3,7 @@ int main() {
     set(&arr, 0, 5);
     set(&arr, 1, -8);
     set(&arr, 2, random() as int);
+    set(&arr, 1, 12);
     printArray(&arr);
     0
 }

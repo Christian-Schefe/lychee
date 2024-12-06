@@ -1,0 +1,8 @@
+struct Test {
+    int a;
+    int b;
+}
+
+int test() {
+    10
+}

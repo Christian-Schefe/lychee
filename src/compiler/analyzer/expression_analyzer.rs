@@ -4,21 +4,21 @@ use crate::compiler::analyzer::analyzed_expression::{
     BinaryAssignOp,
 };
 use crate::compiler::analyzer::program_analyzer::{AnalyzerContext, LocalVariable, LoopData};
-use crate::compiler::analyzer::type_resolver::AnalyzedType;
 use crate::compiler::analyzer::AnalyzerResult;
 use crate::compiler::lexer::location::Location;
-use crate::compiler::parser::parsed_expression::{
-    BinaryComparisonOp, BinaryOp, ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryOp,
+use crate::compiler::merger::merged_expression::{
+    MergedExpression, MergedExpressionKind, MergedLiteral, MergedUnaryOp, TypeId,
 };
+use crate::compiler::parser::parsed_expression::{BinaryComparisonOp, BinaryOp};
 use anyhow::Context;
 use std::collections::HashSet;
 
 pub fn analyze_expression(
     context: &mut AnalyzerContext,
-    expression: &ParsedExpression,
+    expression: &MergedExpression,
 ) -> AnalyzerResult<AnalyzedExpression> {
     match &expression.value {
-        ParsedExpressionKind::Block {
+        MergedExpressionKind::Block {
             expressions,
             returns_value,
         } => {
@@ -41,9 +41,9 @@ pub fn analyze_expression(
             let return_ty = if *returns_value {
                 analyzed_expressions
                     .last()
-                    .map_or(AnalyzedType::Unit, |e| e.ty.clone())
+                    .map_or(TypeId::Unit, |e| e.ty.clone())
             } else {
-                AnalyzedType::Unit
+                TypeId::Unit
             };
 
             context.local_variables = old_local_variables;
@@ -55,7 +55,7 @@ pub fn analyze_expression(
                 ty: return_ty,
             })
         }
-        ParsedExpressionKind::Return(expr) => {
+        MergedExpressionKind::Return(expr) => {
             let analyzed_expr = expr
                 .as_ref()
                 .map(|e| analyze_expression(context, e))
@@ -68,7 +68,7 @@ pub fn analyze_expression(
                 })?;
             let return_ty = analyzed_expr
                 .as_ref()
-                .map_or(AnalyzedType::Unit, |e| e.ty.clone());
+                .map_or(TypeId::Unit, |e| e.ty.clone());
             if return_ty != *context.return_type {
                 Err(anyhow::anyhow!(
                     "Return type '{}' does not match function return type '{}' at {}.",
@@ -79,10 +79,10 @@ pub fn analyze_expression(
             }
             Ok(AnalyzedExpression {
                 kind: AnalyzedExpressionKind::Return(analyzed_expr.map(Box::new)),
-                ty: AnalyzedType::Unit,
+                ty: TypeId::Unit,
             })
         }
-        ParsedExpressionKind::Continue => {
+        MergedExpressionKind::Continue => {
             if context.loop_data.is_none() {
                 Err(anyhow::anyhow!(
                     "Continue outside of loop at {}.",
@@ -91,10 +91,10 @@ pub fn analyze_expression(
             }
             Ok(AnalyzedExpression {
                 kind: AnalyzedExpressionKind::Continue,
-                ty: AnalyzedType::Unit,
+                ty: TypeId::Unit,
             })
         }
-        ParsedExpressionKind::Break(expr) => {
+        MergedExpressionKind::Break(expr) => {
             if context.loop_data.is_none() {
                 Err(anyhow::anyhow!(
                     "Break outside of loop at {}.",
@@ -113,7 +113,7 @@ pub fn analyze_expression(
                 })?;
             let break_return_type = analyzed_expr
                 .as_ref()
-                .map_or(AnalyzedType::Unit, |e| e.ty.clone());
+                .map_or(TypeId::Unit, |e| e.ty.clone());
             let loop_data = context.loop_data.as_ref().unwrap();
             if break_return_type != loop_data.break_return_type {
                 Err(anyhow::anyhow!(
@@ -126,10 +126,10 @@ pub fn analyze_expression(
 
             Ok(AnalyzedExpression {
                 kind: AnalyzedExpressionKind::Break(analyzed_expr.map(Box::new)),
-                ty: AnalyzedType::Unit,
+                ty: TypeId::Unit,
             })
         }
-        ParsedExpressionKind::If {
+        MergedExpressionKind::If {
             condition,
             then_block,
             else_expr,
@@ -140,7 +140,7 @@ pub fn analyze_expression(
                     condition.location
                 )
             })?;
-            if analyzed_condition.ty != AnalyzedType::Bool {
+            if analyzed_condition.ty != TypeId::Bool {
                 Err(anyhow::anyhow!(
                     "If condition has non-bool type at {}.",
                     condition.location
@@ -174,14 +174,14 @@ pub fn analyze_expression(
                 }
                 analyzed_then.ty.clone()
             } else {
-                if analyzed_then.ty != AnalyzedType::Unit {
+                if analyzed_then.ty != TypeId::Unit {
                     Err(anyhow::anyhow!(
                         "If then block has non-unit type '{}' but else block is missing at {}.",
                         analyzed_then.ty,
                         expression.location
                     ))?;
                 }
-                AnalyzedType::Unit
+                TypeId::Unit
             };
             Ok(AnalyzedExpression {
                 kind: AnalyzedExpressionKind::If {
@@ -192,7 +192,7 @@ pub fn analyze_expression(
                 ty: return_ty,
             })
         }
-        ParsedExpressionKind::While {
+        MergedExpressionKind::While {
             condition,
             loop_body,
             else_expr,
@@ -203,7 +203,7 @@ pub fn analyze_expression(
                     condition.location
                 )
             })?;
-            if analyzed_condition.ty != AnalyzedType::Bool {
+            if analyzed_condition.ty != TypeId::Bool {
                 Err(anyhow::anyhow!(
                     "While condition has non-bool type at {}.",
                     condition.location
@@ -223,7 +223,7 @@ pub fn analyze_expression(
 
             let return_ty = analyzed_else
                 .as_ref()
-                .map_or(AnalyzedType::Unit, |e| e.ty.clone());
+                .map_or(TypeId::Unit, |e| e.ty.clone());
 
             let old_loop_data = context.loop_data.clone();
             context.loop_data = Some(LoopData {
@@ -236,7 +236,7 @@ pub fn analyze_expression(
                     loop_body.location
                 )
             })?;
-            if analyzed_body.ty != AnalyzedType::Unit {
+            if analyzed_body.ty != TypeId::Unit {
                 Err(anyhow::anyhow!(
                     "While loop body has non-unit type '{}' at {}.",
                     analyzed_body.ty,
@@ -255,7 +255,7 @@ pub fn analyze_expression(
                 ty: return_ty,
             })
         }
-        ParsedExpressionKind::For {
+        MergedExpressionKind::For {
             init,
             condition,
             step,
@@ -265,7 +265,7 @@ pub fn analyze_expression(
             let analyzed_init = analyze_expression(context, init).with_context(|| {
                 format!("Failed to analyze type of for init at {}.", init.location)
             })?;
-            if analyzed_init.ty != AnalyzedType::Unit {
+            if analyzed_init.ty != TypeId::Unit {
                 Err(anyhow::anyhow!(
                     "For init has non-unit type '{}' at {}.",
                     analyzed_init.ty,
@@ -279,7 +279,7 @@ pub fn analyze_expression(
                     condition.location
                 )
             })?;
-            if analyzed_condition.ty != AnalyzedType::Bool {
+            if analyzed_condition.ty != TypeId::Bool {
                 Err(anyhow::anyhow!(
                     "For condition has non-bool type at {}.",
                     condition.location
@@ -290,8 +290,8 @@ pub fn analyze_expression(
                 format!("Failed to analyze type of for step at {}.", step.location)
             })?;
             match analyzed_step.ty {
-                AnalyzedType::Unit => {}
-                AnalyzedType::Integer(_) => {}
+                TypeId::Unit => {}
+                TypeId::Integer(_) => {}
                 _ => {
                     return Err(anyhow::anyhow!(
                         "For step has non-unit/non-integer type '{}' at {}.",
@@ -314,7 +314,7 @@ pub fn analyze_expression(
 
             let return_ty = analyzed_else
                 .as_ref()
-                .map_or(AnalyzedType::Unit, |e| e.ty.clone());
+                .map_or(TypeId::Unit, |e| e.ty.clone());
 
             let old_loop_data = context.loop_data.clone();
             context.loop_data = Some(LoopData {
@@ -327,7 +327,7 @@ pub fn analyze_expression(
                     loop_body.location
                 )
             })?;
-            if analyzed_body.ty != AnalyzedType::Unit {
+            if analyzed_body.ty != TypeId::Unit {
                 Err(anyhow::anyhow!(
                     "For loop body has non-unit type '{}' at {}.",
                     analyzed_body.ty,
@@ -348,7 +348,7 @@ pub fn analyze_expression(
                 ty: return_ty,
             })
         }
-        ParsedExpressionKind::Declaration {
+        MergedExpressionKind::Declaration {
             var_type,
             var_name,
             value,
@@ -359,12 +359,8 @@ pub fn analyze_expression(
                     value.location
                 )
             })?;
-            let maybe_declared_type = var_type
-                .as_ref()
-                .map(|x| context.analyzed_types.resolve_type(x))
-                .transpose()?;
-            if let Some(declared_type) = maybe_declared_type {
-                if analyzed_value.ty != declared_type {
+            if let Some(declared_type) = var_type {
+                if analyzed_value.ty != *declared_type {
                     Err(anyhow::anyhow!(
                         "Declaration expression should be of type '{}', but was '{}' at {}.",
                         declared_type,
@@ -393,10 +389,10 @@ pub fn analyze_expression(
                     var_name: var_name.clone(),
                     value: Box::new(analyzed_value),
                 },
-                ty: AnalyzedType::Unit,
+                ty: TypeId::Unit,
             })
         }
-        ParsedExpressionKind::Variable(var_name) => {
+        MergedExpressionKind::Variable(var_name) => {
             let local_var = context.local_variables.get(var_name).ok_or_else(|| {
                 anyhow::anyhow!(
                     "Variable '{}' not declared at {}.",
@@ -412,70 +408,54 @@ pub fn analyze_expression(
                 ty: local_var.ty.clone(),
             })
         }
-        ParsedExpressionKind::Literal(lit) => match lit {
-            ParsedLiteral::Unit => Ok(AnalyzedExpression {
+        MergedExpressionKind::Literal(lit) => match lit {
+            MergedLiteral::Unit => Ok(AnalyzedExpression {
                 kind: AnalyzedExpressionKind::Literal(AnalyzedLiteral::Unit),
-                ty: AnalyzedType::Unit,
+                ty: TypeId::Unit,
             }),
-            ParsedLiteral::Bool(val) => Ok(AnalyzedExpression {
+            MergedLiteral::Bool(val) => Ok(AnalyzedExpression {
                 kind: AnalyzedExpressionKind::Literal(AnalyzedLiteral::Bool(*val)),
-                ty: AnalyzedType::Bool,
+                ty: TypeId::Bool,
             }),
-            ParsedLiteral::Char(val) => Ok(AnalyzedExpression {
+            MergedLiteral::Char(val) => Ok(AnalyzedExpression {
                 kind: AnalyzedExpressionKind::Literal(AnalyzedLiteral::Char(*val)),
-                ty: AnalyzedType::Char,
+                ty: TypeId::Char,
             }),
-            ParsedLiteral::Integer(val) => {
+            MergedLiteral::Integer(val) => {
                 let ty = if *val >= -2147483648 && *val <= 2147483647 {
-                    AnalyzedType::Integer(4)
+                    TypeId::Integer(4)
                 } else {
-                    AnalyzedType::Integer(8)
+                    TypeId::Integer(8)
                 };
                 Ok(AnalyzedExpression {
                     kind: AnalyzedExpressionKind::Literal(AnalyzedLiteral::Integer(*val)),
                     ty,
                 })
             }
-            ParsedLiteral::String(val) => {
+            MergedLiteral::String(val) => {
                 let mut bytes = val.as_bytes().to_vec();
                 bytes.push(0);
                 Ok(AnalyzedExpression {
                     kind: AnalyzedExpressionKind::ConstantPointer(AnalyzedConstant::String(bytes)),
-                    ty: AnalyzedType::Pointer(Box::new(AnalyzedType::Char)),
+                    ty: TypeId::Pointer(Box::new(TypeId::Char)),
                 })
             }
-            ParsedLiteral::Struct(ty, field_values) => {
-                let analyzed_ty = context.analyzed_types.resolve_type(ty)?;
-                let struct_type = if let AnalyzedType::Struct(str_name) = &analyzed_ty {
-                    context
-                        .analyzed_types
-                        .struct_types
-                        .get(str_name)
-                        .ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "Struct type '{}' not found at {}.",
-                                str_name,
-                                ty.location
-                            )
-                        })?
-                } else {
-                    Err(anyhow::anyhow!(
-                        "Expected struct type, found '{}' at {}.",
-                        analyzed_ty,
-                        ty.location
-                    ))?
-                };
+            MergedLiteral::Struct(ty, field_values) => {
+                let struct_type = context.structs.get(ty).ok_or_else(|| {
+                    anyhow::anyhow!("Struct type '{}' not found at {}.", ty, expression.location)
+                })?;
 
                 let mut present_fields = field_values.keys().collect::<HashSet<_>>();
                 let mut analyzed_field_values = Vec::new();
 
                 for field_name in &struct_type.field_order {
-                    let field_value = field_values.get(field_name).ok_or_else(|| {
+                    let field_expr = field_values.get(field_name);
+                    let field_value = field_expr.ok_or_else(|| {
                         anyhow::anyhow!(
-                            "Struct type '{}' is missing field '{}' at {}.",
-                            analyzed_ty,
+                            "Struct literal '{}' is missing field '{}' at {}.",
+                            ty,
                             field_name,
-                            ty.location
+                            expression.location
                         )
                     })?;
                     let analyzed_field_value = analyze_expression(context, field_value)
@@ -485,7 +465,7 @@ pub fn analyze_expression(
                                 field_value.location
                             )
                         })?;
-                    let expected_type = struct_type.fields.get(field_name).unwrap();
+                    let expected_type = struct_type.field_types.get(field_name).unwrap();
                     if analyzed_field_value.ty != *expected_type {
                         Err(anyhow::anyhow!(
                             "Struct field '{}' has type '{}', but expected '{}' at {}.",
@@ -502,9 +482,9 @@ pub fn analyze_expression(
                 if !present_fields.is_empty() {
                     Err(anyhow::anyhow!(
                         "Struct literal of type '{}' has extra fields: {:?} at {}.",
-                        analyzed_ty,
+                        ty,
                         present_fields,
-                        ty.location
+                        expression.location
                     ))?;
                 }
 
@@ -512,12 +492,12 @@ pub fn analyze_expression(
                     kind: AnalyzedExpressionKind::Literal(AnalyzedLiteral::Struct(
                         analyzed_field_values,
                     )),
-                    ty: analyzed_ty,
+                    ty: ty.clone(),
                 })
             }
         },
-        ParsedExpressionKind::Unary { expr, op } => match op {
-            UnaryOp::Math(math_op) => {
+        MergedExpressionKind::Unary { expr, op } => match op {
+            MergedUnaryOp::Math(math_op) => {
                 let analyzed_expr = analyze_expression(context, expr).with_context(|| {
                     format!(
                         "Failed to analyze type of math unary expression at {}.",
@@ -525,7 +505,7 @@ pub fn analyze_expression(
                     )
                 })?;
                 match analyzed_expr.ty {
-                    AnalyzedType::Integer(_) => {}
+                    TypeId::Integer(_) => {}
                     _ => Err(anyhow::anyhow!(
                         "Math unary expression has non-integer type '{}' at {}.",
                         analyzed_expr.ty,
@@ -540,14 +520,14 @@ pub fn analyze_expression(
                     },
                 })
             }
-            UnaryOp::LogicalNot => {
+            MergedUnaryOp::LogicalNot => {
                 let analyzed_expr = analyze_expression(context, expr).with_context(|| {
                     format!(
                         "Failed to analyze type of logical not expression at {}.",
                         expression.location
                     )
                 })?;
-                if analyzed_expr.ty != AnalyzedType::Bool {
+                if analyzed_expr.ty != TypeId::Bool {
                     Err(anyhow::anyhow!(
                         "Logical not expression has non-bool type '{}' at {}.",
                         analyzed_expr.ty,
@@ -559,10 +539,10 @@ pub fn analyze_expression(
                         op: AnalyzedUnaryOp::LogicalNot,
                         expr: Box::new(analyzed_expr),
                     },
-                    ty: AnalyzedType::Bool,
+                    ty: TypeId::Bool,
                 })
             }
-            UnaryOp::Borrow => {
+            MergedUnaryOp::Borrow => {
                 let analyzed_expr =
                     analyze_assignable_expression(context, expr).with_context(|| {
                         format!(
@@ -571,13 +551,13 @@ pub fn analyze_expression(
                         )
                     })?;
                 Ok(AnalyzedExpression {
-                    ty: AnalyzedType::Pointer(Box::new(analyzed_expr.ty.clone())),
+                    ty: TypeId::Pointer(Box::new(analyzed_expr.ty.clone())),
                     kind: AnalyzedExpressionKind::Borrow {
                         expr: analyzed_expr,
                     },
                 })
             }
-            UnaryOp::Dereference => {
+            MergedUnaryOp::Dereference => {
                 let analyzed_expr = analyze_expression(context, expr).with_context(|| {
                     format!(
                         "Failed to analyze type of dereference expression at {}.",
@@ -585,7 +565,7 @@ pub fn analyze_expression(
                     )
                 })?;
                 match analyzed_expr.ty.clone() {
-                    AnalyzedType::Pointer(inner) => Ok(AnalyzedExpression {
+                    TypeId::Pointer(inner) => Ok(AnalyzedExpression {
                         kind: AnalyzedExpressionKind::ValueOfAssignable(AssignableExpression {
                             kind: AssignableExpressionKind::Dereference(Box::new(analyzed_expr)),
                             ty: *inner.clone(),
@@ -599,7 +579,7 @@ pub fn analyze_expression(
                     ))?,
                 }
             }
-            UnaryOp::Increment { is_prefix } => {
+            MergedUnaryOp::Increment { is_prefix } => {
                 let analyzed_expr =
                     analyze_assignable_expression(context, expr).with_context(|| {
                         format!(
@@ -608,7 +588,7 @@ pub fn analyze_expression(
                         )
                     })?;
                 match &analyzed_expr.ty {
-                    AnalyzedType::Integer(_) => {}
+                    TypeId::Integer(_) => {}
                     _ => Err(anyhow::anyhow!(
                         "Increment expression has non-integer type '{}' at {}.",
                         analyzed_expr.ty,
@@ -620,7 +600,7 @@ pub fn analyze_expression(
                     kind: AnalyzedExpressionKind::Increment(analyzed_expr, *is_prefix),
                 })
             }
-            UnaryOp::Decrement { is_prefix } => {
+            MergedUnaryOp::Decrement { is_prefix } => {
                 let analyzed_expr =
                     analyze_assignable_expression(context, expr).with_context(|| {
                         format!(
@@ -629,7 +609,7 @@ pub fn analyze_expression(
                         )
                     })?;
                 match &analyzed_expr.ty {
-                    AnalyzedType::Integer(_) => {}
+                    TypeId::Integer(_) => {}
                     _ => Err(anyhow::anyhow!(
                         "Decrement expression has non-integer type '{}' at {}.",
                         analyzed_expr.ty,
@@ -641,21 +621,20 @@ pub fn analyze_expression(
                     kind: AnalyzedExpressionKind::Decrement(analyzed_expr, *is_prefix),
                 })
             }
-            UnaryOp::Cast(target_type) => {
+            MergedUnaryOp::Cast(target_type) => {
                 let analyzed_expr = analyze_expression(context, expr).with_context(|| {
                     format!(
                         "Failed to analyze type of cast expression at {}.",
                         expression.location
                     )
                 })?;
-                let target_type = context.analyzed_types.resolve_type(target_type)?;
-                if analyzed_expr.ty.can_cast_to(&target_type) {
+                if can_cast_to(&analyzed_expr.ty, target_type) {
                     Ok(AnalyzedExpression {
                         kind: AnalyzedExpressionKind::Unary {
                             op: AnalyzedUnaryOp::Cast,
                             expr: Box::new(analyzed_expr),
                         },
-                        ty: target_type,
+                        ty: target_type.clone(),
                     })
                 } else {
                     Err(anyhow::anyhow!(
@@ -666,7 +645,7 @@ pub fn analyze_expression(
                     ))?
                 }
             }
-            UnaryOp::Member(member) => {
+            MergedUnaryOp::Member(member) => {
                 let analyzed_expr = analyze_expression(context, expr).with_context(|| {
                     format!(
                         "Failed to analyze type of member expression at {}.",
@@ -674,19 +653,16 @@ pub fn analyze_expression(
                     )
                 })?;
                 match &analyzed_expr.ty {
-                    AnalyzedType::Struct(str_name) => {
-                        let struct_type = context
-                            .analyzed_types
-                            .struct_types
-                            .get(str_name)
-                            .ok_or_else(|| {
+                    TypeId::StructType(_) => {
+                        let struct_type =
+                            context.structs.get(&analyzed_expr.ty).ok_or_else(|| {
                                 anyhow::anyhow!(
                                     "Struct type '{}' not found at {}.",
-                                    str_name,
+                                    analyzed_expr.ty,
                                     expr.location
                                 )
                             })?;
-                        let field_type = struct_type.fields.get(member).ok_or_else(|| {
+                        let field_type = struct_type.field_types.get(member).ok_or_else(|| {
                             anyhow::anyhow!(
                                 "Struct type '{}' does not have field '{}' at {}.",
                                 analyzed_expr.ty,
@@ -702,27 +678,24 @@ pub fn analyze_expression(
                             ty: field_type.clone(),
                         })
                     }
-                    AnalyzedType::Pointer(inner) => {
-                        if let AnalyzedType::Struct(str_name) = inner.as_ref() {
-                            let struct_type = context
-                                .analyzed_types
-                                .struct_types
-                                .get(str_name)
-                                .ok_or_else(|| {
-                                    anyhow::anyhow!(
-                                        "Struct type '{}' not found at {}.",
-                                        str_name,
-                                        expr.location
-                                    )
-                                })?;
-                            let field_type = struct_type.fields.get(member).ok_or_else(|| {
+                    TypeId::Pointer(inner) => {
+                        if let TypeId::StructType(_) = inner.as_ref() {
+                            let struct_type = context.structs.get(inner).ok_or_else(|| {
                                 anyhow::anyhow!(
-                                    "Struct type '{}' does not have field '{}' at {}.",
+                                    "Struct type '{}' not found at {}.",
                                     inner,
-                                    member,
                                     expr.location
                                 )
                             })?;
+                            let field_type =
+                                struct_type.field_types.get(member).ok_or_else(|| {
+                                    anyhow::anyhow!(
+                                        "Struct type '{}' does not have field '{}' at {}.",
+                                        inner,
+                                        member,
+                                        expr.location
+                                    )
+                                })?;
                             Ok(AnalyzedExpression {
                                 kind: AnalyzedExpressionKind::ValueOfAssignable(
                                     AssignableExpression {
@@ -750,7 +723,7 @@ pub fn analyze_expression(
                     ))?,
                 }
             }
-            UnaryOp::Index(index) => {
+            MergedUnaryOp::Index(index) => {
                 let analyzed_expr = analyze_expression(context, expr).with_context(|| {
                     format!(
                         "Failed to analyze type of index expression at {}.",
@@ -764,7 +737,7 @@ pub fn analyze_expression(
                     )
                 })?;
                 match &analyzed_index.ty {
-                    AnalyzedType::Integer(_) => {}
+                    TypeId::Integer(_) => {}
                     _ => Err(anyhow::anyhow!(
                         "Index expression has non-integer type '{}' at {}.",
                         analyzed_index.ty,
@@ -772,7 +745,7 @@ pub fn analyze_expression(
                     ))?,
                 }
                 match analyzed_expr.ty.clone() {
-                    AnalyzedType::Pointer(inner) => Ok(AnalyzedExpression {
+                    TypeId::Pointer(inner) => Ok(AnalyzedExpression {
                         kind: AnalyzedExpressionKind::ValueOfAssignable(AssignableExpression {
                             kind: AssignableExpressionKind::ArrayIndex(
                                 Box::new(analyzed_expr),
@@ -790,7 +763,7 @@ pub fn analyze_expression(
                 }
             }
         },
-        ParsedExpressionKind::Binary { left, op, right } => {
+        MergedExpressionKind::Binary { left, op, right } => {
             match op {
                 BinaryOp::Math(math_op) => {
                     let analyzed_left = analyze_expression(context, left).with_context(|| {
@@ -806,7 +779,7 @@ pub fn analyze_expression(
                         )
                     })?;
                     match &analyzed_left.ty {
-                        AnalyzedType::Integer(_) => {}
+                        TypeId::Integer(_) => {}
                         _ => Err(anyhow::anyhow!(
                             "Math binary left expression has non-integer type '{}' at {}.",
                             analyzed_left.ty,
@@ -838,14 +811,14 @@ pub fn analyze_expression(
                             expression.location
                         )
                     })?;
-                    if analyzed_left.ty != AnalyzedType::Bool {
+                    if analyzed_left.ty != TypeId::Bool {
                         Err(anyhow::anyhow!(
                             "Logic binary left expression has non-bool type '{}' at {}.",
                             analyzed_left.ty,
                             left.location
                         ))?;
                     }
-                    if analyzed_right.ty != AnalyzedType::Bool {
+                    if analyzed_right.ty != TypeId::Bool {
                         Err(anyhow::anyhow!(
                             "Logic binary right expression has non-bool type '{}' at {}.",
                             analyzed_right.ty,
@@ -858,7 +831,7 @@ pub fn analyze_expression(
                             left: Box::new(analyzed_left),
                             right: Box::new(analyzed_right),
                         },
-                        ty: AnalyzedType::Bool,
+                        ty: TypeId::Bool,
                     })
                 }
                 BinaryOp::Comparison(comp_op) => {
@@ -879,8 +852,8 @@ pub fn analyze_expression(
                         _ => true,
                     };
                     match &analyzed_left.ty {
-                        AnalyzedType::Integer(_) => {}
-                        AnalyzedType::Char | AnalyzedType::Bool if !needs_integers => {}
+                        TypeId::Integer(_) => {}
+                        TypeId::Char | TypeId::Bool if !needs_integers => {}
                         _ => Err(anyhow::anyhow!(
                             "Comparison binary left expression has non-comparable type '{}' at {}.",
                             analyzed_left.ty,
@@ -896,7 +869,7 @@ pub fn analyze_expression(
                             left: Box::new(analyzed_left),
                             right: Box::new(analyzed_right),
                         },
-                        ty: AnalyzedType::Bool,
+                        ty: TypeId::Bool,
                     })
                 }
                 BinaryOp::Assign => {
@@ -934,7 +907,7 @@ pub fn analyze_expression(
                         )
                     })?;
                     match &analyzed_left.ty {
-                        AnalyzedType::Integer(_) => {}
+                        TypeId::Integer(_) => {}
                         _ => Err(anyhow::anyhow!(
                             "Math assign binary left expression has non-integer type '{}' at {}.",
                             analyzed_left.ty,
@@ -961,14 +934,14 @@ pub fn analyze_expression(
                             expression.location
                         )
                     })?;
-                    if analyzed_left.ty != AnalyzedType::Bool {
+                    if analyzed_left.ty != TypeId::Bool {
                         Err(anyhow::anyhow!(
                             "Logic assign binary left expression has non-bool type '{}' at {}.",
                             analyzed_left.ty,
                             left.location
                         ))?;
                     }
-                    if analyzed_right.ty != AnalyzedType::Bool {
+                    if analyzed_right.ty != TypeId::Bool {
                         Err(anyhow::anyhow!(
                             "Logic assign binary right expression has non-bool type '{}' at {}.",
                             analyzed_right.ty,
@@ -981,41 +954,43 @@ pub fn analyze_expression(
                             lhs: analyzed_left,
                             rhs: Box::new(analyzed_right),
                         },
-                        ty: AnalyzedType::Bool,
+                        ty: TypeId::Bool,
                     })
                 }
             }
         }
-        ParsedExpressionKind::FunctionCall {
-            function_name,
-            args,
-        } => {
-            let function_header = context.function_headers.get(function_name).ok_or_else(|| {
-                anyhow::anyhow!(
-                    "Function '{}' not found at {}.",
-                    function_name,
-                    expression.location
-                )
-            })?;
+        MergedExpressionKind::FunctionCall { function_id, args } => {
+            let function_header = context
+                .function_headers
+                .functions
+                .get(function_id)
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Function '{}' not found at {}.",
+                        function_id,
+                        expression.location
+                    )
+                })?;
 
-            if args.len() != function_header.parameters.len() {
+            if args.len() != function_header.parameter_order.len() {
                 Err(anyhow::anyhow!(
                     "Function '{}' expects {} arguments, but got {} at {}.",
-                    function_name,
-                    function_header.parameters.len(),
+                    function_id,
+                    function_header.parameter_order.len(),
                     args.len(),
                     expression.location
                 ))?;
             }
 
             let mut analyzed_args = Vec::new();
-            for (arg, arg_type) in args.iter().zip(function_header.parameters.iter()) {
+            for (arg, arg_name) in args.iter().zip(function_header.parameter_order.iter()) {
                 let analyzed_arg = analyze_expression(context, arg).with_context(|| {
                     format!(
                         "Failed to analyze type of function call argument at {}.",
                         arg.location
                     )
                 })?;
+                let arg_type = function_header.parameter_types.get(arg_name).unwrap();
                 if analyzed_arg.ty != *arg_type {
                     Err(anyhow::anyhow!(
                         "Function call argument has type '{}', but expected '{}' at {}.",
@@ -1028,7 +1003,7 @@ pub fn analyze_expression(
             }
             Ok(AnalyzedExpression {
                 kind: AnalyzedExpressionKind::FunctionCall {
-                    function_name: function_name.clone(),
+                    function_name: function_id.clone(),
                     args: analyzed_args,
                 },
                 ty: function_header.return_type.clone(),
@@ -1039,54 +1014,54 @@ pub fn analyze_expression(
 
 pub fn analyze_assignable_expression(
     context: &mut AnalyzerContext,
-    expression: &ParsedExpression,
+    expression: &MergedExpression,
 ) -> AnalyzerResult<AssignableExpression> {
     match &expression.value {
-        ParsedExpressionKind::Block { .. } => Err(anyhow::anyhow!(
+        MergedExpressionKind::Block { .. } => Err(anyhow::anyhow!(
             "Block expression cannot be assigned to at {}.",
             expression.location
         )),
-        ParsedExpressionKind::Return(_) => Err(anyhow::anyhow!(
+        MergedExpressionKind::Return(_) => Err(anyhow::anyhow!(
             "Return expression cannot be assigned to at {}.",
             expression.location
         )),
-        ParsedExpressionKind::Continue => Err(anyhow::anyhow!(
+        MergedExpressionKind::Continue => Err(anyhow::anyhow!(
             "Continue expression cannot be assigned to at {}.",
             expression.location
         )),
-        ParsedExpressionKind::Break(_) => Err(anyhow::anyhow!(
+        MergedExpressionKind::Break(_) => Err(anyhow::anyhow!(
             "Break expression cannot be assigned to at {}.",
             expression.location
         )),
-        ParsedExpressionKind::If { .. } => Err(anyhow::anyhow!(
+        MergedExpressionKind::If { .. } => Err(anyhow::anyhow!(
             "If expression cannot be assigned to at {}.",
             expression.location
         )),
-        ParsedExpressionKind::While { .. } => Err(anyhow::anyhow!(
+        MergedExpressionKind::While { .. } => Err(anyhow::anyhow!(
             "While expression cannot be assigned to at {}.",
             expression.location
         )),
-        ParsedExpressionKind::For { .. } => Err(anyhow::anyhow!(
+        MergedExpressionKind::For { .. } => Err(anyhow::anyhow!(
             "For expression cannot be assigned to at {}.",
             expression.location
         )),
-        ParsedExpressionKind::Declaration { .. } => Err(anyhow::anyhow!(
+        MergedExpressionKind::Declaration { .. } => Err(anyhow::anyhow!(
             "Declaration expression cannot be assigned to at {}.",
             expression.location
         )),
-        ParsedExpressionKind::FunctionCall { .. } => Err(anyhow::anyhow!(
+        MergedExpressionKind::FunctionCall { .. } => Err(anyhow::anyhow!(
             "Function call expression cannot be assigned to at {}.",
             expression.location
         )),
-        ParsedExpressionKind::Literal(_) => Err(anyhow::anyhow!(
+        MergedExpressionKind::Literal(_) => Err(anyhow::anyhow!(
             "Literal expression cannot be assigned to at {}.",
             expression.location
         )),
-        ParsedExpressionKind::Binary { .. } => Err(anyhow::anyhow!(
+        MergedExpressionKind::Binary { .. } => Err(anyhow::anyhow!(
             "Binary expression cannot be assigned to at {}.",
             expression.location
         )),
-        ParsedExpressionKind::Variable(name) => {
+        MergedExpressionKind::Variable(name) => {
             let var_type = context.local_variables.get(name).ok_or_else(|| {
                 anyhow::anyhow!(
                     "Variable '{}' not declared at {}.",
@@ -1099,8 +1074,8 @@ pub fn analyze_assignable_expression(
                 ty: var_type.ty.clone(),
             })
         }
-        ParsedExpressionKind::Unary {
-            op: UnaryOp::Dereference,
+        MergedExpressionKind::Unary {
+            op: MergedUnaryOp::Dereference,
             expr,
         } => {
             let analyzed_expr = analyze_expression(context, expr).with_context(|| {
@@ -1110,7 +1085,7 @@ pub fn analyze_assignable_expression(
                 )
             })?;
             match analyzed_expr.ty.clone() {
-                AnalyzedType::Pointer(inner) => Ok(AssignableExpression {
+                TypeId::Pointer(inner) => Ok(AssignableExpression {
                     kind: AssignableExpressionKind::Dereference(Box::new(analyzed_expr)),
                     ty: *inner,
                 }),
@@ -1121,12 +1096,12 @@ pub fn analyze_assignable_expression(
                 )),
             }
         }
-        ParsedExpressionKind::Unary {
-            op: UnaryOp::Member(member),
+        MergedExpressionKind::Unary {
+            op: MergedUnaryOp::Member(member),
             expr,
         } => try_as_assignable_field_access(context, member.clone(), expr, &expression.location),
-        ParsedExpressionKind::Unary {
-            op: UnaryOp::Index(index),
+        MergedExpressionKind::Unary {
+            op: MergedUnaryOp::Index(index),
             expr,
         } => {
             let analyzed_expr = analyze_expression(context, expr).with_context(|| {
@@ -1142,7 +1117,7 @@ pub fn analyze_assignable_expression(
                 )
             })?;
             match &analyzed_index.ty {
-                AnalyzedType::Integer(_) => {}
+                TypeId::Integer(_) => {}
                 _ => Err(anyhow::anyhow!(
                     "Index expression has non-integer type '{}' at {}.",
                     analyzed_index.ty,
@@ -1150,7 +1125,7 @@ pub fn analyze_assignable_expression(
                 ))?,
             }
             match analyzed_expr.ty.clone() {
-                AnalyzedType::Pointer(inner) => Ok(AssignableExpression {
+                TypeId::Pointer(inner) => Ok(AssignableExpression {
                     ty: *inner,
                     kind: AssignableExpressionKind::ArrayIndex(
                         Box::new(analyzed_expr),
@@ -1164,7 +1139,7 @@ pub fn analyze_assignable_expression(
                 )),
             }
         }
-        ParsedExpressionKind::Unary { .. } => Err(anyhow::anyhow!(
+        MergedExpressionKind::Unary { .. } => Err(anyhow::anyhow!(
             "Unary expression cannot be assigned to at {}.",
             expression.location
         )),
@@ -1174,21 +1149,17 @@ pub fn analyze_assignable_expression(
 fn try_as_assignable_field_access(
     context: &mut AnalyzerContext,
     member: String,
-    inner: &ParsedExpression,
+    inner: &MergedExpression,
     location: &Location,
 ) -> AnalyzerResult<AssignableExpression> {
     let maybe_assignable_expr = analyze_assignable_expression(context, inner);
     if let Ok(analyzed_expr) = maybe_assignable_expr {
         match &analyzed_expr.ty {
-            AnalyzedType::Struct(str_name) => {
-                let struct_type = context
-                    .analyzed_types
-                    .struct_types
-                    .get(str_name)
-                    .ok_or_else(|| {
-                        anyhow::anyhow!("Struct type '{}' not found at {}.", str_name, location)
-                    })?;
-                let field_type = struct_type.fields.get(&member).ok_or_else(|| {
+            TypeId::StructType(str_name) => {
+                let struct_type = context.structs.get(&analyzed_expr.ty).ok_or_else(|| {
+                    anyhow::anyhow!("Struct type '{}' not found at {}.", str_name, location)
+                })?;
+                let field_type = struct_type.field_types.get(&member).ok_or_else(|| {
                     anyhow::anyhow!(
                         "Struct type '{}' does not have field '{}' at {}.",
                         analyzed_expr.ty,
@@ -1204,7 +1175,7 @@ fn try_as_assignable_field_access(
                     ty: field_type.clone(),
                 });
             }
-            AnalyzedType::Pointer(_) => {}
+            TypeId::Pointer(_) => {}
             _ => {
                 return Err(anyhow::anyhow!(
                     "Expected struct type, found '{}' at {}.",
@@ -1222,16 +1193,12 @@ fn try_as_assignable_field_access(
         )
     })?;
     match &analyzed_expr.ty {
-        AnalyzedType::Pointer(inner) => {
-            if let AnalyzedType::Struct(str_name) = inner.as_ref() {
-                let struct_type = context
-                    .analyzed_types
-                    .struct_types
-                    .get(str_name)
-                    .ok_or_else(|| {
-                        anyhow::anyhow!("Struct type '{}' not found at {}.", str_name, location)
-                    })?;
-                let field_type = struct_type.fields.get(&member).ok_or_else(|| {
+        TypeId::Pointer(inner) => {
+            if let TypeId::StructType(str_name) = inner.as_ref() {
+                let struct_type = context.structs.get(inner).ok_or_else(|| {
+                    anyhow::anyhow!("Struct type '{}' not found at {}.", str_name, location)
+                })?;
+                let field_type = struct_type.field_types.get(&member).ok_or_else(|| {
                     anyhow::anyhow!(
                         "Struct type '{}' does not have field '{}' at {}.",
                         inner,
@@ -1259,5 +1226,20 @@ fn try_as_assignable_field_access(
             analyzed_expr.ty,
             location
         )),
+    }
+}
+
+fn can_cast_to(original_type: &TypeId, target_type: &TypeId) -> bool {
+    if *original_type == *target_type {
+        return true;
+    }
+    match (original_type, target_type) {
+        (TypeId::Integer(_), TypeId::Integer(_)) => true,
+        (TypeId::Char, TypeId::Integer(_)) => true,
+        (TypeId::Integer(_), TypeId::Char) => true,
+        (TypeId::Bool, TypeId::Integer(_)) => true,
+        (TypeId::Integer(_), TypeId::Bool) => true,
+        (TypeId::Pointer(_), TypeId::Pointer(_)) => true,
+        _ => false,
     }
 }

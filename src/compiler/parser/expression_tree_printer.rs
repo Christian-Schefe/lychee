@@ -1,6 +1,6 @@
 use crate::compiler::parser::parsed_expression::{
-    ParsedExpression, ParsedExpressionKind, ParsedFunction, ParsedLiteral, ParsedProgram,
-    ParsedStructDefinition,
+    ParsedExpression, ParsedExpressionKind, ParsedFunction, ParsedLiteral, ParsedModule,
+    ParsedProgram, ParsedStructDefinition,
 };
 use std::fmt::Display;
 
@@ -43,15 +43,22 @@ impl Printer {
     }
 }
 
-pub fn print_program(expr: &ParsedProgram) {
+pub fn print_program(program: &ParsedProgram) {
     let mut printer = Printer::new();
-    for struct_def in &expr.struct_definitions {
-        print_struct_definition(&mut printer, &struct_def.value);
-    }
-    for function in &expr.functions {
-        print_function(&mut printer, &function.value);
+    for (_, module) in &program.module_tree {
+        print_module(&mut printer, module);
     }
     println!("{}", printer.build());
+}
+
+pub fn print_module(printer: &mut Printer, expr: &ParsedModule) {
+    printer.add_line(format!("Module({})", expr.module_path.get_identifier()));
+    for struct_def in &expr.struct_definitions {
+        print_struct_definition(printer, &struct_def.value);
+    }
+    for function in &expr.functions {
+        print_function(printer, &function.value);
+    }
 }
 
 fn print_struct_definition(printer: &mut Printer, struct_def: &ParsedStructDefinition) {
@@ -191,10 +198,10 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
             printer.dedent();
         }
         ParsedExpressionKind::FunctionCall {
-            function_name,
+            function_id: function_name,
             args,
         } => {
-            printer.add_line(format!("FunctionCall({})", function_name));
+            printer.add_line(format!("FunctionCall({:?})", function_name));
             printer.indent();
             for arg in args {
                 print_expression(printer, arg);

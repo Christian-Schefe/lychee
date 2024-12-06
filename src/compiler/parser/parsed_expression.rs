@@ -1,8 +1,16 @@
 use crate::compiler::lexer::location::Src;
+use crate::compiler::merger::merged_expression::ModuleId;
+use crate::compiler::parser::ModulePath;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct ParsedProgram {
+    pub module_tree: HashMap<ModulePath, ParsedModule>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ParsedModule {
+    pub module_path: ModulePath,
     pub functions: Vec<Src<ParsedFunction>>,
     pub struct_definitions: Vec<Src<ParsedStructDefinition>>,
 }
@@ -66,7 +74,7 @@ pub enum ParsedExpressionKind {
         right: Box<ParsedExpression>,
     },
     FunctionCall {
-        function_name: String,
+        function_id: ModuleId,
         args: Vec<ParsedExpression>,
     },
 }
@@ -75,7 +83,7 @@ pub type ParsedType = Src<ParsedTypeKind>;
 
 #[derive(Debug, Clone)]
 pub enum ParsedTypeKind {
-    Named(String),
+    Named(ModuleId),
     Pointer(Box<ParsedType>),
 }
 

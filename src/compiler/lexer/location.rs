@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct Src<T> {
@@ -16,17 +17,22 @@ impl<T> Src<T> {
 pub struct Location {
     pub line: usize,
     pub column: usize,
+    pub file: PathBuf,
 }
 
 impl Display for Location {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "line {}, column {}", self.line, self.column)
+        write!(f, "line {}, column {} ({})", self.line, self.column, self.file.display())
     }
 }
 
 impl Location {
-    pub fn new() -> Self {
-        Location { line: 1, column: 1 }
+    pub fn new(file: PathBuf) -> Self {
+        Location {
+            line: 1,
+            column: 1,
+            file,
+        }
     }
 
     pub fn advance_line(&mut self) {
