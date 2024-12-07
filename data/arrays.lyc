@@ -29,6 +29,13 @@ unit set(&IntArray arr, int index, int value) {
     arr.data[index] = value;
 }
 
+unit fill(&IntArray arr, int value) {
+    let int i = 0;
+    while (i < arr.size) {
+        arr.data[i++] = value;
+    }
+}
+
 unit printArray(&IntArray arr) {
     let int i = 0;
     write_char('[');

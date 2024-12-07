@@ -234,7 +234,6 @@ pub fn merge_expression(
                     }
                 }
                 ParsedExpressionKind::Unary { op, .. } => {
-                    let merged_expr = output.pop().unwrap();
                     let op = match op {
                         UnaryOp::Math(math_op) => MergedUnaryOp::Math(math_op.clone()),
                         UnaryOp::LogicalNot => MergedUnaryOp::LogicalNot,
@@ -257,6 +256,7 @@ pub fn merge_expression(
                             MergedUnaryOp::Index(Box::new(merged_index))
                         }
                     };
+                    let merged_expr = output.pop().unwrap();
                     MergedExpression {
                         value: MergedExpressionKind::Unary {
                             expr: Box::new(merged_expr),

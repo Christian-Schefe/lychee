@@ -60,7 +60,6 @@ pub enum BinopElement {
 
 pub fn build_binop_expression(elements: Vec<BinopElement>) -> ParseResult<ParsedExpression> {
     let postfix = infix_to_postfix(elements);
-    println!("result: {:?}", postfix);
     postfix_to_tree(postfix)
 }
 
