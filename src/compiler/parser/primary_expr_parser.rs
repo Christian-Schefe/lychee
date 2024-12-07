@@ -27,9 +27,30 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
                 }
             }
 
-            let module_id = parse_module_path(tokens, name)
+            let module_id = parse_module_path(tokens, name, false)
                 .with_context(|| format!("Failed to parse module path at {}.", token.location))?;
 
+            let (_, args, _) = parse_seperated_expressions(
+                tokens,
+                Token::Static(StaticToken::OpenParen),
+                Token::Static(StaticToken::CloseParen),
+                Token::Static(StaticToken::Comma),
+                false,
+                "function call arguments",
+            )?;
+            Ok(ParsedExpression::new(
+                ParsedExpressionKind::FunctionCall {
+                    function_id: module_id,
+                    args,
+                },
+                token.location,
+            ))
+        }
+        Token::Static(StaticToken::DoubleColon) => {
+            tokens.pop();
+            let first_id = parse_identifier(tokens)?;
+            let module_id = parse_module_path(tokens, first_id.value, true)
+                .with_context(|| format!("Failed to parse module path at {}.", token.location))?;
             let (_, args, _) = parse_seperated_expressions(
                 tokens,
                 Token::Static(StaticToken::OpenParen),

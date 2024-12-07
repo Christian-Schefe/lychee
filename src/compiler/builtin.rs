@@ -1,6 +1,6 @@
 use crate::compiler::codegen::CodegenContext;
 use crate::compiler::merger::merged_expression::{ModuleId, ResolvedFunctionHeader, TypeId};
-use crate::compiler::parser::ModulePath;
+use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
 pub struct BuiltinFunction {
@@ -22,6 +22,16 @@ impl BuiltinFunction {
             return_type,
             parameters,
             code,
+        }
+    }
+
+    fn module_id(&self) -> ModuleId {
+        ModuleId {
+            name: self.name.clone(),
+            module_path: ModuleIdentifier {
+                path: vec![],
+                absolute: false,
+            },
         }
     }
 
@@ -115,10 +125,7 @@ impl BuiltinFunction {
                 parameter_types.insert(name.clone(), ty.clone());
             }
 
-            let id = ModuleId {
-                name: function.name.clone(),
-                module_path: ModulePath(vec!["builtin".to_string()]),
-            };
+            let id = function.module_id();
             function_headers.insert(
                 id.clone(),
                 ResolvedFunctionHeader {
@@ -133,9 +140,10 @@ impl BuiltinFunction {
 
     pub fn generate_builtin_function_code(context: &mut CodegenContext) {
         for function in BuiltinFunction::all_functions() {
-            let id = format!("builtin::{}", function.name);
-            let label = context.new_label(&id);
-            context.function_labels.insert(id, label.clone());
+            let id = function.module_id();
+            let identifier = id.to_string();
+            let label = context.new_label(&identifier);
+            context.function_labels.insert(identifier, label.clone());
             context.label(&label);
             (function.code)(context);
         }

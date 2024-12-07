@@ -1,0 +1,15 @@
+module arrays;
+
+unit test() {
+    let var test = new ::Test {
+        a: 1,
+        b: 2
+    };
+    t2();
+}
+
+unit t2() {
+    let var arr = arrays::newIntArray(5);
+    arrays::fill(&arr, -8);
+    arrays::printArray(&arr);
+}

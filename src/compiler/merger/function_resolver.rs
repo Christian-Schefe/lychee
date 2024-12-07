@@ -4,7 +4,7 @@ use crate::compiler::merger::merged_expression::{
 };
 use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::parsed_expression::{ParsedModule, ParsedProgram};
-use crate::compiler::parser::ModulePath;
+use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
 pub fn build_resolved_functions(
@@ -20,6 +20,10 @@ pub fn build_resolved_functions(
     }
 
     extract_module_functions(resolved_types, &mut functions, &program.module_tree)?;
+    
+    functions.iter().for_each(|(id, header)| {
+        println!("Function: {} -> {:?}", id, header);
+    });
 
     Ok(ResolvedFunctions {
         functions,
@@ -30,7 +34,7 @@ pub fn build_resolved_functions(
 fn extract_module_functions(
     resolved_types: &ResolvedTypes,
     functions: &mut HashMap<ModuleId, ResolvedFunctionHeader>,
-    module_tree: &HashMap<ModulePath, ParsedModule>,
+    module_tree: &HashMap<ModuleIdentifier, ParsedModule>,
 ) -> MergerResult<()> {
     for module in module_tree.values() {
         for func_def in &module.functions {

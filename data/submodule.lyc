@@ -1,8 +1,0 @@
-struct Test {
-    int a;
-    int b;
-}
-
-int test(unit a) {
-    10
-}

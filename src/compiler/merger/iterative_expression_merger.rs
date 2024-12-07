@@ -6,13 +6,13 @@ use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::parsed_expression::{
     ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryOp,
 };
-use crate::compiler::parser::ModulePath;
+use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
 pub fn merge_expression(
     resolved_types: &ResolvedTypes,
     resolved_functions: &ResolvedFunctions,
-    module_path: &ModulePath,
+    module_path: &ModuleIdentifier,
     parsed_expression: &ParsedExpression,
 ) -> MergerResult<MergedExpression> {
     let mut stack = vec![(parsed_expression, false)];

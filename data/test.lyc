@@ -1,4 +1,4 @@
-module arrays;
+module std;
 
 int main() {
     for (let int i = 0; i < 10; i++) {
@@ -11,10 +11,16 @@ int main() {
         }
     };
     i = random() as int;
-    let var arr = arrays::newIntArray(5);
-    arr = arrays::newIntArray(5);
-    arrays::fill(&arr, -5);
-    arrays::printArray(&arr);
+    let var arr = std::arrays::newIntArray(5);
+    arr = std::arrays::newIntArray(5);
+    std::arrays::fill(&arr, -5);
+    std::arrays::printArray(&arr);
     let int k = 1 + 1 +1+1+1+1+1+1+1;
+    std::test();
     i
+}
+
+struct Test {
+    int a;
+    int b;
 }

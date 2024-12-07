@@ -7,7 +7,7 @@ use crate::compiler::merger::merged_expression::{
 use crate::compiler::merger::type_resolver::build_resolved_types;
 use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::parsed_expression::{ParsedFunction, ParsedModule, ParsedProgram};
-use crate::compiler::parser::ModulePath;
+use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
 pub fn merge_program(parsed_program: &ParsedProgram) -> MergerResult<MergedProgram> {
@@ -64,7 +64,7 @@ pub fn merge_module(
 pub fn merge_function(
     resolved_types: &ResolvedTypes,
     resolved_functions: &ResolvedFunctions,
-    module_path: &ModulePath,
+    module_path: &ModuleIdentifier,
     parsed_function: &Src<ParsedFunction>,
 ) -> MergerResult<MergedFunction> {
     let body = merge_expression(

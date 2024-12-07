@@ -5,7 +5,7 @@ use lychee_compiler::{DATA_SIZE_32, DATA_SIZE_64};
 pub struct Heap {
     pub offset: usize,
     pub size: usize,
-    pub block_size: usize,
+    pub header_size: usize,
 }
 
 /*pub struct Block {
@@ -22,19 +22,19 @@ impl Heap {
         Heap {
             offset,
             size,
-            block_size: 16,
+            header_size: 16,
         }
     }
     pub fn malloc(&mut self, memory: &mut Memory, size: u64) -> Option<usize> {
-        let block_size = size + self.block_size as u64;
+        let block_size = size + self.header_size as u64;
         let block_address = self.find_free_block(memory, block_size)?;
         self.split_block(memory, block_address, block_size);
         self.toggle_free(memory, block_address);
-        Some(block_address + self.block_size)
+        Some(block_address + self.header_size)
     }
 
     pub fn free(&mut self, memory: &mut Memory, address: usize) {
-        let block_address = address - self.block_size;
+        let block_address = address - self.header_size;
         self.toggle_free(memory, block_address);
         self.merge_blocks(memory, block_address);
     }
@@ -126,6 +126,10 @@ impl Heap {
                 "Block: {:?}, Size: {:?}, Next: {:?}, Prev: {:?}",
                 current, block_size, next, prev
             );
+            if block_size.abs() < 1000 {
+                let content = memory.data[current..current+block_size.abs() as usize].to_vec();
+                println!("Content: {:?}", content);
+            }
             if next == -1 {
                 break;
             }

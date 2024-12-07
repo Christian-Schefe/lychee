@@ -540,7 +540,10 @@ fn alloc(pc: usize, memory: &mut Memory, heap: &mut Heap, debug_print: bool) {
 
     let address_register = ((byte1 & 0xF0) >> 4) as usize;
 
-    let address = heap.malloc(memory, size as u64).unwrap();
+    let address = heap.malloc(memory, size as u64).unwrap_or_else(|| {
+        heap.print_blocks(memory);
+        panic!("Failed to allocate {} bytes", size);
+    });
     memory.registers[address_register] = address as u64;
     memory.registers[constants::PC] += 2;
 

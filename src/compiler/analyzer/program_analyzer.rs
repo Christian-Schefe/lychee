@@ -7,7 +7,7 @@ use crate::compiler::merger::merged_expression::{
     MergedFunction, MergedProgram, ModuleId, ResolvedFunctions, ResolvedStruct, ResolvedTypes,
     TypeId,
 };
-use crate::compiler::parser::ModulePath;
+use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
 pub struct AnalyzerContext<'a> {
@@ -47,7 +47,10 @@ pub fn analyze_program(program: &MergedProgram) -> AnalyzerResult<AnalyzedProgra
         .functions
         .get(&ModuleId {
             name: "main".to_string(),
-            module_path: ModulePath(vec!["root".to_string()]),
+            module_path: ModuleIdentifier {
+                path: Vec::new(),
+                absolute: true,
+            },
         })
         .ok_or_else(|| anyhow::anyhow!("Main function not found"))?;
 

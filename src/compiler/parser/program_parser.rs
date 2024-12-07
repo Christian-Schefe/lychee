@@ -11,7 +11,7 @@ use crate::compiler::parser::parsed_expression::{
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::primary_expr_parser::parse_block_expression;
 use crate::compiler::parser::type_parser::parse_type;
-use crate::compiler::parser::ModulePath;
+use crate::compiler::parser::{ModuleIdentifier, ModulePath};
 use anyhow::Context;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -67,11 +67,16 @@ pub fn parse_identifier(tokens: &mut TokenStack) -> ParseResult<Src<String>> {
 
 pub fn parse_module(
     visited_paths: &mut HashSet<PathBuf>,
-    module_tree: &mut HashMap<ModulePath, ParsedModule>,
-    root_path: &PathBuf,
+    module_tree: &mut HashMap<ModuleIdentifier, ParsedModule>,
     module_path: ModulePath,
 ) -> ParseResult<()> {
-    let path = module_path.get_path(root_path);
+    let path = &module_path.file;
+    if !path.try_exists()? {
+        return Err(anyhow::anyhow!(
+            "Module file '{}' does not exist.",
+            path.to_str().unwrap()
+        ))?;
+    }
     if !visited_paths.insert(path.clone()) {
         return Err(anyhow::anyhow!(
             "Cyclic module dependency in file '{}'.",
@@ -79,7 +84,7 @@ pub fn parse_module(
         ))?;
     }
 
-    println!("Parsing module: {}", module_path.get_identifier());
+    println!("Parsing module: {}", module_path.id.get_identifier());
 
     let tokens = lexer::lex(&path)?;
     let mut tokens = TokenStack::new(tokens);
@@ -113,21 +118,21 @@ pub fn parse_module(
     let mut submodules = Vec::new();
 
     for (location, submodule) in submodule_declarations {
-        let mut child_module = module_path.clone();
-        child_module.push(submodule.clone());
-        parse_module(visited_paths, module_tree, root_path, child_module).with_context(|| {
+        let child_module = module_path.get_submodule_path(&submodule);
+        println!("Parsing submodule: {:?}", child_module,);
+        parse_module(visited_paths, module_tree, child_module).with_context(|| {
             format!("Failed to parse submodule '{}' at {}.", submodule, location)
         })?;
         submodules.push(submodule);
     }
 
     let module = ParsedModule {
-        module_path: module_path.clone(),
+        module_path: module_path.id.clone(),
         functions,
         struct_definitions,
     };
 
-    module_tree.insert(module_path, module);
+    module_tree.insert(module_path.id, module);
     Ok(())
 }
 

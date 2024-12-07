@@ -4,7 +4,7 @@ use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::parsed_expression::{
     ParsedModule, ParsedProgram, ParsedStructDefinition, ParsedType, ParsedTypeKind,
 };
-use crate::compiler::parser::ModulePath;
+use crate::compiler::parser::ModuleIdentifier;
 use std::collections::{HashMap, HashSet};
 
 pub fn build_resolved_types(parsed_program: &ParsedProgram) -> MergerResult<ResolvedTypes> {
@@ -28,7 +28,10 @@ pub fn build_resolved_types(parsed_program: &ParsedProgram) -> MergerResult<Reso
         known_type_names.insert(
             ModuleId {
                 name: name.clone(),
-                module_path: ModulePath(Vec::new()),
+                module_path: ModuleIdentifier {
+                    path: Vec::new(),
+                    absolute: false,
+                },
             },
             type_id.clone(),
         );
@@ -85,7 +88,7 @@ fn map_parsed_type(
         ParsedTypeKind::Named(module_id) => known_types.get(&module_id).cloned().ok_or_else(|| {
             anyhow::Error::msg(format!(
                 "Unknown type '{}' at {}",
-                module_id.name, parsed_type.location
+                module_id, parsed_type.location
             ))
         }),
         ParsedTypeKind::Pointer(inner) => Ok(TypeId::Pointer(Box::new(map_parsed_type(
@@ -119,7 +122,7 @@ fn resolve_struct_definition(
 
 fn extract_module_struct_types(
     structs: &mut HashMap<ModuleId, Src<ParsedStructDefinition>>,
-    module_tree: &HashMap<ModulePath, ParsedModule>,
+    module_tree: &HashMap<ModuleIdentifier, ParsedModule>,
 ) -> MergerResult<()> {
     for module in module_tree.values() {
         for struct_def in &module.struct_definitions {

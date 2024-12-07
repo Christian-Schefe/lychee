@@ -1,18 +1,16 @@
 use crate::compiler::lexer::location::Src;
-use crate::compiler::lexer::token::StaticToken;
 use crate::compiler::merger::merged_expression::ModuleId;
-use crate::compiler::parser::ModulePath;
-use lazy_static::lazy_static;
+use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct ParsedProgram {
-    pub module_tree: HashMap<ModulePath, ParsedModule>,
+    pub module_tree: HashMap<ModuleIdentifier, ParsedModule>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ParsedModule {
-    pub module_path: ModulePath,
+    pub module_path: ModuleIdentifier,
     pub functions: Vec<Src<ParsedFunction>>,
     pub struct_definitions: Vec<Src<ParsedStructDefinition>>,
 }

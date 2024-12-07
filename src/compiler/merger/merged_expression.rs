@@ -3,7 +3,7 @@ use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::parsed_expression::{
     BinaryOp, ParsedType, ParsedTypeKind, UnaryMathOp,
 };
-use crate::compiler::parser::ModulePath;
+use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 use std::fmt::Display;
 
@@ -25,7 +25,7 @@ pub struct ResolvedTypes {
 impl ResolvedTypes {
     pub fn resolve_type(
         &self,
-        current_module: &ModulePath,
+        current_module: &ModuleIdentifier,
         parsed_type: &ParsedType,
     ) -> MergerResult<TypeId> {
         match &parsed_type.value {
@@ -87,7 +87,7 @@ pub struct ResolvedFunctions {
 impl ResolvedFunctions {
     pub fn resolve_function(
         &self,
-        current_module: &ModulePath,
+        current_module: &ModuleIdentifier,
         parsed_function: &ModuleId,
     ) -> Option<&ResolvedFunctionHeader> {
         if parsed_function.module_path.len() == 0
@@ -125,7 +125,7 @@ pub struct ResolvedStruct {
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct ModuleId {
     pub name: String,
-    pub module_path: ModulePath,
+    pub module_path: ModuleIdentifier,
 }
 
 impl Display for ModuleId {

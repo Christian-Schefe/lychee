@@ -14,39 +14,65 @@ mod type_parser;
 mod unop_expr_parser;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
-pub struct ModulePath(pub Vec<String>);
+pub struct ModuleIdentifier {
+    pub path: Vec<String>,
+    pub absolute: bool,
+}
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+pub struct ModulePath {
+    pub id: ModuleIdentifier,
+    pub file: PathBuf,
+}
 
 impl ModulePath {
-    pub fn get_path(&self, root_path: &PathBuf) -> PathBuf {
-        let last = self.0.get(self.0.len() - 1).unwrap();
-        if last == "root" {
-            return root_path.clone();
+    pub fn get_submodule_path(&self, name: &str) -> ModulePath {
+        let mut new_id = self.id.clone();
+        new_id.path.push(name.to_string());
+        let mut new_file = self.file.clone();
+        new_file.set_file_name(format!("{}.lyc", name));
+        if !new_file.try_exists().unwrap() {
+            let stem = self.file.file_stem().unwrap().to_str().unwrap();
+            new_file.pop();
+            new_file.push(format!("{}/{}.lyc", stem, name));
         }
-        root_path.with_file_name(format!("{}.lyc", last))
+        ModulePath {
+            id: new_id,
+            file: new_file,
+        }
     }
+}
+
+impl ModuleIdentifier {
     pub fn get_identifier(&self) -> String {
-        self.0.join("::")
-    }
-    pub fn push(&mut self, name: String) {
-        self.0.push(name);
-    }
-    pub fn resolve_relative(&self, relative: &ModulePath) -> ModulePath {
-        let mut new_path = self.0.clone();
-        for name in &relative.0 {
-            new_path.push(name.clone());
-        }
-        ModulePath(new_path)
-    }
-    pub fn resolve(&self, other: &ModulePath) -> ModulePath {
-        let is_absolute = other.0.len() > 0 && other.0[0] == "root";
-        if is_absolute {
-            ModulePath(other.0.clone())
+        let relative = self
+            .path
+            .iter()
+            .map(|x| x.clone())
+            .collect::<Vec<String>>()
+            .join("::");
+        if self.absolute {
+            format!("::{}", relative)
         } else {
-            self.resolve_relative(other)
+            relative
+        }
+    }
+    pub fn resolve(&self, other: &ModuleIdentifier) -> ModuleIdentifier {
+        if other.absolute {
+            other.clone()
+        } else {
+            let mut new_path = self.path.clone();
+            for name in &other.path {
+                new_path.push(name.clone());
+            }
+            ModuleIdentifier {
+                path: new_path,
+                absolute: self.absolute,
+            }
         }
     }
     pub fn len(&self) -> usize {
-        self.0.len()
+        self.path.len()
     }
 }
 
@@ -56,8 +82,13 @@ pub fn parse(root_module_path: &PathBuf) -> ParsedProgram {
     parse_module(
         &mut visited_modules,
         &mut module_tree,
-        root_module_path,
-        ModulePath(vec!["root".to_string()]),
+        ModulePath {
+            id: ModuleIdentifier {
+                path: Vec::new(),
+                absolute: true,
+            },
+            file: root_module_path.clone(),
+        },
     )
     .unwrap();
     ParsedProgram { module_tree }

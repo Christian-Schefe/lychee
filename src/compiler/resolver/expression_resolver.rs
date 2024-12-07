@@ -350,7 +350,7 @@ fn resolve_assignable_expression(
         AssignableExpressionKind::ArrayIndex(arr_expr, index_expr) => {
             let resolved_arr_expr = resolve_expression(context, arr_expr, false);
             let resolved_index_expr = resolve_expression(context, index_expr, false);
-            let element_size = context.resolved_types.get_type_size(&arr_expr.ty);
+            let element_size = context.resolved_types.get_type_size(&expr.ty);
             ResolvedAssignableExpression::ArrayIndex(
                 Box::new(resolved_arr_expr),
                 Box::new(resolved_index_expr),
