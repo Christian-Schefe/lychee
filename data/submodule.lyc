@@ -3,6 +3,6 @@ struct Test {
     int b;
 }
 
-int test() {
+int test(unit a) {
     10
 }

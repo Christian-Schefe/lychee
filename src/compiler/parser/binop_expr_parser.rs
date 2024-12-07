@@ -1,14 +1,15 @@
 use crate::compiler::lexer::token::{Keyword, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
-use crate::compiler::parser::parsed_expression::{
-    BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, BinaryOp,
+use crate::compiler::parser::binop_constructor::{
+    build_binop_expression, BinopElement, LEFT_ASSOCIATIVE_BINARY_OPERATORS,
 };
+use crate::compiler::parser::parsed_expression::{BinaryLogicOp, BinaryMathOp, BinaryOp};
 use crate::compiler::parser::parsed_expression::{ParsedExpression, ParsedExpressionKind, UnaryOp};
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::type_parser::parse_type;
 use crate::compiler::parser::unop_expr_parser::parse_unop_expression;
 
-fn find_op(tokens: &TokenStack, op_tokens: &[(StaticToken, BinaryOp)]) -> Option<BinaryOp> {
+pub fn find_op(tokens: &TokenStack, op_tokens: &[(StaticToken, BinaryOp)]) -> Option<BinaryOp> {
     op_tokens
         .iter()
         .find(|t| {
@@ -21,32 +22,7 @@ fn find_op(tokens: &TokenStack, op_tokens: &[(StaticToken, BinaryOp)]) -> Option
         .map(|t| t.1.clone())
 }
 
-fn parse_left_associative<F>(
-    tokens: &mut TokenStack,
-    op_tokens: &[(StaticToken, BinaryOp)],
-    parse_lower: F,
-) -> ParseResult<ParsedExpression>
-where
-    F: Fn(&mut TokenStack) -> ParseResult<ParsedExpression>,
-{
-    let mut expr = parse_lower(tokens)?;
-    let location = expr.location.clone();
-    while let Some(op) = find_op(tokens, op_tokens) {
-        tokens.pop();
-        let right = parse_lower(tokens)?;
-        expr = ParsedExpression::new(
-            ParsedExpressionKind::Binary {
-                left: Box::new(expr),
-                op: op.clone(),
-                right: Box::new(right),
-            },
-            location.clone(),
-        );
-    }
-    Ok(expr)
-}
-
-fn parse_right_associative<F>(
+pub fn parse_right_associative<F>(
     tokens: &mut TokenStack,
     op_tokens: &[(StaticToken, BinaryOp)],
     parse_lower: F,
@@ -125,130 +101,32 @@ pub fn parse_binop_expression(tokens: &mut TokenStack) -> ParseResult<ParsedExpr
                 BinaryOp::LogicAssign(BinaryLogicOp::Or),
             ),
         ],
-        parse_logical_or_or_lower,
+        parse_left_associative,
     )
 }
 
-fn parse_logical_or_or_lower(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
-    parse_left_associative(
-        tokens,
-        &[(StaticToken::LogicalOr, BinaryOp::Logical(BinaryLogicOp::Or))],
-        parse_logical_and_or_lower,
-    )
+pub fn parse_left_associative(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
+    let expr = parse_cast_or_lower(tokens)?;
+    let mut elements = vec![BinopElement::Expr(expr)];
+
+    while let Some(op) = find_op(tokens, &LEFT_ASSOCIATIVE_BINARY_OPERATORS) {
+        tokens.pop();
+        let right = parse_cast_or_lower(tokens)?;
+        elements.push(BinopElement::Op(op));
+        elements.push(BinopElement::Expr(right));
+    }
+
+    if elements.len() == 1 {
+        match elements.pop().unwrap() {
+            BinopElement::Expr(expr) => Ok(expr),
+            _ => unreachable!(),
+        }
+    } else {
+        build_binop_expression(elements)
+    }
 }
 
-fn parse_logical_and_or_lower(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
-    parse_left_associative(
-        tokens,
-        &[(
-            StaticToken::LogicalAnd,
-            BinaryOp::Logical(BinaryLogicOp::And),
-        )],
-        parse_bitwise_or_or_lower,
-    )
-}
-
-fn parse_bitwise_or_or_lower(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
-    parse_left_associative(
-        tokens,
-        &[(StaticToken::Pipe, BinaryOp::Math(BinaryMathOp::Or))],
-        parse_bitwise_xor_or_lower,
-    )
-}
-
-fn parse_bitwise_xor_or_lower(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
-    parse_left_associative(
-        tokens,
-        &[(StaticToken::Caret, BinaryOp::Math(BinaryMathOp::Xor))],
-        parse_bitwise_and_or_lower,
-    )
-}
-
-fn parse_bitwise_and_or_lower(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
-    parse_left_associative(
-        tokens,
-        &[(StaticToken::Ampersand, BinaryOp::Math(BinaryMathOp::And))],
-        parse_equality_or_lower,
-    )
-}
-
-fn parse_equality_or_lower(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
-    parse_left_associative(
-        tokens,
-        &[
-            (
-                StaticToken::Equals,
-                BinaryOp::Comparison(BinaryComparisonOp::Equals),
-            ),
-            (
-                StaticToken::NotEquals,
-                BinaryOp::Comparison(BinaryComparisonOp::NotEquals),
-            ),
-        ],
-        parse_relational_or_lower,
-    )
-}
-
-fn parse_relational_or_lower(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
-    parse_left_associative(
-        tokens,
-        &[
-            (
-                StaticToken::LessThan,
-                BinaryOp::Comparison(BinaryComparisonOp::Less),
-            ),
-            (
-                StaticToken::GreaterThan,
-                BinaryOp::Comparison(BinaryComparisonOp::Greater),
-            ),
-            (
-                StaticToken::LessThanOrEqual,
-                BinaryOp::Comparison(BinaryComparisonOp::LessEquals),
-            ),
-            (
-                StaticToken::GreaterThanOrEqual,
-                BinaryOp::Comparison(BinaryComparisonOp::GreaterEquals),
-            ),
-        ],
-        parse_shift_or_lower,
-    )
-}
-
-fn parse_shift_or_lower(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
-    parse_left_associative(
-        tokens,
-        &[
-            (StaticToken::ShiftLeft, BinaryOp::Math(BinaryMathOp::Shl)),
-            (StaticToken::ShiftRight, BinaryOp::Math(BinaryMathOp::Shr)),
-        ],
-        parse_add_or_lower,
-    )
-}
-
-fn parse_add_or_lower(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
-    parse_left_associative(
-        tokens,
-        &[
-            (StaticToken::Plus, BinaryOp::Math(BinaryMathOp::Add)),
-            (StaticToken::Minus, BinaryOp::Math(BinaryMathOp::Sub)),
-        ],
-        parse_mul_or_lower,
-    )
-}
-
-fn parse_mul_or_lower(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
-    parse_left_associative(
-        tokens,
-        &[
-            (StaticToken::Asterisk, BinaryOp::Math(BinaryMathOp::Mul)),
-            (StaticToken::Slash, BinaryOp::Math(BinaryMathOp::Div)),
-            (StaticToken::Percent, BinaryOp::Math(BinaryMathOp::Mod)),
-        ],
-        parse_cast_or_lower,
-    )
-}
-
-fn parse_cast_or_lower(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
+pub fn parse_cast_or_lower(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
     let mut expr = parse_unop_expression(tokens)?;
     let location = expr.location.clone();
     loop {

@@ -22,7 +22,13 @@ pub struct Location {
 
 impl Display for Location {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "line {}, column {} ({})", self.line, self.column, self.file.display())
+        write!(
+            f,
+            "line {}, column {} ({})",
+            self.line,
+            self.column,
+            self.file.display()
+        )
     }
 }
 

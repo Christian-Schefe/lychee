@@ -3,6 +3,7 @@ use crate::compiler::parser::program_parser::parse_module;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
+mod binop_constructor;
 mod binop_expr_parser;
 pub mod expression_tree_printer;
 pub mod parsed_expression;

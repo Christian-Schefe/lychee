@@ -1,6 +1,8 @@
 use crate::compiler::lexer::location::Src;
+use crate::compiler::lexer::token::StaticToken;
 use crate::compiler::merger::merged_expression::ModuleId;
 use crate::compiler::parser::ModulePath;
+use lazy_static::lazy_static;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -105,6 +107,42 @@ pub enum BinaryOp {
     Assign,
     MathAssign(BinaryMathOp),
     LogicAssign(BinaryLogicOp),
+}
+
+impl BinaryOp {
+    pub fn precedence(&self) -> usize {
+        match self {
+            BinaryOp::Math(BinaryMathOp::Mul)
+            | BinaryOp::Math(BinaryMathOp::Div)
+            | BinaryOp::Math(BinaryMathOp::Mod) => 10,
+
+            BinaryOp::Math(BinaryMathOp::Add) | BinaryOp::Math(BinaryMathOp::Sub) => 20,
+
+            BinaryOp::Math(BinaryMathOp::Shl) | BinaryOp::Math(BinaryMathOp::Shr) => 30,
+
+            BinaryOp::Comparison(BinaryComparisonOp::Less)
+            | BinaryOp::Comparison(BinaryComparisonOp::LessEquals)
+            | BinaryOp::Comparison(BinaryComparisonOp::Greater)
+            | BinaryOp::Comparison(BinaryComparisonOp::GreaterEquals) => 40,
+
+            BinaryOp::Comparison(BinaryComparisonOp::Equals)
+            | BinaryOp::Comparison(BinaryComparisonOp::NotEquals) => 50,
+
+            BinaryOp::Math(BinaryMathOp::And) => 60,
+
+            BinaryOp::Math(BinaryMathOp::Or) => 70,
+
+            BinaryOp::Math(BinaryMathOp::Xor) => 80,
+
+            BinaryOp::Logical(BinaryLogicOp::And) => 90,
+
+            BinaryOp::Logical(BinaryLogicOp::Or) => 100,
+
+            BinaryOp::Assign => 110,
+            BinaryOp::MathAssign(_) => 110,
+            BinaryOp::LogicAssign(_) => 110,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

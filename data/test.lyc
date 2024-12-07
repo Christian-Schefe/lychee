@@ -1,5 +1,3 @@
-module arrays;
-module submodule;
 
 int main() {
     for (let int i = 0; i < 10; i++) {
@@ -12,7 +10,5 @@ int main() {
         }
     };
     i = random() as int;
-    arrays::main();
-    i = root::submodule::test();
     i
 }

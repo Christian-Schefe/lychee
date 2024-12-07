@@ -3,10 +3,10 @@ use crate::compiler::parser::parsed_expression::ParsedProgram;
 use anyhow::Error;
 
 mod expression_merger;
+mod function_resolver;
 pub mod merged_expression;
 mod program_merger;
 mod type_resolver;
-mod function_resolver;
 
 pub type MergerResult<T> = Result<T, Error>;
 
