@@ -1,6 +1,6 @@
 use crate::compiler::lexer::location::Src;
-use crate::compiler::merger::expression_merger::merge_expression;
 use crate::compiler::merger::function_resolver::build_resolved_functions;
+use crate::compiler::merger::iterative_expression_merger::merge_expression;
 use crate::compiler::merger::merged_expression::{
     MergedFunction, MergedProgram, ModuleId, ResolvedFunctions, ResolvedTypes,
 };

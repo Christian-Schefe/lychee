@@ -2,8 +2,8 @@ use crate::compiler::merger::merged_expression::MergedProgram;
 use crate::compiler::parser::parsed_expression::ParsedProgram;
 use anyhow::Error;
 
-mod expression_merger;
 mod function_resolver;
+mod iterative_expression_merger;
 pub mod merged_expression;
 mod program_merger;
 mod type_resolver;
