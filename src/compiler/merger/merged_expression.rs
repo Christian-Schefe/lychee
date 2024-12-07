@@ -31,6 +31,7 @@ impl ResolvedTypes {
         match &parsed_type.value {
             ParsedTypeKind::Named(module_id) => {
                 if module_id.module_path.len() == 0
+                    && !module_id.module_path.absolute
                     && self.builtin_types.contains_key(&module_id.name)
                 {
                     return self
@@ -88,20 +89,21 @@ impl ResolvedFunctions {
     pub fn resolve_function(
         &self,
         current_module: &ModuleIdentifier,
-        parsed_function: &ModuleId,
+        function_id: &ModuleId,
     ) -> Option<&ResolvedFunctionHeader> {
-        if parsed_function.module_path.len() == 0
-            && self.builtin_functions.contains_key(&parsed_function.name)
+        if function_id.module_path.len() == 0
+            && !function_id.module_path.absolute
+            && self.builtin_functions.contains_key(&function_id.name)
         {
             return Some(
                 self.functions
-                    .get(self.builtin_functions.get(&parsed_function.name).unwrap())
+                    .get(self.builtin_functions.get(&function_id.name).unwrap())
                     .unwrap(),
             );
         }
         let resolved_module_id = ModuleId {
-            name: parsed_function.name.clone(),
-            module_path: current_module.resolve(&parsed_function.module_path),
+            name: function_id.name.clone(),
+            module_path: current_module.resolve(&function_id.module_path),
         };
         self.functions.get(&resolved_module_id)
     }

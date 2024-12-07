@@ -448,7 +448,7 @@ fn set_flags(memory: &mut Memory, value: i64) {
 
 fn sign_extend(pc: usize, memory: &mut Memory, debug_print: bool) {
     let byte1 = memory.data[pc + 1];
-    let data_size = 1 << ((byte1 % 0x30) >> 4);
+    let data_size = 1 << ((byte1 & 0x30) >> 4);
     let register = byte1 & 0x0F;
 
     let value = memory.registers[register as usize] as i64;

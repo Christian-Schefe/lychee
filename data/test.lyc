@@ -24,3 +24,8 @@ struct Test {
     int a;
     int b;
 }
+
+struct Int {
+    int value;
+    long value2;
+}

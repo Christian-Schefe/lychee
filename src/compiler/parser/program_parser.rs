@@ -84,8 +84,6 @@ pub fn parse_module(
         ))?;
     }
 
-    println!("Parsing module: {}", module_path.id.get_identifier());
-
     let tokens = lexer::lex(&path)?;
     let mut tokens = TokenStack::new(tokens);
 
@@ -119,7 +117,6 @@ pub fn parse_module(
 
     for (location, submodule) in submodule_declarations {
         let child_module = module_path.get_submodule_path(&submodule);
-        println!("Parsing submodule: {:?}", child_module,);
         parse_module(visited_paths, module_tree, child_module).with_context(|| {
             format!("Failed to parse submodule '{}' at {}.", submodule, location)
         })?;

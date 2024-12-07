@@ -205,8 +205,8 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
                     context.cmpi("r0", 0);
                     context.setz("r0");
                 }
-                ResolvedUnaryOp::IntCast => {
-                    context.signext(expression.value_data.size, "r0");
+                ResolvedUnaryOp::IntCast(smaller_size) => {
+                    context.signext(*smaller_size, "r0");
                 }
                 ResolvedUnaryOp::BoolCast => {
                     context.cmpi("r0", 0);

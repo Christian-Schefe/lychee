@@ -161,6 +161,6 @@ pub enum ResolvedUnaryOp {
     Math(UnaryMathOp),
     LogicalNot,
     PointerCast,
-    IntCast,
+    IntCast(usize),
     BoolCast,
 }

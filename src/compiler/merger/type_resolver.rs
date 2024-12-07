@@ -42,6 +42,13 @@ pub fn build_resolved_types(parsed_program: &ParsedProgram) -> MergerResult<Reso
             name: struct_def.value.struct_name.clone(),
             module_path: id.module_path.clone(),
         };
+        if builtin_types.contains_key(&struct_id.name) {
+            return Err(anyhow::anyhow!(
+                "Struct name '{}' conflicts with builtin type at {}",
+                struct_id.name,
+                struct_def.location
+            ));
+        }
         known_type_names.insert(struct_id.clone(), TypeId::StructType(struct_id));
     }
 

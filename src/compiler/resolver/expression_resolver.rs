@@ -198,15 +198,20 @@ pub fn resolve_expression(
             let mapped_op = match op {
                 AnalyzedUnaryOp::Math(math_op) => ResolvedUnaryOp::Math(math_op.clone()),
                 AnalyzedUnaryOp::LogicalNot => ResolvedUnaryOp::LogicalNot,
-                AnalyzedUnaryOp::Cast => match &expression.ty {
-                    TypeId::Integer(_) => ResolvedUnaryOp::IntCast,
-                    TypeId::Bool => ResolvedUnaryOp::BoolCast,
-                    TypeId::Char => ResolvedUnaryOp::IntCast,
-                    TypeId::Pointer(_) => ResolvedUnaryOp::PointerCast,
-                    _ => {
-                        panic!("Unsupported cast: {:?}", expression.ty)
+                AnalyzedUnaryOp::Cast => {
+                    let original_size = context.resolved_types.get_type_size(&expr.ty);
+                    let target_size = context.resolved_types.get_type_size(&expression.ty);
+                    let smaller_size = original_size.min(target_size);
+                    match &expression.ty {
+                        TypeId::Integer(_) => ResolvedUnaryOp::IntCast(smaller_size),
+                        TypeId::Bool => ResolvedUnaryOp::BoolCast,
+                        TypeId::Char => ResolvedUnaryOp::IntCast(smaller_size),
+                        TypeId::Pointer(_) => ResolvedUnaryOp::PointerCast,
+                        _ => {
+                            panic!("Unsupported cast: {:?}", expression.ty)
+                        }
                     }
-                },
+                }
             };
 
             ResolvedExpression {

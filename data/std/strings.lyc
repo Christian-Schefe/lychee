@@ -1,26 +1,3 @@
-int main() {
-    print_literal("Guess a number between 0-9!\n");
-    let var str = newString(100);
-    readString(&str);
-    print_literal("Your input:\n");
-    printString(&str);
-    let int num = stringToInt(&str);
-    print_literal("You guessed:\n");
-    write_num(num);
-    write_char('\n');
-    let int numToGuess = rand(10);
-    print_literal("The answer was:\n");
-    write_num(numToGuess);
-    write_char('\n');
-    if num == numToGuess {
-        print_literal("You won!:\n");
-    } else {
-        print_literal("You lost!:\n");
-    };
-    write_char('\n');
-    num
-}
-
 struct String {
     &char data;
     int size;
@@ -46,11 +23,6 @@ String fromLiteral(&char literal) {
         i++;
     };
     str
-}
-
-int rand(int max) {
-    let long r = random();
-    ((r % max as long) as int + max) % max
 }
 
 unit readString(&String str) {

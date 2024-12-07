@@ -18,6 +18,7 @@ pub fn merge_expression(
     let mut stack = vec![(parsed_expression, false)];
     let mut output = vec![];
     while let Some((stack_expr, was_visited)) = stack.pop() {
+        let location = stack_expr.location.clone();
         if !was_visited {
             stack.push((stack_expr, true));
             match &stack_expr.value {
@@ -114,46 +115,31 @@ pub fn merge_expression(
                 } => {
                     let new_len = output.len() - expressions.len();
                     let merged_expressions = output.split_off(new_len);
-                    MergedExpression {
-                        value: MergedExpressionKind::Block {
-                            expressions: merged_expressions,
-                            returns_value: *returns_value,
-                        },
-                        location: parsed_expression.location.clone(),
+                    MergedExpressionKind::Block {
+                        expressions: merged_expressions,
+                        returns_value: *returns_value,
                     }
                 }
                 ParsedExpressionKind::Return(maybe_expr) => {
                     let merged_expression =
                         maybe_expr.as_ref().map(|_| Box::new(output.pop().unwrap()));
-                    MergedExpression {
-                        value: MergedExpressionKind::Return(merged_expression),
-                        location: parsed_expression.location.clone(),
-                    }
+                    MergedExpressionKind::Return(merged_expression)
                 }
-                ParsedExpressionKind::Continue => MergedExpression {
-                    value: MergedExpressionKind::Continue,
-                    location: parsed_expression.location.clone(),
-                },
+                ParsedExpressionKind::Continue => MergedExpressionKind::Continue,
                 ParsedExpressionKind::Break(maybe_expr) => {
                     let merged_expression =
                         maybe_expr.as_ref().map(|_| Box::new(output.pop().unwrap()));
-                    MergedExpression {
-                        value: MergedExpressionKind::Break(merged_expression),
-                        location: parsed_expression.location.clone(),
-                    }
+                    MergedExpressionKind::Break(merged_expression)
                 }
                 ParsedExpressionKind::If { else_expr, .. } => {
                     let merged_else_expr =
                         else_expr.as_ref().map(|_| Box::new(output.pop().unwrap()));
                     let merged_then_block = Box::new(output.pop().unwrap());
                     let merged_condition = Box::new(output.pop().unwrap());
-                    MergedExpression {
-                        value: MergedExpressionKind::If {
-                            condition: merged_condition,
-                            then_block: merged_then_block,
-                            else_expr: merged_else_expr,
-                        },
-                        location: parsed_expression.location.clone(),
+                    MergedExpressionKind::If {
+                        condition: merged_condition,
+                        then_block: merged_then_block,
+                        else_expr: merged_else_expr,
                     }
                 }
                 ParsedExpressionKind::While { else_expr, .. } => {
@@ -161,13 +147,10 @@ pub fn merge_expression(
                         else_expr.as_ref().map(|_| Box::new(output.pop().unwrap()));
                     let merged_loop_body = Box::new(output.pop().unwrap());
                     let merged_condition = Box::new(output.pop().unwrap());
-                    MergedExpression {
-                        value: MergedExpressionKind::While {
-                            condition: merged_condition,
-                            loop_body: merged_loop_body,
-                            else_expr: merged_else_expr,
-                        },
-                        location: parsed_expression.location.clone(),
+                    MergedExpressionKind::While {
+                        condition: merged_condition,
+                        loop_body: merged_loop_body,
+                        else_expr: merged_else_expr,
                     }
                 }
                 ParsedExpressionKind::For { else_expr, .. } => {
@@ -177,15 +160,12 @@ pub fn merge_expression(
                     let merged_step = Box::new(output.pop().unwrap());
                     let merged_condition = Box::new(output.pop().unwrap());
                     let merged_init = Box::new(output.pop().unwrap());
-                    MergedExpression {
-                        value: MergedExpressionKind::For {
-                            init: merged_init,
-                            condition: merged_condition,
-                            step: merged_step,
-                            loop_body: merged_loop_body,
-                            else_expr: merged_else_expr,
-                        },
-                        location: parsed_expression.location.clone(),
+                    MergedExpressionKind::For {
+                        init: merged_init,
+                        condition: merged_condition,
+                        step: merged_step,
+                        loop_body: merged_loop_body,
+                        else_expr: merged_else_expr,
                     }
                 }
                 ParsedExpressionKind::Declaration {
@@ -197,19 +177,15 @@ pub fn merge_expression(
                     } else {
                         None
                     };
-                    MergedExpression {
-                        value: MergedExpressionKind::Declaration {
-                            var_type: resolved_type,
-                            var_name: var_name.clone(),
-                            value: merged_value,
-                        },
-                        location: parsed_expression.location.clone(),
+                    MergedExpressionKind::Declaration {
+                        var_type: resolved_type,
+                        var_name: var_name.clone(),
+                        value: merged_value,
                     }
                 }
-                ParsedExpressionKind::Variable(name) => MergedExpression {
-                    value: MergedExpressionKind::Variable(name.clone()),
-                    location: parsed_expression.location.clone(),
-                },
+                ParsedExpressionKind::Variable(name) => {
+                    MergedExpressionKind::Variable(name.clone())
+                }
                 ParsedExpressionKind::Literal(lit) => {
                     let lit = match lit {
                         ParsedLiteral::Unit => MergedLiteral::Unit,
@@ -228,10 +204,7 @@ pub fn merge_expression(
                             MergedLiteral::Struct(resolved_type, merged_fields)
                         }
                     };
-                    MergedExpression {
-                        value: MergedExpressionKind::Literal(lit),
-                        location: parsed_expression.location.clone(),
-                    }
+                    MergedExpressionKind::Literal(lit)
                 }
                 ParsedExpressionKind::Unary { op, .. } => {
                     let op = match op {
@@ -257,24 +230,18 @@ pub fn merge_expression(
                         }
                     };
                     let merged_expr = output.pop().unwrap();
-                    MergedExpression {
-                        value: MergedExpressionKind::Unary {
-                            expr: Box::new(merged_expr),
-                            op,
-                        },
-                        location: parsed_expression.location.clone(),
+                    MergedExpressionKind::Unary {
+                        expr: Box::new(merged_expr),
+                        op,
                     }
                 }
                 ParsedExpressionKind::Binary { op, .. } => {
                     let merged_right = Box::new(output.pop().unwrap());
                     let merged_left = Box::new(output.pop().unwrap());
-                    MergedExpression {
-                        value: MergedExpressionKind::Binary {
-                            left: merged_left,
-                            right: merged_right,
-                            op: op.clone(),
-                        },
-                        location: parsed_expression.location.clone(),
+                    MergedExpressionKind::Binary {
+                        left: merged_left,
+                        right: merged_right,
+                        op: op.clone(),
                     }
                 }
                 ParsedExpressionKind::FunctionCall { function_id, args } => {
@@ -283,22 +250,18 @@ pub fn merge_expression(
                     let function_header = resolved_functions
                         .resolve_function(module_path, function_id)
                         .ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "Function '{}' not found at {}",
-                                function_id,
-                                parsed_expression.location
-                            )
+                            anyhow::anyhow!("Function '{}' not found at {}", function_id, location)
                         })?;
-                    MergedExpression {
-                        value: MergedExpressionKind::FunctionCall {
-                            function_id: function_header.id.clone(),
-                            args: merged_args,
-                        },
-                        location: parsed_expression.location.clone(),
+                    MergedExpressionKind::FunctionCall {
+                        function_id: function_header.id.clone(),
+                        args: merged_args,
                     }
                 }
             };
-            output.push(merged);
+            output.push(MergedExpression {
+                value: merged,
+                location,
+            });
         }
     }
     Ok(output.pop().unwrap())
