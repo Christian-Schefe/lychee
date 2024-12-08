@@ -63,6 +63,46 @@ impl BuiltinFunction {
         )
     }
 
+    pub fn write() -> BuiltinFunction {
+        BuiltinFunction::new(
+            "write".to_string(),
+            TypeId::Unit,
+            vec![
+                (
+                    "string".to_string(),
+                    TypeId::Pointer(Box::new(TypeId::Char)),
+                ),
+                ("length".to_string(), TypeId::Integer(4)),
+            ],
+            Box::new(|context| {
+                context.load(4, "r0", "[sp;8]");
+                context.load(8, "r1", "[sp;12]");
+                context.write("r0", "[r1]");
+                context.ret();
+            }),
+        )
+    }
+
+    pub fn read() -> BuiltinFunction {
+        BuiltinFunction::new(
+            "read".to_string(),
+            TypeId::Unit,
+            vec![
+                (
+                    "string".to_string(),
+                    TypeId::Pointer(Box::new(TypeId::Char)),
+                ),
+                ("length".to_string(), TypeId::Integer(4)),
+            ],
+            Box::new(|context| {
+                context.load(4, "r0", "[sp;8]");
+                context.load(8, "r1", "[sp;12]");
+                context.read("r0", "[r1]");
+                context.ret();
+            }),
+        )
+    }
+
     pub fn malloc() -> BuiltinFunction {
         BuiltinFunction::new(
             "malloc".to_string(),
@@ -120,6 +160,8 @@ impl BuiltinFunction {
         vec![
             BuiltinFunction::read_char(),
             BuiltinFunction::write_char(),
+            BuiltinFunction::write(),
+            BuiltinFunction::read(),
             BuiltinFunction::malloc(),
             BuiltinFunction::free(),
             BuiltinFunction::random(),

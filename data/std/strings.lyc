@@ -3,20 +3,19 @@ struct String {
     int size;
 }
 
-String newString(int size) {
-    let String str = new String {
+String new_string(int size) {
+    new String {
         data: malloc(size) as &char,
         size: size
-    };
-    str
+    }
 }
 
-String fromLiteral(&char literal) {
+String from_literal(&char literal) {
     let int size = 0;
     while (literal[size] != '\0') {
         size++;
     };
-    let String str = newString(size);
+    let String str = new_string(size);
     let int i = 0;
     while (i < size) {
         set(&str, i, literal[i]);
@@ -25,17 +24,47 @@ String fromLiteral(&char literal) {
     str
 }
 
-unit readString(&String str) {
+unit free_string(&String str) {
+    free(str.data as &unit);
+}
+
+String read_line() {
+    let var str = new_string(100);
     let int i = 0;
     while (i < str.size) {
         let char c = read_char();
         if c == '\n' || c == '\r' {
             break;
         };
-        set(str, i, c);
+        set(&str, i, c);
         i++;
     };
     str.size = i;
+    str
+}
+
+String concat(&String str1, &String str2) {
+    let String str = new_string(str1.size + str2.size);
+    let int i = 0;
+    while (i < str1.size) {
+        set(&str, i, get(str1, i));
+        i++;
+    };
+    let int j = 0;
+    while (j < str2.size) {
+        set(&str, i, get(str2, j));
+        i++;
+        j++;
+    };
+    str
+}
+
+unit write_string(&String str) {
+    write(str.data, str.size);
+}
+
+unit read_string(&String str) {
+    read(str.data, str.size);
 }
 
 char get(&String str, int index) {
@@ -46,16 +75,8 @@ unit set(&String str, int index, char value) {
     str.data[index] = value;
 }
 
-unit printString(&String str) {
-    let int i = 0;
-    while (i < str.size) {
-        write_char(get(str, i));
-        i++;
-    };
-    write_char('\n');
-}
 
-int stringToInt(&String str) {
+int parse_int(&String str) {
     let int i = 0;
     let int num = 0;
     let int sign = 1;
@@ -88,7 +109,7 @@ unit write_num(int num) {
 unit print_literal(&char literal) {
     let int i = 0;
     while (literal[i] != '\0') {
-        write_char(literal[i]);
         i++;
     };
+    write(literal, i);
 }
