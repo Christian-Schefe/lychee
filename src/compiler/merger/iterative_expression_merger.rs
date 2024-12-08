@@ -86,7 +86,6 @@ pub fn merge_expression(
                         for field in struct_decl.field_order.iter().rev() {
                             stack.push((fields.get(field).unwrap(), false));
                         }
-                        continue;
                     }
                     _ => {}
                 },

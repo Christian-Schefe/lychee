@@ -2,6 +2,7 @@ use anyhow::Error;
 
 pub mod analyzed_expression;
 mod expression_analyzer;
+mod iterative_expression_analyzer;
 pub mod program_analyzer;
 mod return_analyzer;
 

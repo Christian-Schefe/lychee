@@ -1,3 +1,4 @@
+use crate::compiler::lexer::location::Location;
 use crate::compiler::merger::merged_expression::{
     ModuleId, ResolvedFunctions, ResolvedTypes, TypeId,
 };
@@ -22,6 +23,7 @@ pub struct AnalyzedFunction {
 pub struct AnalyzedExpression {
     pub kind: AnalyzedExpressionKind,
     pub ty: TypeId,
+    pub location: Location,
 }
 
 #[derive(Debug, Clone)]

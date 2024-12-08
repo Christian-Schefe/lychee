@@ -3,7 +3,8 @@ use crate::compiler::analyzer::analyzed_expression::{
     AnalyzedLiteral, AnalyzedUnaryOp, AssignableExpression, AssignableExpressionKind,
     BinaryAssignOp,
 };
-use crate::compiler::analyzer::program_analyzer::{AnalyzerContext, LocalVariable, LoopData};
+use crate::compiler::analyzer::iterative_expression_analyzer::analyze_expression;
+use crate::compiler::analyzer::program_analyzer::{AnalyzerContext, LocalVariable};
 use crate::compiler::analyzer::AnalyzerResult;
 use crate::compiler::lexer::location::Location;
 use crate::compiler::merger::merged_expression::{
@@ -12,8 +13,7 @@ use crate::compiler::merger::merged_expression::{
 use crate::compiler::parser::parsed_expression::{BinaryComparisonOp, BinaryOp};
 use anyhow::Context;
 use std::collections::HashSet;
-
-pub fn analyze_expression(
+/*pub fn analyze_expression(
     context: &mut AnalyzerContext,
     expression: &MergedExpression,
 ) -> AnalyzerResult<AnalyzedExpression> {
@@ -1010,7 +1010,7 @@ pub fn analyze_expression(
             })
         }
     }
-}
+}*/
 
 pub fn analyze_assignable_expression(
     context: &mut AnalyzerContext,
@@ -1229,7 +1229,7 @@ fn try_as_assignable_field_access(
     }
 }
 
-fn can_cast_to(original_type: &TypeId, target_type: &TypeId) -> bool {
+pub fn can_cast_to(original_type: &TypeId, target_type: &TypeId) -> bool {
     if *original_type == *target_type {
         return true;
     }

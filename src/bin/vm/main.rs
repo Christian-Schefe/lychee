@@ -203,10 +203,11 @@ fn load_or_store(pc: usize, memory: &mut Memory, is_load: bool, debug_print: boo
     memory.registers[constants::PC] += 2;
 
     if debug_print {
+        let bytes = memory.read_bytes(address as usize, data_size as usize);
         if is_load {
             println!(
-                "Loaded {} bytes from address {} into register {}",
-                data_size, address, register
+                "Loaded {} bytes ({:?}) from address {} into register {}",
+                data_size, bytes, address, register
             );
         } else {
             println!(
@@ -299,7 +300,7 @@ fn binop(pc: usize, memory: &mut Memory, op_type: BinopType, immediate: bool, de
                 "Performed {:?} operation with register {} and register {}, Result: {}, Flags: {:?}",
                 op_type,
                 dest_register,
-                byte1 & 0x0F,
+                ((byte1 & 0xF0) >> 4) as usize,
                 result,
                 memory.flags
             );

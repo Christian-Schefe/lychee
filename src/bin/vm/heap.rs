@@ -127,7 +127,7 @@ impl Heap {
                 current, block_size, next, prev
             );
             if block_size.abs() < 1000 {
-                let content = memory.data[current..current+block_size.abs() as usize].to_vec();
+                let content = memory.data[current..current + block_size.abs() as usize].to_vec();
                 println!("Content: {:?}", content);
             }
             if next == -1 {

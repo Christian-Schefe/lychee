@@ -19,7 +19,7 @@ unit t2() {
     strings::printString(&str);
     write_char(strings::get(&str, 0));
     let ::Int i = tf(-595);
-    for (let int k = 0; k < 10000; k++) {
+    for (let int k = 0; k < 100; k++) {
         let var j = tf(-595).value2 as int;
         strings::write_num(j);
     }

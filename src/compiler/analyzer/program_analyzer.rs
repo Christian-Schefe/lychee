@@ -1,5 +1,5 @@
 use crate::compiler::analyzer::analyzed_expression::{AnalyzedFunction, AnalyzedProgram};
-use crate::compiler::analyzer::expression_analyzer::analyze_expression;
+use crate::compiler::analyzer::iterative_expression_analyzer::analyze_expression;
 use crate::compiler::analyzer::return_analyzer::always_calls_return;
 use crate::compiler::analyzer::AnalyzerResult;
 use crate::compiler::lexer::location::Src;
@@ -12,15 +12,9 @@ use std::collections::HashMap;
 
 pub struct AnalyzerContext<'a> {
     pub function_headers: &'a ResolvedFunctions,
-    pub loop_data: Option<LoopData>,
     pub local_variables: HashMap<String, LocalVariable>,
     pub structs: &'a HashMap<TypeId, ResolvedStruct>,
     pub return_type: &'a TypeId,
-}
-
-#[derive(Debug, Clone)]
-pub struct LoopData {
-    pub break_return_type: TypeId,
 }
 
 #[derive(Debug, Clone)]
@@ -83,7 +77,6 @@ pub fn analyze_function(
     let mut context = AnalyzerContext {
         function_headers: resolved_functions,
         structs: &resolved_types.structs,
-        loop_data: None,
         local_variables: HashMap::new(),
         return_type: &return_type,
     };
