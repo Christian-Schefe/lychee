@@ -27,23 +27,27 @@ impl ResolvedTypes {
         &self,
         current_module: &ModuleIdentifier,
         parsed_type: &ParsedType,
+        imports: &HashMap<String, Src<ModuleId>>,
     ) -> MergerResult<TypeId> {
         match &parsed_type.value {
             ParsedTypeKind::Named(module_id) => {
-                if module_id.module_path.len() == 0
-                    && !module_id.module_path.absolute
-                    && self.builtin_types.contains_key(&module_id.name)
-                {
-                    return self
-                        .builtin_types
-                        .get(&module_id.name)
-                        .cloned()
-                        .ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "Builtin type '{}' not found in builtin types",
-                                module_id.name
-                            )
-                        });
+                if module_id.module_path.len() == 0 && !module_id.module_path.absolute {
+                    if let Some(builtin_type) = self.builtin_types.get(&module_id.name) {
+                        return Ok(builtin_type.clone());
+                    }
+                    if let Some(imported_module_id) = imports.get(&module_id.name) {
+                        return self
+                            .known_types
+                            .get(&imported_module_id.value)
+                            .cloned()
+                            .ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "Type '{}' not found in known types at {}",
+                                    imported_module_id.value,
+                                    parsed_type.location
+                                )
+                            });
+                    }
                 }
                 let resolved_module_id = ModuleId {
                     name: module_id.name.clone(),
@@ -61,7 +65,7 @@ impl ResolvedTypes {
                     })
             }
             ParsedTypeKind::Pointer(inner) => {
-                let inner_type = self.resolve_type(current_module, inner)?;
+                let inner_type = self.resolve_type(current_module, inner, imports)?;
                 Ok(TypeId::Pointer(Box::new(inner_type)))
             }
         }
@@ -90,16 +94,14 @@ impl ResolvedFunctions {
         &self,
         current_module: &ModuleIdentifier,
         function_id: &ModuleId,
+        imports: &HashMap<String, Src<ModuleId>>,
     ) -> Option<&ResolvedFunctionHeader> {
-        if function_id.module_path.len() == 0
-            && !function_id.module_path.absolute
-            && self.builtin_functions.contains_key(&function_id.name)
-        {
-            return Some(
-                self.functions
-                    .get(self.builtin_functions.get(&function_id.name).unwrap())
-                    .unwrap(),
-            );
+        if function_id.module_path.len() == 0 && !function_id.module_path.absolute {
+            if let Some(builtin_module_id) = self.builtin_functions.get(&function_id.name) {
+                return self.functions.get(builtin_module_id);
+            } else if let Some(imported_module_id) = imports.get(&function_id.name) {
+                return self.functions.get(&imported_module_id.value);
+            }
         }
         let resolved_module_id = ModuleId {
             name: function_id.name.clone(),

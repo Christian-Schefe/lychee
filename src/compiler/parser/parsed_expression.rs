@@ -13,6 +13,7 @@ pub struct ParsedModule {
     pub module_path: ModuleIdentifier,
     pub functions: Vec<Src<ParsedFunction>>,
     pub struct_definitions: Vec<Src<ParsedStructDefinition>>,
+    pub imports: HashMap<String, Src<ModuleId>>,
 }
 
 #[derive(Debug, Clone)]

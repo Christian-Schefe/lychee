@@ -53,6 +53,13 @@ pub fn print_program(program: &ParsedProgram) {
 
 pub fn print_module(printer: &mut Printer, expr: &ParsedModule) {
     printer.add_line(format!("Module({})", expr.module_path.get_identifier()));
+    for (name, import) in &expr.imports {
+        printer.add_line(format!(
+            "Import({} from {})",
+            name,
+            import.value.module_path.get_identifier()
+        ));
+    }
     for struct_def in &expr.struct_definitions {
         print_struct_definition(printer, &struct_def.value);
     }

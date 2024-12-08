@@ -47,3 +47,7 @@ unit for_loop_test() {
 
     write_char('\n');
 }
+
+struct test {
+    int a;
+}

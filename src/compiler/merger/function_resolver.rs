@@ -40,13 +40,13 @@ fn extract_module_functions(
             };
 
             let return_type =
-                resolved_types.resolve_type(&module.module_path, &func_def.value.return_type)?;
+                resolved_types.resolve_type(&module.module_path, &func_def.value.return_type, &module.imports)?;
 
             let mut parameter_order = Vec::with_capacity(func_def.value.args.len());
             let mut parameter_types = HashMap::with_capacity(func_def.value.args.len());
 
             for (arg_type, arg_name) in &func_def.value.args {
-                let arg_type = resolved_types.resolve_type(&module.module_path, arg_type)?;
+                let arg_type = resolved_types.resolve_type(&module.module_path, arg_type, &module.imports)?;
                 parameter_order.push(arg_name.clone());
                 parameter_types.insert(arg_name.clone(), arg_type);
             }

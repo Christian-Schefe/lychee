@@ -32,23 +32,31 @@ pub fn merge_program(parsed_program: &ParsedProgram) -> MergerResult<MergedProgr
     })
 }
 
+pub struct MergerContext<'a> {
+    pub resolved_types: &'a ResolvedTypes,
+    pub resolved_functions: &'a ResolvedFunctions,
+    pub module_path: &'a ModuleIdentifier,
+    pub imports: &'a HashMap<String, Src<ModuleId>>,
+}
+
 pub fn merge_module(
     functions: &mut HashMap<ModuleId, Src<MergedFunction>>,
     resolved_types: &ResolvedTypes,
     resolved_functions: &ResolvedFunctions,
     parsed_module: &ParsedModule,
 ) -> MergerResult<()> {
+    let context = MergerContext {
+        resolved_types,
+        resolved_functions,
+        module_path: &parsed_module.module_path,
+        imports: &parsed_module.imports,
+    };
     for function in &parsed_module.functions {
         let module_id = ModuleId {
             name: function.value.function_name.clone(),
             module_path: parsed_module.module_path.clone(),
         };
-        let merged_function = merge_function(
-            resolved_types,
-            resolved_functions,
-            &parsed_module.module_path,
-            function,
-        )?;
+        let merged_function = merge_function(&context, function)?;
         functions.insert(
             module_id,
             Src {
@@ -58,21 +66,41 @@ pub fn merge_module(
         );
     }
 
+    validate_imports(&context)?;
+
     Ok(())
 }
 
 pub fn merge_function(
-    resolved_types: &ResolvedTypes,
-    resolved_functions: &ResolvedFunctions,
-    module_path: &ModuleIdentifier,
+    context: &MergerContext,
     parsed_function: &Src<ParsedFunction>,
 ) -> MergerResult<MergedFunction> {
-    let body = merge_expression(
-        resolved_types,
-        resolved_functions,
-        module_path,
-        &parsed_function.value.body,
-    )?;
+    let body = merge_expression(context, &parsed_function.value.body)?;
 
     Ok(MergedFunction { body })
+}
+
+pub fn validate_imports(context: &MergerContext) -> MergerResult<()> {
+    for (_, import_id) in context.imports {
+        let is_type = context
+            .resolved_types
+            .known_types
+            .get(&import_id.value)
+            .is_some();
+        let is_function = context
+            .resolved_functions
+            .functions
+            .get(&import_id.value)
+            .is_some();
+        if !is_type && !is_function {
+            Err(anyhow::anyhow!(
+                "Import '{}' in module '{}' does not resolve to a type or function at {}",
+                import_id.value,
+                context.module_path.get_identifier(),
+                import_id.location
+            ))?;
+        }
+    }
+
+    Ok(())
 }

@@ -1,18 +1,15 @@
 use crate::compiler::merger::merged_expression::{
-    MergedExpression, MergedExpressionKind, MergedLiteral, MergedUnaryOp, ResolvedFunctions,
-    ResolvedTypes,
+    MergedExpression, MergedExpressionKind, MergedLiteral, MergedUnaryOp,
 };
+use crate::compiler::merger::program_merger::MergerContext;
 use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::parsed_expression::{
     ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryOp,
 };
-use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
 pub fn merge_expression(
-    resolved_types: &ResolvedTypes,
-    resolved_functions: &ResolvedFunctions,
-    module_path: &ModuleIdentifier,
+    context: &MergerContext,
     parsed_expression: &ParsedExpression,
 ) -> MergerResult<MergedExpression> {
     let mut stack = vec![(parsed_expression, false)];
@@ -81,8 +78,13 @@ pub fn merge_expression(
                 ParsedExpressionKind::Variable(_) => {}
                 ParsedExpressionKind::Literal(lit) => match lit {
                     ParsedLiteral::Struct(t, fields) => {
-                        let resolved_type = resolved_types.resolve_type(module_path, t)?;
-                        let struct_decl = resolved_types.structs.get(&resolved_type).unwrap();
+                        let resolved_type = context.resolved_types.resolve_type(
+                            context.module_path,
+                            t,
+                            context.imports,
+                        )?;
+                        let struct_decl =
+                            context.resolved_types.structs.get(&resolved_type).unwrap();
                         for field in struct_decl.field_order.iter().rev() {
                             stack.push((fields.get(field).unwrap(), false));
                         }
@@ -172,7 +174,11 @@ pub fn merge_expression(
                 } => {
                     let merged_value = Box::new(output.pop().unwrap());
                     let resolved_type = if let Some(var_type) = var_type {
-                        Some(resolved_types.resolve_type(module_path, var_type)?)
+                        Some(context.resolved_types.resolve_type(
+                            context.module_path,
+                            var_type,
+                            context.imports,
+                        )?)
                     } else {
                         None
                     };
@@ -193,8 +199,13 @@ pub fn merge_expression(
                         ParsedLiteral::String(s) => MergedLiteral::String(s.clone()),
                         ParsedLiteral::Integer(i) => MergedLiteral::Integer(*i),
                         ParsedLiteral::Struct(t, _) => {
-                            let resolved_type = resolved_types.resolve_type(module_path, t)?;
-                            let struct_decl = resolved_types.structs.get(&resolved_type).unwrap();
+                            let resolved_type = context.resolved_types.resolve_type(
+                                context.module_path,
+                                t,
+                                context.imports,
+                            )?;
+                            let struct_decl =
+                                context.resolved_types.structs.get(&resolved_type).unwrap();
                             let mut merged_fields = HashMap::new();
                             for field in struct_decl.field_order.iter().rev() {
                                 let merged_field = output.pop().unwrap();
@@ -218,8 +229,11 @@ pub fn merge_expression(
                             is_prefix: *is_prefix,
                         },
                         UnaryOp::Cast(target_type) => {
-                            let resolved_type =
-                                resolved_types.resolve_type(module_path, target_type)?;
+                            let resolved_type = context.resolved_types.resolve_type(
+                                context.module_path,
+                                target_type,
+                                context.imports,
+                            )?;
                             MergedUnaryOp::Cast(resolved_type)
                         }
                         UnaryOp::Member(name) => MergedUnaryOp::Member(name.clone()),
@@ -246,8 +260,9 @@ pub fn merge_expression(
                 ParsedExpressionKind::FunctionCall { function_id, args } => {
                     let new_len = output.len() - args.len();
                     let merged_args = output.split_off(new_len);
-                    let function_header = resolved_functions
-                        .resolve_function(module_path, function_id)
+                    let function_header = context
+                        .resolved_functions
+                        .resolve_function(context.module_path, function_id, context.imports)
                         .ok_or_else(|| {
                             anyhow::anyhow!("Function '{}' not found at {}", function_id, location)
                         })?;

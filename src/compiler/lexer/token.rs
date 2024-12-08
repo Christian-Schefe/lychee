@@ -192,6 +192,7 @@ pub enum Keyword {
     Let,
     Var,
     Module,
+    Import,
 }
 
 impl Keyword {
@@ -212,6 +213,7 @@ impl Keyword {
             "let" => Some(Keyword::Let),
             "var" => Some(Keyword::Var),
             "module" => Some(Keyword::Module),
+            "import" => Some(Keyword::Import),
             _ => None,
         }
     }

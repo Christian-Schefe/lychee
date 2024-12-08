@@ -4,13 +4,14 @@ use crate::compiler::lexer::location::Src;
 use crate::compiler::lexer::token::{Keyword, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::lexer::SrcToken;
+use crate::compiler::merger::merged_expression::ModuleId;
 use crate::compiler::parser::binop_expr_parser::parse_binop_expression;
 use crate::compiler::parser::parsed_expression::{
     ParsedExpression, ParsedFunction, ParsedModule, ParsedStructDefinition,
 };
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::primary_expr_parser::parse_block_expression;
-use crate::compiler::parser::type_parser::parse_type;
+use crate::compiler::parser::type_parser::{parse_module_path, parse_type};
 use crate::compiler::parser::{ModuleIdentifier, ModulePath};
 use anyhow::Context;
 use std::collections::{HashMap, HashSet};
@@ -90,6 +91,7 @@ pub fn parse_module(
     let mut functions = Vec::new();
     let mut struct_definitions = Vec::new();
     let mut submodule_declarations = Vec::new();
+    let mut imports = Vec::new();
 
     while tokens.peek().value != Token::EOF {
         let token = tokens.peek().clone();
@@ -104,6 +106,11 @@ pub fn parse_module(
                 let submodule = parse_module_declaration(&mut tokens)
                     .with_context(|| format!("Failed to parse submodule at {}.", token.location))?;
                 submodule_declarations.push((token.location, submodule));
+            }
+            Token::Keyword(Keyword::Import) => {
+                let module = parse_import(&mut tokens)
+                    .with_context(|| format!("Failed to parse import at {}.", token.location))?;
+                imports.push((module, token.location.clone()));
             }
             _ => {
                 let func = parse_function(&mut tokens)
@@ -123,14 +130,57 @@ pub fn parse_module(
         submodules.push(submodule);
     }
 
+    let mut resolved_imports = HashMap::new();
+    for (import, location) in imports {
+        let absolute_path = module_path.id.resolve(&import.module_path);
+        if resolved_imports
+            .insert(
+                import.name.clone(),
+                Src {
+                    value: ModuleId {
+                        name: import.name.clone(),
+                        module_path: absolute_path,
+                    },
+                    location,
+                },
+            )
+            .is_some()
+        {
+            Err(anyhow::anyhow!("Duplicate import name '{}'", import.name))?;
+        }
+    }
+
     let module = ParsedModule {
         module_path: module_path.id.clone(),
         functions,
         struct_definitions,
+        imports: resolved_imports,
     };
 
     module_tree.insert(module_path.id, module);
     Ok(())
+}
+
+pub fn parse_import(tokens: &mut TokenStack) -> ParseResult<ModuleId> {
+    pop_expected(tokens, Token::Keyword(Keyword::Import))?;
+    let token = tokens.pop().clone();
+    match &token.value {
+        Token::Identifier(module_name) => {
+            let id = parse_module_path(tokens, module_name.clone(), false)?;
+            pop_expected(tokens, Token::Static(StaticToken::Semicolon))?;
+            Ok(id)
+        }
+        Token::Static(StaticToken::DoubleColon) => {
+            let first_id = parse_identifier(tokens)?;
+            let id = parse_module_path(tokens, first_id.value, true)?;
+            pop_expected(tokens, Token::Static(StaticToken::Semicolon))?;
+            Ok(id)
+        }
+        _ => Err(LocationError::new(
+            format!("Expected module name or '::', found '{}'", token.value),
+            token.location,
+        ))?,
+    }
 }
 
 pub fn parse_module_declaration(tokens: &mut TokenStack) -> ParseResult<String> {

@@ -1,9 +1,14 @@
 module loop_test;
 module variables_test;
 
+import loop_test::test;
+
 int main() {
     variables_test::test();
-    loop_test::test();
+    test();
+    let var t = new test {
+        a: 5
+    };
     exit(5);
     0
 }
