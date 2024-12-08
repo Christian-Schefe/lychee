@@ -1,0 +1,49 @@
+unit test() {
+    for_loop_test();
+}
+
+unit for_loop_test() {
+    //writes '010101010101010'
+    for (let int i = 0; i < 15; i++) {
+        if (i % 2 == 0) {
+            write_char('0');
+        } else {
+            write_char('1');
+        };
+    };
+
+    write_char('\n');
+
+    //writes '7777777'
+    i = 0;
+    for ((); true; ()) {
+        write_char('7');
+        if i++ > 5 {
+            break;
+        }
+    };
+
+    write_char('\n');
+
+    //writes 'y'
+    for (let int j = 5; j < 2; j++) {
+        write_char('n');
+    } else {
+        write_char('y');
+    };
+
+    write_char('\n');
+
+    //writes 'louou'
+    for (let var k = {write_char('l'); 5 as long}; {k > 0 as long}; {write_char('u'); --k}) {
+        if k == 3 as long {
+            break;
+        } else {
+            write_char('o');
+        };
+    } else {
+        write_char('y');
+    };
+
+    write_char('\n');
+}

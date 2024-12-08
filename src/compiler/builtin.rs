@@ -104,6 +104,18 @@ impl BuiltinFunction {
         )
     }
 
+    pub fn exit() -> BuiltinFunction {
+        BuiltinFunction::new(
+            "exit".to_string(),
+            TypeId::Unit,
+            vec![("code".to_string(), TypeId::Integer(4))],
+            Box::new(|context| {
+                context.load(4, "r0", "[sp;8]");
+                context.exit();
+            }),
+        )
+    }
+
     fn all_functions() -> Vec<BuiltinFunction> {
         vec![
             BuiltinFunction::read_char(),
@@ -111,6 +123,7 @@ impl BuiltinFunction {
             BuiltinFunction::malloc(),
             BuiltinFunction::free(),
             BuiltinFunction::random(),
+            BuiltinFunction::exit(),
         ]
     }
 

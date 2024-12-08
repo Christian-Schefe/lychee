@@ -1,0 +1,28 @@
+unit test() {
+    variables_test();
+}
+
+unit variables_test() {
+    let int a = 5;
+    let var b = a;
+    b = -6;
+    let long c = (a + b) as long;
+    let int sum = b + c as int * 2;
+    if sum == -8 {
+        write_char('y');
+    } else {
+        write_char('n');
+    };
+    write_char('\n');
+
+    let bool short_circuit = true && {
+        write_char('y');
+        false
+    };
+    let bool short_circuit2 = true || {
+        write_char('n');
+        false
+    };
+
+    write_char('\n');
+}

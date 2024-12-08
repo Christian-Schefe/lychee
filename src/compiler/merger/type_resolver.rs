@@ -83,7 +83,6 @@ fn compute_struct_field_offsets(
             offsets.insert(field_name.clone(), offset);
             offset += get_type_size(field_type, type_sizes);
         }
-        println!("Field offsets{:?}", offsets);
         resolved_struct.field_offsets = offsets;
     }
 }

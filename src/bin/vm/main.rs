@@ -31,7 +31,7 @@ fn main() {
     let exit_code = run(&mut memory, &mut heap, args.debug_print);
     let elapsed = start_instant.elapsed();
     println!("Elapsed: {:?}", elapsed);
-    println!("Main return value: {}", exit_code);
+    println!("Exit Code: {}", exit_code);
 }
 
 pub fn run(memory: &mut Memory, heap: &mut Heap, debug_print: bool) -> i64 {

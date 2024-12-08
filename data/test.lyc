@@ -1,31 +1,9 @@
-module std;
+module loop_test;
+module variables_test;
 
 int main() {
-    for (let int i = 0; i < 10; i++) {
-        let int i = 3;
-        if (i % 2 == 0) {
-            write_char('0');
-        } else {
-            write_char('1');
-            continue;
-        }
-    };
-    i = random() as int;
-    let var arr = std::arrays::newIntArray(5);
-    arr = std::arrays::newIntArray(5);
-    std::arrays::fill(&arr, -5);
-    std::arrays::printArray(&arr);
-    let int k = 1 + 1 +1+1+1+1+1+1+1;
-    std::test();
-    i
-}
-
-struct Test {
-    int a;
-    int b;
-}
-
-struct Int {
-    int value;
-    long value2;
+    variables_test::test();
+    loop_test::test();
+    exit(5);
+    0
 }
