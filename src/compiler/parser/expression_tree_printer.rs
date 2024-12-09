@@ -141,32 +141,24 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
                 printer.dedent();
             }
         }
-        ParsedExpressionKind::While {
-            condition,
-            loop_body,
-            else_expr: false_block,
-        } => {
-            printer.add_line("While".to_string());
-            printer.indent();
-            print_expression(printer, condition);
-            print_expression(printer, loop_body);
-            if let Some(false_block) = false_block {
-                print_expression(printer, false_block);
-            }
-            printer.dedent();
-        }
-        ParsedExpressionKind::For {
+        ParsedExpressionKind::Loop {
             init,
             condition,
             step,
             loop_body,
             else_expr,
         } => {
-            printer.add_line("For".to_string());
+            printer.add_line("Loop".to_string());
             printer.indent();
-            print_expression(printer, init);
-            print_expression(printer, condition);
-            print_expression(printer, step);
+            if let Some(init) = init {
+                print_expression(printer, init);
+            }
+            if let Some(condition) = condition {
+                print_expression(printer, condition);
+            }
+            if let Some(step) = step {
+                print_expression(printer, step);
+            }
             print_expression(printer, loop_body);
             if let Some(else_expr) = else_expr {
                 print_expression(printer, else_expr);

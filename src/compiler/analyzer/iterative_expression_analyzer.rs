@@ -58,18 +58,7 @@ pub fn analyze_expression(
                     stack.push((then_block, false, in_loop));
                     stack.push((condition, false, in_loop));
                 }
-                MergedExpressionKind::While {
-                    condition,
-                    loop_body,
-                    else_expr,
-                } => {
-                    if let Some(else_expr) = else_expr {
-                        stack.push((else_expr, false, in_loop));
-                    }
-                    stack.push((loop_body, false, true));
-                    stack.push((condition, false, false));
-                }
-                MergedExpressionKind::For {
+                MergedExpressionKind::Loop {
                     init,
                     condition,
                     step,
@@ -80,9 +69,15 @@ pub fn analyze_expression(
                         stack.push((else_expr, false, in_loop));
                     }
                     stack.push((loop_body, false, true));
-                    stack.push((step, false, false));
-                    stack.push((condition, false, false));
-                    stack.push((init, false, in_loop));
+                    if let Some(step) = step {
+                        stack.push((step, false, false));
+                    }
+                    if let Some(condition) = condition {
+                        stack.push((condition, false, false));
+                    }
+                    if let Some(init) = init {
+                        stack.push((init, false, in_loop));
+                    }
                 }
                 MergedExpressionKind::Declaration { value, .. } => {
                     stack.push((value, false, in_loop));
@@ -221,83 +216,79 @@ pub fn analyze_expression(
                         },
                     )
                 }
-                MergedExpressionKind::While { else_expr, .. } => {
+                MergedExpressionKind::Loop {
+                    init,
+                    condition,
+                    step,
+                    loop_body: _,
+                    else_expr,
+                } => {
                     let analyzed_else = else_expr.as_ref().map(|_| Box::new(output.pop().unwrap()));
                     let analyzed_loop_body = output.pop().unwrap();
-                    let analyzed_condition = output.pop().unwrap();
-                    if analyzed_condition.ty != TypeId::Bool {
+                    let analyzed_step = step.as_ref().map(|_| Box::new(output.pop().unwrap()));
+                    let analyzed_condition =
+                        condition.as_ref().map(|_| Box::new(output.pop().unwrap()));
+                    let analyzed_init = init.as_ref().map(|_| Box::new(output.pop().unwrap()));
+                    if analyzed_init.as_ref().is_some_and(|x| x.ty != TypeId::Unit) {
                         Err(anyhow::anyhow!(
-                            "While condition has non-bool type at {}.",
+                            "Loop init has non-unit type '{}' at {}.",
+                            analyzed_init.as_ref().unwrap().ty,
                             location
                         ))?;
                     }
-                    if analyzed_loop_body.ty != TypeId::Unit {
-                        Err(anyhow::anyhow!(
-                            "While loop body has non-unit type '{}' at {}.",
-                            analyzed_loop_body.ty,
-                            location
-                        ))?;
-                    }
-                    let return_ty = analyzed_else
+                    if analyzed_condition
                         .as_ref()
-                        .map_or(TypeId::Unit, |e| e.ty.clone());
-
-                    assert_break_return_type(&return_ty, &analyzed_loop_body)?;
-                    (
-                        return_ty,
-                        AnalyzedExpressionKind::While {
-                            condition: Box::new(analyzed_condition),
-                            loop_body: Box::new(analyzed_loop_body),
-                            else_expr: analyzed_else,
-                        },
-                    )
-                }
-                MergedExpressionKind::For { else_expr, .. } => {
-                    let analyzed_else = else_expr.as_ref().map(|_| Box::new(output.pop().unwrap()));
-                    let analyzed_loop_body = output.pop().unwrap();
-                    let analyzed_step = output.pop().unwrap();
-                    let analyzed_condition = output.pop().unwrap();
-                    let analyzed_init = output.pop().unwrap();
-                    if analyzed_init.ty != TypeId::Unit {
+                        .is_some_and(|x| x.ty != TypeId::Bool)
+                    {
                         Err(anyhow::anyhow!(
-                            "For init has non-unit type '{}' at {}.",
-                            analyzed_init.ty,
+                            "Loop condition has non-bool type '{}' at {}.",
+                            analyzed_condition.as_ref().unwrap().ty,
                             location
                         ))?;
                     }
-                    if analyzed_condition.ty != TypeId::Bool {
-                        Err(anyhow::anyhow!(
-                            "For condition has non-bool type at {}.",
-                            location
-                        ))?;
-                    }
-                    match analyzed_step.ty {
+                    match analyzed_step
+                        .as_ref()
+                        .map(|x| x.ty.clone())
+                        .unwrap_or(TypeId::Unit)
+                    {
                         TypeId::Unit => {}
                         TypeId::Integer(_) => {}
-                        _ => Err(anyhow::anyhow!(
-                            "For step has non-unit/non-integer type '{}' at {}.",
-                            analyzed_step.ty,
+                        any_ty => Err(anyhow::anyhow!(
+                            "Loop step has non-unit/non-integer type '{}' at {}.",
+                            any_ty,
                             location
                         ))?,
                     }
                     if analyzed_loop_body.ty != TypeId::Unit {
                         Err(anyhow::anyhow!(
-                            "While loop body has non-unit type '{}' at {}.",
+                            "Loop body has non-unit type '{}' at {}.",
                             analyzed_loop_body.ty,
                             location
                         ))?;
                     }
-                    let return_ty = analyzed_else
-                        .as_ref()
-                        .map_or(TypeId::Unit, |e| e.ty.clone());
+                    let else_ty = analyzed_else.as_ref().map(|e| e.ty.clone());
 
-                    assert_break_return_type(&return_ty, &analyzed_loop_body)?;
+                    let has_condition = analyzed_condition.is_some();
+                    let has_else = analyzed_else.is_some();
+
+                    let required_break_type = match (has_condition, has_else) {
+                        (true, true) => Some(else_ty.unwrap()),
+                        (true, false) => Some(TypeId::Unit),
+                        (false, true) => unreachable!("Else without condition"),
+                        (false, false) => None,
+                    };
+
+                    let final_return_ty = assert_break_return_type(
+                        required_break_type.as_ref(),
+                        &analyzed_loop_body,
+                    )?
+                    .unwrap_or(TypeId::Unit);
                     (
-                        return_ty,
-                        AnalyzedExpressionKind::For {
-                            init: Box::new(analyzed_init),
-                            condition: Box::new(analyzed_condition),
-                            step: Box::new(analyzed_step),
+                        final_return_ty,
+                        AnalyzedExpressionKind::Loop {
+                            init: analyzed_init,
+                            condition: analyzed_condition,
+                            step: analyzed_step,
                             loop_body: Box::new(analyzed_loop_body),
                             else_expr: analyzed_else,
                         },
@@ -906,28 +897,37 @@ pub fn analyze_expression(
     Ok(output.pop().unwrap())
 }
 
-fn assert_break_return_type(break_type: &TypeId, expr: &AnalyzedExpression) -> AnalyzerResult<()> {
+fn assert_break_return_type(
+    break_type: Option<&TypeId>,
+    expr: &AnalyzedExpression,
+) -> AnalyzerResult<Option<TypeId>> {
     match &expr.kind {
         AnalyzedExpressionKind::Block { expressions, .. } => {
+            let mut actual_break_type = break_type.cloned();
             for expr in expressions.iter() {
-                assert_break_return_type(break_type, expr)?;
+                actual_break_type = assert_break_return_type(actual_break_type.as_ref(), expr)?;
             }
+            Ok(actual_break_type)
         }
         AnalyzedExpressionKind::Return(maybe_expr) => {
+            let mut actual_break_type = break_type.cloned();
             if let Some(expr) = maybe_expr {
-                assert_break_return_type(break_type, expr)?;
+                actual_break_type = assert_break_return_type(actual_break_type.as_ref(), expr)?;
             }
+            Ok(actual_break_type)
         }
-        AnalyzedExpressionKind::Continue => {}
+        AnalyzedExpressionKind::Continue => Ok(break_type.cloned()),
         AnalyzedExpressionKind::Break(maybe_expr) => {
             let expr_type = maybe_expr.as_ref().map_or(TypeId::Unit, |e| e.ty.clone());
-            if expr_type != *break_type {
-                return Err(anyhow::anyhow!(
+            if break_type.is_some_and(|x| *x != expr_type) {
+                Err(anyhow::anyhow!(
                     "Break type '{}' does not match loop return type '{}' at {}.",
                     expr_type,
-                    break_type,
+                    break_type.unwrap(),
                     expr.location
-                ))?;
+                ))
+            } else {
+                Ok(Some(expr_type))
             }
         }
         AnalyzedExpressionKind::If {
@@ -935,91 +935,91 @@ fn assert_break_return_type(break_type: &TypeId, expr: &AnalyzedExpression) -> A
             then_block,
             else_expr,
         } => {
-            assert_break_return_type(break_type, condition)?;
-            assert_break_return_type(break_type, then_block)?;
+            let mut new_break_type = assert_break_return_type(break_type, condition)?;
+            new_break_type = assert_break_return_type(new_break_type.as_ref(), then_block)?;
             if let Some(else_expr) = else_expr {
-                assert_break_return_type(break_type, else_expr)?;
+                new_break_type = assert_break_return_type(new_break_type.as_ref(), else_expr)?;
             }
+            Ok(new_break_type)
         }
-        AnalyzedExpressionKind::While { else_expr, .. } => {
-            if let Some(else_expr) = else_expr {
-                assert_break_return_type(break_type, else_expr)?;
-            }
-        }
-        AnalyzedExpressionKind::For {
+        AnalyzedExpressionKind::Loop {
             init, else_expr, ..
         } => {
-            assert_break_return_type(break_type, init)?;
-            if let Some(else_expr) = else_expr {
-                assert_break_return_type(break_type, else_expr)?;
+            let mut actual_break_type = break_type.cloned();
+            if let Some(init) = init {
+                actual_break_type = assert_break_return_type(actual_break_type.as_ref(), init)?;
             }
+            if let Some(else_expr) = else_expr {
+                actual_break_type =
+                    assert_break_return_type(actual_break_type.as_ref(), else_expr)?;
+            }
+            Ok(actual_break_type)
         }
         AnalyzedExpressionKind::Declaration { value, .. } => {
-            assert_break_return_type(break_type, value)?;
+            assert_break_return_type(break_type, value)
         }
         AnalyzedExpressionKind::ValueOfAssignable(assignable) => {
-            assert_break_return_type_assignable(break_type, assignable)?;
+            assert_break_return_type_assignable(break_type, assignable)
         }
         AnalyzedExpressionKind::Literal(lit) => match lit {
             AnalyzedLiteral::Struct(fields) => {
+                let mut actual_break_type = break_type.cloned();
                 for (_, field) in fields {
-                    assert_break_return_type(break_type, field)?;
+                    actual_break_type =
+                        assert_break_return_type(actual_break_type.as_ref(), field)?;
                 }
+                Ok(actual_break_type)
             }
-            _ => {}
+            _ => Ok(break_type.cloned()),
         },
-        AnalyzedExpressionKind::ConstantPointer(_) => {}
-        AnalyzedExpressionKind::Unary { expr, .. } => {
-            assert_break_return_type(break_type, expr)?;
-        }
+        AnalyzedExpressionKind::ConstantPointer(_) => Ok(break_type.cloned()),
+        AnalyzedExpressionKind::Unary { expr, .. } => assert_break_return_type(break_type, expr),
         AnalyzedExpressionKind::Binary { left, right, .. } => {
-            assert_break_return_type(break_type, left)?;
-            assert_break_return_type(break_type, right)?;
+            let actual_break_type = assert_break_return_type(break_type, left)?;
+            assert_break_return_type(actual_break_type.as_ref(), right)
         }
         AnalyzedExpressionKind::Assign { lhs, rhs, .. } => {
-            assert_break_return_type_assignable(break_type, lhs)?;
-            assert_break_return_type(break_type, rhs)?;
+            let actual_break_type = assert_break_return_type_assignable(break_type, lhs)?;
+            assert_break_return_type(actual_break_type.as_ref(), rhs)
         }
-        AnalyzedExpressionKind::Borrow { expr, .. } => {
-            assert_break_return_type_assignable(break_type, expr)?;
+        AnalyzedExpressionKind::Borrow { expr } => {
+            assert_break_return_type_assignable(break_type, expr)
         }
         AnalyzedExpressionKind::FunctionCall { args, .. } => {
+            let mut actual_break_type = break_type.cloned();
             for arg in args {
-                assert_break_return_type(break_type, arg)?;
+                actual_break_type = assert_break_return_type(actual_break_type.as_ref(), arg)?;
             }
+            Ok(actual_break_type)
         }
         AnalyzedExpressionKind::FieldAccess { expr, .. } => {
-            assert_break_return_type(break_type, expr)?;
+            assert_break_return_type(break_type, expr)
         }
         AnalyzedExpressionKind::Increment(expr, _) => {
-            assert_break_return_type_assignable(break_type, expr)?;
+            assert_break_return_type_assignable(break_type, expr)
         }
         AnalyzedExpressionKind::Decrement(expr, _) => {
-            assert_break_return_type_assignable(break_type, expr)?;
+            assert_break_return_type_assignable(break_type, expr)
         }
     }
-    Ok(())
 }
 
 fn assert_break_return_type_assignable(
-    break_type: &TypeId,
+    break_type: Option<&TypeId>,
     expr: &AssignableExpression,
-) -> AnalyzerResult<()> {
+) -> AnalyzerResult<Option<TypeId>> {
     match &expr.kind {
-        AssignableExpressionKind::LocalVariable(_) => {}
-        AssignableExpressionKind::Dereference(expr) => {
-            assert_break_return_type(break_type, expr)?;
-        }
+        AssignableExpressionKind::LocalVariable(_) => Ok(break_type.cloned()),
+        AssignableExpressionKind::Dereference(expr) => assert_break_return_type(break_type, expr),
         AssignableExpressionKind::FieldAccess(expr, _) => {
-            assert_break_return_type_assignable(break_type, expr)?;
+            assert_break_return_type_assignable(break_type, expr)
         }
         AssignableExpressionKind::PointerFieldAccess(expr, _) => {
-            assert_break_return_type(break_type, expr)?;
+            assert_break_return_type(break_type, expr)
         }
         AssignableExpressionKind::ArrayIndex(arr, index) => {
-            assert_break_return_type(break_type, arr)?;
-            assert_break_return_type(break_type, index)?;
+            let actual = assert_break_return_type(break_type, arr)?;
+            assert_break_return_type(actual.as_ref(), index)
         }
     }
-    Ok(())
 }

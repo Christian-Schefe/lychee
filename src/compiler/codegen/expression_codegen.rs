@@ -69,46 +69,7 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
 
             context.label(&end_label);
         }
-        ResolvedExpressionKind::While {
-            condition,
-            loop_body,
-            else_expr,
-        } => {
-            let continue_label = context.new_label("continue");
-            let else_label = context.new_label("else");
-            let break_label = context.new_label("break");
-
-            context.label(&continue_label);
-
-            generate_expression_code(context, condition);
-            context.cmpi("r0", 0);
-            context.jz(&else_label);
-
-            let old_break_label = context.break_label.clone();
-            let old_continue_label = context.continue_label.clone();
-            context.break_label = break_label.clone();
-            context.continue_label = continue_label.clone();
-
-            let old_loop_stack_size = context.last_loop_stack_size;
-            context.last_loop_stack_size = context.current_stack_size;
-
-            generate_expression_code(context, loop_body);
-
-            context.last_loop_stack_size = old_loop_stack_size;
-
-            context.break_label = old_break_label;
-            context.continue_label = old_continue_label;
-
-            context.jmp(&continue_label);
-            context.label(&else_label);
-
-            if let Some(else_expr) = else_expr {
-                generate_expression_code(context, else_expr);
-            }
-
-            context.label(&break_label);
-        }
-        ResolvedExpressionKind::For {
+        ResolvedExpressionKind::Loop {
             init,
             condition,
             step,
@@ -120,13 +81,17 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
             let else_label = context.new_label("else");
             let break_label = context.new_label("break");
 
-            generate_expression_code(context, init);
+            if let Some(init_expr) = init {
+                generate_expression_code(context, init_expr);
+            }
 
             context.label(&loop_label);
 
-            generate_expression_code(context, condition);
-            context.cmpi("r0", 0);
-            context.jz(&else_label);
+            if let Some(condition_expr) = condition {
+                generate_expression_code(context, condition_expr);
+                context.cmpi("r0", 0);
+                context.jz(&else_label);
+            }
 
             let old_break_label = context.break_label.clone();
             let old_continue_label = context.continue_label.clone();
@@ -139,7 +104,9 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
             generate_expression_code(context, loop_body);
 
             context.label(&continue_label);
-            generate_expression_code(context, step);
+            if let Some(step_expr) = step {
+                generate_expression_code(context, step_expr);
+            }
 
             context.last_loop_stack_size = old_loop_stack_size;
 

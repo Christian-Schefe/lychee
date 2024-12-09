@@ -101,47 +101,32 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        AnalyzedExpressionKind::While {
-            condition,
-            loop_body,
-            else_expr,
-        } => {
-            let resolved_condition = resolve_expression(context, condition, false);
-            let resolved_loop_body = resolve_expression(context, loop_body, false);
-            let resolved_else_expr = else_expr
-                .as_ref()
-                .map(|expr| resolve_expression(context, expr, false));
-
-            ResolvedExpression {
-                kind: ResolvedExpressionKind::While {
-                    condition: Box::new(resolved_condition),
-                    loop_body: Box::new(resolved_loop_body),
-                    else_expr: resolved_else_expr.map(Box::new),
-                },
-                stack_discard,
-                value_data,
-            }
-        }
-        AnalyzedExpressionKind::For {
+        AnalyzedExpressionKind::Loop {
             init,
             condition,
             step,
             loop_body,
             else_expr,
         } => {
-            let resolved_init = resolve_expression(context, init, false);
-            let resolved_condition = resolve_expression(context, condition, false);
-            let resolved_step = resolve_expression(context, step, false);
+            let resolved_init = init
+                .as_ref()
+                .map(|expr| resolve_expression(context, expr, false));
+            let resolved_condition = condition
+                .as_ref()
+                .map(|expr| resolve_expression(context, expr, false));
+            let resolved_step = step
+                .as_ref()
+                .map(|expr| resolve_expression(context, expr, false));
             let resolved_loop_body = resolve_expression(context, loop_body, false);
             let resolved_else_expr = else_expr
                 .as_ref()
                 .map(|expr| resolve_expression(context, expr, false));
 
             ResolvedExpression {
-                kind: ResolvedExpressionKind::For {
-                    init: Box::new(resolved_init),
-                    condition: Box::new(resolved_condition),
-                    step: Box::new(resolved_step),
+                kind: ResolvedExpressionKind::Loop {
+                    init: resolved_init.map(Box::new),
+                    condition: resolved_condition.map(Box::new),
+                    step: resolved_step.map(Box::new),
                     loop_body: Box::new(resolved_loop_body),
                     else_expr: resolved_else_expr.map(Box::new),
                 },

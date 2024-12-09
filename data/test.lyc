@@ -14,6 +14,7 @@ int main() {
     let var t = new test {
         a: 5
     };
+    write_char('\n');
     let var str = read_line();
     let var str2 = from_literal("Hello, ");
     let var concat_str = concat(&str2, &str);

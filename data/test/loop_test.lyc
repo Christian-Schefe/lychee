@@ -1,5 +1,6 @@
 unit test() {
     for_loop_test();
+    loop_test();
 }
 
 unit for_loop_test() {
@@ -46,6 +47,23 @@ unit for_loop_test() {
     };
 
     write_char('\n');
+}
+
+unit loop_test() {
+    loop {
+        write_char('a');
+        break;
+    };
+
+    let int i = 0;
+    let int j = loop {
+        write_char('b');
+        if i++ > 5 {
+            break 5;
+        }
+    };
+
+    write_char(if j != 5 {'n'} else {'y'});
 }
 
 struct test {

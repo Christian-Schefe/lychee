@@ -46,18 +46,7 @@ pub fn merge_expression(
                     stack.push((then_block, false));
                     stack.push((condition, false));
                 }
-                ParsedExpressionKind::While {
-                    condition,
-                    loop_body,
-                    else_expr,
-                } => {
-                    if let Some(expr) = else_expr {
-                        stack.push((expr, false));
-                    }
-                    stack.push((loop_body, false));
-                    stack.push((condition, false));
-                }
-                ParsedExpressionKind::For {
+                ParsedExpressionKind::Loop {
                     init,
                     condition,
                     step,
@@ -68,9 +57,15 @@ pub fn merge_expression(
                         stack.push((expr, false));
                     }
                     stack.push((loop_body, false));
-                    stack.push((step, false));
-                    stack.push((condition, false));
-                    stack.push((init, false));
+                    if let Some(expr) = step {
+                        stack.push((expr, false));
+                    }
+                    if let Some(expr) = condition {
+                        stack.push((expr, false));
+                    }
+                    if let Some(expr) = init {
+                        stack.push((expr, false));
+                    }
                 }
                 ParsedExpressionKind::Declaration { value, .. } => {
                     stack.push((value, false));
@@ -143,25 +138,21 @@ pub fn merge_expression(
                         else_expr: merged_else_expr,
                     }
                 }
-                ParsedExpressionKind::While { else_expr, .. } => {
+                ParsedExpressionKind::Loop {
+                    init,
+                    condition,
+                    step,
+                    loop_body: _,
+                    else_expr,
+                } => {
                     let merged_else_expr =
                         else_expr.as_ref().map(|_| Box::new(output.pop().unwrap()));
                     let merged_loop_body = Box::new(output.pop().unwrap());
-                    let merged_condition = Box::new(output.pop().unwrap());
-                    MergedExpressionKind::While {
-                        condition: merged_condition,
-                        loop_body: merged_loop_body,
-                        else_expr: merged_else_expr,
-                    }
-                }
-                ParsedExpressionKind::For { else_expr, .. } => {
-                    let merged_else_expr =
-                        else_expr.as_ref().map(|_| Box::new(output.pop().unwrap()));
-                    let merged_loop_body = Box::new(output.pop().unwrap());
-                    let merged_step = Box::new(output.pop().unwrap());
-                    let merged_condition = Box::new(output.pop().unwrap());
-                    let merged_init = Box::new(output.pop().unwrap());
-                    MergedExpressionKind::For {
+                    let merged_step = step.as_ref().map(|_| Box::new(output.pop().unwrap()));
+                    let merged_condition =
+                        condition.as_ref().map(|_| Box::new(output.pop().unwrap()));
+                    let merged_init = init.as_ref().map(|_| Box::new(output.pop().unwrap()));
+                    MergedExpressionKind::Loop {
                         init: merged_init,
                         condition: merged_condition,
                         step: merged_step,

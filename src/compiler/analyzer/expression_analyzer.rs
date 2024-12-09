@@ -35,12 +35,8 @@ pub fn analyze_assignable_expression(
             "If expression cannot be assigned to at {}.",
             expression.location
         )),
-        MergedExpressionKind::While { .. } => Err(anyhow::anyhow!(
-            "While expression cannot be assigned to at {}.",
-            expression.location
-        )),
-        MergedExpressionKind::For { .. } => Err(anyhow::anyhow!(
-            "For expression cannot be assigned to at {}.",
+        MergedExpressionKind::Loop { .. } => Err(anyhow::anyhow!(
+            "Loop expression cannot be assigned to at {}.",
             expression.location
         )),
         MergedExpressionKind::Declaration { .. } => Err(anyhow::anyhow!(

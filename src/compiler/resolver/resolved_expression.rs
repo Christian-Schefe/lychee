@@ -88,15 +88,10 @@ pub enum ResolvedExpressionKind {
         then_block: Box<ResolvedExpression>,
         else_expr: Option<Box<ResolvedExpression>>,
     },
-    While {
-        condition: Box<ResolvedExpression>,
-        loop_body: Box<ResolvedExpression>,
-        else_expr: Option<Box<ResolvedExpression>>,
-    },
-    For {
-        init: Box<ResolvedExpression>,
-        condition: Box<ResolvedExpression>,
-        step: Box<ResolvedExpression>,
+    Loop {
+        init: Option<Box<ResolvedExpression>>,
+        condition: Option<Box<ResolvedExpression>>,
+        step: Option<Box<ResolvedExpression>>,
         loop_body: Box<ResolvedExpression>,
         else_expr: Option<Box<ResolvedExpression>>,
     },

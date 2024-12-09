@@ -46,15 +46,10 @@ pub enum ParsedExpressionKind {
         then_block: Box<ParsedExpression>,
         else_expr: Option<Box<ParsedExpression>>,
     },
-    While {
-        condition: Box<ParsedExpression>,
-        loop_body: Box<ParsedExpression>,
-        else_expr: Option<Box<ParsedExpression>>,
-    },
-    For {
-        init: Box<ParsedExpression>,
-        condition: Box<ParsedExpression>,
-        step: Box<ParsedExpression>,
+    Loop {
+        init: Option<Box<ParsedExpression>>,
+        condition: Option<Box<ParsedExpression>>,
+        step: Option<Box<ParsedExpression>>,
         loop_body: Box<ParsedExpression>,
         else_expr: Option<Box<ParsedExpression>>,
     },

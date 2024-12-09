@@ -188,15 +188,10 @@ pub enum MergedExpressionKind {
         then_block: Box<MergedExpression>,
         else_expr: Option<Box<MergedExpression>>,
     },
-    While {
-        condition: Box<MergedExpression>,
-        loop_body: Box<MergedExpression>,
-        else_expr: Option<Box<MergedExpression>>,
-    },
-    For {
-        init: Box<MergedExpression>,
-        condition: Box<MergedExpression>,
-        step: Box<MergedExpression>,
+    Loop {
+        init: Option<Box<MergedExpression>>,
+        condition: Option<Box<MergedExpression>>,
+        step: Option<Box<MergedExpression>>,
         loop_body: Box<MergedExpression>,
         else_expr: Option<Box<MergedExpression>>,
     },

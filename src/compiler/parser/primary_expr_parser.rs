@@ -170,20 +170,12 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
                 Box::new(parse_block_expression(tokens).with_context(|| {
                     format!("Failed to parse then block at {}.", then_location)
                 })?);
-            let else_block = if let Token::Keyword(Keyword::Else) = tokens.peek().value {
-                tokens.pop();
-                let else_location = tokens.location().clone();
-                Some(Box::new(parse_expression(tokens).with_context(|| {
-                    format!("Failed to parse else block at {}.", else_location)
-                })?))
-            } else {
-                None
-            };
+            let else_block = parse_optional_else_block(tokens)?;
             Ok(ParsedExpression::new(
                 ParsedExpressionKind::If {
                     condition,
                     then_block,
-                    else_expr: else_block,
+                    else_expr: else_block.map(|x| Box::new(x)),
                 },
                 token.location,
             ))
@@ -198,20 +190,14 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             let loop_body = Box::new(parse_block_expression(tokens).with_context(|| {
                 format!("Failed to parse loop body at {}.", loop_body_location)
             })?);
-            let false_block = if let Token::Keyword(Keyword::Else) = tokens.peek().value {
-                tokens.pop();
-                let else_location = tokens.location().clone();
-                Some(Box::new(parse_expression(tokens).with_context(|| {
-                    format!("Failed to parse else block at {}.", else_location)
-                })?))
-            } else {
-                None
-            };
+            let false_block = parse_optional_else_block(tokens)?;
             Ok(ParsedExpression::new(
-                ParsedExpressionKind::While {
-                    condition,
+                ParsedExpressionKind::Loop {
+                    init: None,
+                    condition: Some(condition),
+                    step: None,
                     loop_body,
-                    else_expr: false_block,
+                    else_expr: false_block.map(|x| Box::new(x)),
                 },
                 token.location,
             ))
@@ -240,22 +226,31 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             let loop_body = Box::new(parse_block_expression(tokens).with_context(|| {
                 format!("Failed to parse for loop body at {}.", loop_body_location)
             })?);
-            let false_block = if let Token::Keyword(Keyword::Else) = tokens.peek().value {
-                tokens.pop();
-                let else_location = tokens.location().clone();
-                Some(Box::new(parse_expression(tokens).with_context(|| {
-                    format!("Failed to parse else block at {}.", else_location)
-                })?))
-            } else {
-                None
-            };
+            let false_block = parse_optional_else_block(tokens)?;
             Ok(ParsedExpression::new(
-                ParsedExpressionKind::For {
-                    init,
-                    condition,
-                    step,
+                ParsedExpressionKind::Loop {
+                    init: Some(init),
+                    condition: Some(condition),
+                    step: Some(step),
                     loop_body,
-                    else_expr: false_block,
+                    else_expr: false_block.map(|x| Box::new(x)),
+                },
+                token.location,
+            ))
+        }
+        Token::Keyword(Keyword::Loop) => {
+            tokens.pop();
+            let loop_body_location = tokens.location().clone();
+            let loop_body = Box::new(parse_block_expression(tokens).with_context(|| {
+                format!("Failed to parse loop body at {}.", loop_body_location)
+            })?);
+            Ok(ParsedExpression::new(
+                ParsedExpressionKind::Loop {
+                    init: None,
+                    condition: None,
+                    step: None,
+                    loop_body,
+                    else_expr: None,
                 },
                 token.location,
             ))
@@ -411,4 +406,16 @@ fn parse_struct_literal(
         ParsedExpressionKind::Literal(ParsedLiteral::Struct(struct_type, fields)),
         location,
     ))
+}
+
+fn parse_optional_else_block(tokens: &mut TokenStack) -> ParseResult<Option<ParsedExpression>> {
+    if let Token::Keyword(Keyword::Else) = tokens.peek().value {
+        tokens.pop();
+        let else_location = tokens.location().clone();
+        let else_block = parse_expression(tokens)
+            .with_context(|| format!("Failed to parse else block at {}.", else_location))?;
+        Ok(Some(else_block))
+    } else {
+        Ok(None)
+    }
 }

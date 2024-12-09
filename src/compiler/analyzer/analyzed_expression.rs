@@ -40,15 +40,10 @@ pub enum AnalyzedExpressionKind {
         then_block: Box<AnalyzedExpression>,
         else_expr: Option<Box<AnalyzedExpression>>,
     },
-    While {
-        condition: Box<AnalyzedExpression>,
-        loop_body: Box<AnalyzedExpression>,
-        else_expr: Option<Box<AnalyzedExpression>>,
-    },
-    For {
-        init: Box<AnalyzedExpression>,
-        condition: Box<AnalyzedExpression>,
-        step: Box<AnalyzedExpression>,
+    Loop {
+        init: Option<Box<AnalyzedExpression>>,
+        condition: Option<Box<AnalyzedExpression>>,
+        step: Option<Box<AnalyzedExpression>>,
         loop_body: Box<AnalyzedExpression>,
         else_expr: Option<Box<AnalyzedExpression>>,
     },

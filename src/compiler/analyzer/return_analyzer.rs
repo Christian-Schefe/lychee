@@ -25,30 +25,21 @@ pub fn always_calls_return(expression: &AnalyzedExpression) -> bool {
                     .is_some_and(|expr| always_calls_return(expr))
                     && always_calls_return(then_block))
         }
-        AnalyzedExpressionKind::While {
-            condition,
-            else_expr,
-            loop_body,
-        } => {
-            always_calls_return(condition)
-                || (else_expr
-                    .as_ref()
-                    .is_some_and(|expr| always_calls_return(expr))
-                    && always_calls_return(loop_body))
-        }
-        AnalyzedExpressionKind::For {
+        AnalyzedExpressionKind::Loop {
             init,
             condition,
             step: _,
             else_expr,
             loop_body,
         } => {
-            always_calls_return(init)
-                || always_calls_return(condition)
-                || (else_expr
+            init.as_ref().is_some_and(|expr| always_calls_return(expr))
+                || condition
                     .as_ref()
                     .is_some_and(|expr| always_calls_return(expr))
-                    && always_calls_return(loop_body))
+                || (always_calls_return(loop_body)
+                    && else_expr
+                        .as_ref()
+                        .is_some_and(|expr| always_calls_return(expr)))
         }
         AnalyzedExpressionKind::Declaration { var_name: _, value } => always_calls_return(value),
         AnalyzedExpressionKind::ValueOfAssignable(expr) => always_calls_return_assignable(expr),
