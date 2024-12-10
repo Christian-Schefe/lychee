@@ -176,23 +176,29 @@ pub fn parse_module(
 pub fn parse_import(tokens: &mut TokenStack) -> ParseResult<ModuleId> {
     pop_expected(tokens, Token::Keyword(Keyword::Import))?;
     let token = tokens.pop().clone();
-    match &token.value {
+    let mut mod_id = match &token.value {
         Token::Identifier(module_name) => {
             let id = parse_module_path(tokens, module_name.clone(), false)?;
-            pop_expected(tokens, Token::Static(StaticToken::Semicolon))?;
-            Ok(id)
+            id
         }
         Token::Static(StaticToken::DoubleColon) => {
             let first_id = parse_identifier(tokens)?;
             let id = parse_module_path(tokens, first_id.value, true)?;
-            pop_expected(tokens, Token::Static(StaticToken::Semicolon))?;
-            Ok(id)
+            id
         }
         _ => Err(LocationError::new(
             format!("Expected module name or '::', found '{}'", token.value),
             token.location,
         ))?,
+    };
+    if tokens.peek().value == Token::Static(StaticToken::At) {
+        tokens.pop();
+        let at_id = parse_identifier(tokens)?.value;
+        let new_name = format!("{}@{}", mod_id.name, at_id);
+        mod_id.name = new_name;
     }
+    pop_expected(tokens, Token::Static(StaticToken::Semicolon))?;
+    Ok(mod_id)
 }
 
 pub fn parse_type_impl(tokens: &mut TokenStack) -> ParseResult<Src<ParsedTypeImplementation>> {

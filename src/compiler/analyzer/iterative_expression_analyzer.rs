@@ -11,7 +11,7 @@ use crate::compiler::merger::merged_expression::{
 };
 use crate::compiler::parser::parsed_expression::{BinaryComparisonOp, BinaryOp};
 use anyhow::Context;
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 pub fn analyze_expression(
     context: &mut AnalyzerContext,
@@ -86,8 +86,28 @@ pub fn analyze_expression(
                 MergedExpressionKind::Literal(lit) => match lit {
                     MergedLiteral::Struct(ty, fields) => {
                         let struct_decl = context.structs.get(&ty).unwrap();
+                        let mut present_fields = fields
+                            .iter()
+                            .map(|x| (&x.0, &x.1))
+                            .collect::<HashMap<_, _>>();
                         for field in struct_decl.field_order.iter().rev() {
-                            stack.push((fields.get(field).unwrap(), false, in_loop));
+                            if let Some(value) = present_fields.get(field) {
+                                stack.push((value, false, in_loop));
+                                present_fields.remove(field);
+                            } else {
+                                Err(anyhow::anyhow!(
+                                    "Struct field '{}' missing at {}.",
+                                    field,
+                                    location
+                                ))?;
+                            }
+                        }
+                        if !present_fields.is_empty() {
+                            Err(anyhow::anyhow!(
+                                "Struct has extra fields {:?} at {}.",
+                                present_fields.keys(),
+                                location
+                            ))?;
                         }
                     }
                     _ => {}
@@ -392,19 +412,13 @@ pub fn analyze_expression(
                             anyhow::anyhow!("Struct type '{}' not found at {}.", ty, location)
                         })?;
 
-                        let mut present_fields = field_values.keys().collect::<HashSet<_>>();
                         let mut analyzed_field_values = Vec::new();
+                        let location_map = field_values
+                            .iter()
+                            .map(|(k, v)| (k.clone(), &v.location))
+                            .collect::<HashMap<_, _>>();
 
                         for field_name in struct_type.field_order.iter().rev() {
-                            let field_expr = field_values.get(field_name);
-                            let field_value = field_expr.ok_or_else(|| {
-                                anyhow::anyhow!(
-                                    "Struct literal '{}' is missing field '{}' at {}.",
-                                    ty,
-                                    field_name,
-                                    location
-                                )
-                            })?;
                             let analyzed_field_value = output.pop().unwrap();
                             let expected_type = struct_type.field_types.get(field_name).unwrap();
                             if analyzed_field_value.ty != *expected_type {
@@ -413,23 +427,13 @@ pub fn analyze_expression(
                                     field_name,
                                     analyzed_field_value.ty,
                                     expected_type,
-                                    field_value.location
+                                    location_map.get(field_name).unwrap()
                                 ))?;
                             }
                             analyzed_field_values.push((field_name.clone(), analyzed_field_value));
-                            present_fields.remove(field_name);
                         }
 
                         analyzed_field_values.reverse();
-
-                        if !present_fields.is_empty() {
-                            Err(anyhow::anyhow!(
-                                "Struct literal of type '{}' has extra fields: {:?} at {}.",
-                                ty,
-                                present_fields,
-                                location
-                            ))?;
-                        }
 
                         (
                             ty.clone(),
@@ -890,10 +894,11 @@ pub fn analyze_expression(
                     println!("Args: {:?}", args);
                     println!("Analyzed: {:?}", analyzed_args);
 
+                    let module_id = location.file.id.clone();
                     let object_ty = analyzed_args[0].ty.clone();
                     let function_header = context
                         .resolved_functions
-                        .resolve_member_function(&object_ty, function_name)
+                        .resolve_member_function(&object_ty, function_name, &module_id)
                         .ok_or_else(|| {
                             anyhow::anyhow!(
                                 "Member function '{}' not found for type '{}' at {}.",

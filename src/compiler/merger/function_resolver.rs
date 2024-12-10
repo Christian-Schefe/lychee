@@ -1,7 +1,7 @@
 use crate::compiler::builtin;
 use crate::compiler::lexer::location::Src;
 use crate::compiler::merger::merged_expression::{
-    ModuleId, ResolvedFunctionHeader, ResolvedFunctions, ResolvedTypes, TypeId,
+    ModuleId, ResolvedFunctionHeader, ResolvedFunctions, ResolvedTypes,
 };
 use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::parsed_expression::{ParsedFunction, ParsedModule, ParsedProgram};
@@ -13,7 +13,6 @@ pub fn build_resolved_functions(
     resolved_types: &ResolvedTypes,
 ) -> MergerResult<ResolvedFunctions> {
     let mut functions = HashMap::new();
-    let mut type_functions = HashMap::new();
     builtin::BuiltinFunction::add_builtin_function_headers(&mut functions);
 
     let mut builtin_functions = HashMap::new();
@@ -28,16 +27,10 @@ pub fn build_resolved_functions(
         imports.insert(module_id.clone(), module_imports);
     }
 
-    extract_module_functions(
-        resolved_types,
-        &mut functions,
-        &mut type_functions,
-        &program.module_tree,
-    )?;
+    extract_module_functions(resolved_types, &mut functions, &program.module_tree)?;
 
     Ok(ResolvedFunctions {
         functions,
-        type_functions,
         builtin_functions,
         imports,
     })
@@ -46,7 +39,6 @@ pub fn build_resolved_functions(
 fn extract_module_functions(
     resolved_types: &ResolvedTypes,
     functions: &mut HashMap<ModuleId, ResolvedFunctionHeader>,
-    type_functions: &mut HashMap<TypeId, HashMap<String, ModuleId>>,
     module_tree: &HashMap<ModuleIdentifier, ParsedModule>,
 ) -> MergerResult<()> {
     for module in module_tree.values() {
@@ -73,7 +65,7 @@ fn extract_module_functions(
                     resolved_types,
                     func_def,
                     module,
-                    Some(resolved_type.to_string()),
+                    Some(resolved_type.type_name()),
                 )?;
                 let id = header.id.clone();
 
@@ -85,13 +77,6 @@ fn extract_module_functions(
                 }
                 impl_functions.insert(func_def.value.function_name.clone(), id);
             }
-            if !type_functions.contains_key(&resolved_type) {
-                type_functions.insert(resolved_type.clone(), HashMap::new());
-            }
-            type_functions
-                .get_mut(&resolved_type)
-                .unwrap()
-                .extend(impl_functions);
         }
     }
     Ok(())

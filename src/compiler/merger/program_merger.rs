@@ -73,7 +73,11 @@ pub fn merge_module(
             &parsed_module.imports,
         )?;
         for function in &type_impl.value.functions {
-            let name = format!("{}@{}", resolved_type, function.value.function_name);
+            let name = format!(
+                "{}@{}",
+                resolved_type.type_name(),
+                function.value.function_name
+            );
             let module_id = ModuleId {
                 name,
                 module_path: parsed_module.module_path.clone(),

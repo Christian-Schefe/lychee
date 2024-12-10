@@ -31,6 +31,14 @@ impl ResolvedTypes {
     ) -> MergerResult<TypeId> {
         match &parsed_type.value {
             ParsedTypeKind::Named(module_id) => {
+                let resolved_module_id = ModuleId {
+                    name: module_id.name.clone(),
+                    module_path: current_module.resolve(&module_id.module_path),
+                };
+                if let Some(ty) = self.known_types.get(&resolved_module_id) {
+                    return Ok(ty.clone());
+                }
+
                 if module_id.module_path.len() == 0 && !module_id.module_path.absolute {
                     if let Some(builtin_type) = self.builtin_types.get(&module_id.name) {
                         return Ok(builtin_type.clone());
@@ -49,20 +57,12 @@ impl ResolvedTypes {
                             });
                     }
                 }
-                let resolved_module_id = ModuleId {
-                    name: module_id.name.clone(),
-                    module_path: current_module.resolve(&module_id.module_path),
-                };
-                self.known_types
-                    .get(&resolved_module_id)
-                    .cloned()
-                    .ok_or_else(|| {
-                        anyhow::anyhow!(
-                            "Type '{}' not found in known types at {}",
-                            resolved_module_id,
-                            parsed_type.location
-                        )
-                    })
+
+                Err(anyhow::anyhow!(
+                    "Type '{}' not found in known types at {}",
+                    resolved_module_id,
+                    parsed_type.location
+                ))
             }
             ParsedTypeKind::Pointer(inner) => {
                 let inner_type = self.resolve_type(current_module, inner, imports)?;
@@ -86,7 +86,6 @@ impl ResolvedTypes {
 #[derive(Debug, Clone)]
 pub struct ResolvedFunctions {
     pub functions: HashMap<ModuleId, ResolvedFunctionHeader>,
-    pub type_functions: HashMap<TypeId, HashMap<String, ModuleId>>,
     pub builtin_functions: HashMap<String, ModuleId>,
     pub imports: HashMap<ModuleIdentifier, HashMap<String, Src<ModuleId>>>,
 }
@@ -98,6 +97,15 @@ impl ResolvedFunctions {
         function_id: &ModuleId,
     ) -> Option<&ResolvedFunctionHeader> {
         let current_imports = self.imports.get(current_module).unwrap();
+
+        let resolved_module_id = ModuleId {
+            name: function_id.name.clone(),
+            module_path: current_module.resolve(&function_id.module_path),
+        };
+        if let Some(header) = self.functions.get(&resolved_module_id) {
+            return Some(header);
+        }
+
         if function_id.module_path.len() == 0 && !function_id.module_path.absolute {
             if let Some(builtin_module_id) = self.builtin_functions.get(&function_id.name) {
                 return self.functions.get(builtin_module_id);
@@ -105,21 +113,25 @@ impl ResolvedFunctions {
                 return self.functions.get(&imported_module_id.value);
             }
         }
-        let resolved_module_id = ModuleId {
-            name: function_id.name.clone(),
-            module_path: current_module.resolve(&function_id.module_path),
-        };
-        self.functions.get(&resolved_module_id)
+
+        None
     }
+
     pub fn resolve_member_function(
         &self,
         type_id: &TypeId,
         function_name: &String,
+        current_module: &ModuleIdentifier,
     ) -> Option<&ResolvedFunctionHeader> {
-        let type_functions = self.type_functions.get(type_id)?;
-        type_functions
-            .get(function_name)
-            .and_then(|id| self.functions.get(id))
+        let name = format!("{}@{}", type_id.type_name(), function_name);
+        let module_id = ModuleId {
+            name,
+            module_path: ModuleIdentifier {
+                path: vec![],
+                absolute: false,
+            },
+        };
+        self.resolve_function(current_module, &module_id)
     }
 }
 
@@ -174,7 +186,26 @@ impl Display for TypeId {
                 _ => unreachable!("Invalid integer size: {}", size),
             },
             TypeId::Pointer(inner) => write!(f, "&{}", inner),
-            TypeId::StructType(module_id) => write!(f, "{}", module_id.name),
+            TypeId::StructType(module_id) => write!(f, "{}", module_id),
+        }
+    }
+}
+
+impl TypeId {
+    pub fn type_name(&self) -> String {
+        match self {
+            TypeId::Unit => "unit".to_string(),
+            TypeId::Bool => "bool".to_string(),
+            TypeId::Char => "char".to_string(),
+            TypeId::Integer(size) => match size {
+                1 => "byte".to_string(),
+                2 => "short".to_string(),
+                4 => "int".to_string(),
+                8 => "long".to_string(),
+                _ => unreachable!("Invalid integer size: {}", size),
+            },
+            TypeId::Pointer(inner) => format!("&{}", inner.type_name()),
+            TypeId::StructType(module_id) => module_id.name.clone(),
         }
     }
 }
@@ -240,7 +271,7 @@ pub enum MergedLiteral {
     Char(i8),
     Integer(i64),
     String(String),
-    Struct(TypeId, HashMap<String, MergedExpression>),
+    Struct(TypeId, Vec<(String, MergedExpression)>),
 }
 
 #[derive(Debug, Clone)]

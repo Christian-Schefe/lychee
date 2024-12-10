@@ -102,7 +102,7 @@ pub enum ParsedLiteral {
     Char(i8),
     Integer(i64),
     String(String),
-    Struct(ParsedType, HashMap<String, ParsedExpression>),
+    Struct(ParsedType, Vec<(String, ParsedExpression)>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

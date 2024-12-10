@@ -9,7 +9,7 @@ use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::program_parser::{parse_expression, parse_identifier, pop_expected};
 use crate::compiler::parser::type_parser::{parse_module_path, parse_type};
 use anyhow::Context;
-use std::collections::HashMap;
+use std::collections::{HashSet};
 
 pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
     let token = tokens.peek().clone();
@@ -377,16 +377,18 @@ fn parse_struct_literal(
     location: Location,
 ) -> ParseResult<ParsedExpression> {
     pop_expected(tokens, Token::Static(StaticToken::OpenBrace))?;
-    let mut fields = HashMap::new();
+    let mut fields = Vec::new();
+    let mut used_field_names = HashSet::new();
     while tokens.peek().value != Token::Static(StaticToken::CloseBrace) {
         let field_name = parse_identifier(tokens)?.value;
         pop_expected(tokens, Token::Static(StaticToken::Colon))?;
         let expr_location = tokens.location().clone();
         let field_value = parse_expression(tokens)
             .with_context(|| format!("Failed to parse struct field value at {}.", expr_location))?;
-        if fields.insert(field_name.clone(), field_value).is_some() {
+        fields.push((field_name.clone(), field_value));
+        if !used_field_names.insert(field_name.clone()) {
             Err(LocationError::new(
-                format!("Duplicate field name '{}'", field_name),
+                format!("Duplicate field name '{}' in struct literal.", field_name),
                 expr_location,
             ))?;
         }

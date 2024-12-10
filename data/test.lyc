@@ -1,12 +1,27 @@
 module various_test;
 
+import various_test::int@add1;
 import various_test::Test;
+import various_test::Test@get_a;
+import various_test::Test@clone;
+import various_test::Test@nothing;
 
 int main() {
-    let var test = new various_test::Test {
-        a: 10
+    let var test = new Test {
+        a: 4,
     };
-    let int a = test.get_a();
-    let var t = test.clone().nothing();
-    a.add1()
+    let int adg = test.get_a();
+    //let var t = test.clone().nothing();
+    let int a = adg;
+    a.add1().add2()
 }
+
+impl int {
+    int add2(int self) {
+        self + 2
+    }
+}
+
+//struct Test {
+//int b;
+//}

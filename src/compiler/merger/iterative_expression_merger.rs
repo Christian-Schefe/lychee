@@ -6,7 +6,6 @@ use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::parsed_expression::{
     ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryOp,
 };
-use std::collections::HashMap;
 
 pub fn merge_expression(
     context: &MergerContext,
@@ -72,16 +71,9 @@ pub fn merge_expression(
                 }
                 ParsedExpressionKind::Variable(_) => {}
                 ParsedExpressionKind::Literal(lit) => match lit {
-                    ParsedLiteral::Struct(t, fields) => {
-                        let resolved_type = context.resolved_types.resolve_type(
-                            context.module_path,
-                            t,
-                            context.imports,
-                        )?;
-                        let struct_decl =
-                            context.resolved_types.structs.get(&resolved_type).unwrap();
-                        for field in struct_decl.field_order.iter().rev() {
-                            stack.push((fields.get(field).unwrap(), false));
+                    ParsedLiteral::Struct(_, fields) => {
+                        for (_, field) in fields.iter().rev() {
+                            stack.push((field, false));
                         }
                     }
                     _ => {}
@@ -195,18 +187,16 @@ pub fn merge_expression(
                         ParsedLiteral::Char(c) => MergedLiteral::Char(*c),
                         ParsedLiteral::String(s) => MergedLiteral::String(s.clone()),
                         ParsedLiteral::Integer(i) => MergedLiteral::Integer(*i),
-                        ParsedLiteral::Struct(t, _) => {
+                        ParsedLiteral::Struct(t, fields) => {
                             let resolved_type = context.resolved_types.resolve_type(
                                 context.module_path,
                                 t,
                                 context.imports,
                             )?;
-                            let struct_decl =
-                                context.resolved_types.structs.get(&resolved_type).unwrap();
-                            let mut merged_fields = HashMap::new();
-                            for field in struct_decl.field_order.iter().rev() {
+                            let mut merged_fields = Vec::new();
+                            for (field_name, _) in fields.iter().rev() {
                                 let merged_field = output.pop().unwrap();
-                                merged_fields.insert(field.clone(), merged_field);
+                                merged_fields.push((field_name.clone(), merged_field));
                             }
                             MergedLiteral::Struct(resolved_type, merged_fields)
                         }
