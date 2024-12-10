@@ -102,6 +102,12 @@ pub fn merge_expression(
                         stack.push((arg, false));
                     }
                 }
+                ParsedExpressionKind::MemberFunctionCall { object, args, .. } => {
+                    for arg in args.iter().rev() {
+                        stack.push((arg, false));
+                    }
+                    stack.push((object, false));
+                }
             }
         } else {
             let merged = match &stack_expr.value {
@@ -253,13 +259,29 @@ pub fn merge_expression(
                     let merged_args = output.split_off(new_len);
                     let function_header = context
                         .resolved_functions
-                        .resolve_function(context.module_path, function_id, context.imports)
+                        .resolve_function(context.module_path, function_id)
                         .ok_or_else(|| {
                             anyhow::anyhow!("Function '{}' not found at {}", function_id, location)
                         })?;
                     MergedExpressionKind::FunctionCall {
                         function_id: function_header.id.clone(),
                         args: merged_args,
+                    }
+                }
+                ParsedExpressionKind::MemberFunctionCall {
+                    object: _,
+                    function_name,
+                    args,
+                } => {
+                    let new_len = output.len() - args.len();
+                    let merged_args = output.split_off(new_len);
+                    let merged_object = output.pop().unwrap();
+                    let mut args = vec![merged_object];
+                    args.extend(merged_args);
+
+                    MergedExpressionKind::MemberFunctionCall {
+                        function_name: function_name.clone(),
+                        args,
                     }
                 }
             };

@@ -66,6 +66,12 @@ pub fn print_module(printer: &mut Printer, expr: &ParsedModule) {
     for function in &expr.functions {
         print_function(printer, &function.value);
     }
+    for struct_impl in &expr.type_implementations {
+        printer.add_line(format!("Impl({:?})", struct_impl.value.impl_type));
+        for function in &struct_impl.value.functions {
+            print_function(printer, &function.value);
+        }
+    }
 }
 
 fn print_struct_definition(printer: &mut Printer, struct_def: &ParsedStructDefinition) {
@@ -202,6 +208,19 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
         } => {
             printer.add_line(format!("FunctionCall({:?})", function_name));
             printer.indent();
+            for arg in args {
+                print_expression(printer, arg);
+            }
+            printer.dedent();
+        }
+        ParsedExpressionKind::MemberFunctionCall {
+            object,
+            function_name,
+            args,
+        } => {
+            printer.add_line(format!("MemberFunctionCall({})", function_name));
+            printer.indent();
+            print_expression(printer, object);
             for arg in args {
                 print_expression(printer, arg);
             }

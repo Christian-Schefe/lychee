@@ -194,6 +194,7 @@ pub enum Keyword {
     Var,
     Module,
     Import,
+    Impl,
 }
 
 impl Keyword {
@@ -216,6 +217,7 @@ impl Keyword {
             "var" => Some(Keyword::Var),
             "module" => Some(Keyword::Module),
             "import" => Some(Keyword::Import),
+            "impl" => Some(Keyword::Impl),
             _ => None,
         }
     }

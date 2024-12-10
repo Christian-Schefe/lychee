@@ -47,6 +47,10 @@ pub fn analyze_assignable_expression(
             "Function call expression cannot be assigned to at {}.",
             expression.location
         )),
+        MergedExpressionKind::MemberFunctionCall { .. } => Err(anyhow::anyhow!(
+            "Member function call expression cannot be assigned to at {}.",
+            expression.location
+        )),
         MergedExpressionKind::Literal(_) => Err(anyhow::anyhow!(
             "Literal expression cannot be assigned to at {}.",
             expression.location

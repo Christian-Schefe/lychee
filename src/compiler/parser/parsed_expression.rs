@@ -13,6 +13,7 @@ pub struct ParsedModule {
     pub module_path: ModuleIdentifier,
     pub functions: Vec<Src<ParsedFunction>>,
     pub struct_definitions: Vec<Src<ParsedStructDefinition>>,
+    pub type_implementations: Vec<Src<ParsedTypeImplementation>>,
     pub imports: HashMap<String, Src<ModuleId>>,
 }
 
@@ -20,6 +21,12 @@ pub struct ParsedModule {
 pub struct ParsedStructDefinition {
     pub struct_name: String,
     pub fields: Vec<(String, ParsedType)>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ParsedTypeImplementation {
+    pub impl_type: ParsedType,
+    pub functions: Vec<Src<ParsedFunction>>,
 }
 
 #[derive(Debug, Clone)]
@@ -71,6 +78,11 @@ pub enum ParsedExpressionKind {
     },
     FunctionCall {
         function_id: ModuleId,
+        args: Vec<ParsedExpression>,
+    },
+    MemberFunctionCall {
+        object: Box<ParsedExpression>,
+        function_name: String,
         args: Vec<ParsedExpression>,
     },
 }

@@ -1,5 +1,5 @@
+use crate::compiler::parser::ModulePath;
 use std::fmt::Display;
-use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct Src<T> {
@@ -17,7 +17,7 @@ impl<T> Src<T> {
 pub struct Location {
     pub line: usize,
     pub column: usize,
-    pub file: PathBuf,
+    pub file: ModulePath,
 }
 
 impl Display for Location {
@@ -27,13 +27,13 @@ impl Display for Location {
             "line {}, column {} ({})",
             self.line,
             self.column,
-            self.file.display()
+            self.file.file.display()
         )
     }
 }
 
 impl Location {
-    pub fn new(file: PathBuf) -> Self {
+    pub fn new(file: ModulePath) -> Self {
         Location {
             line: 1,
             column: 1,

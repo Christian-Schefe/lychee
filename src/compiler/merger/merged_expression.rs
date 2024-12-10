@@ -86,7 +86,9 @@ impl ResolvedTypes {
 #[derive(Debug, Clone)]
 pub struct ResolvedFunctions {
     pub functions: HashMap<ModuleId, ResolvedFunctionHeader>,
+    pub type_functions: HashMap<TypeId, HashMap<String, ModuleId>>,
     pub builtin_functions: HashMap<String, ModuleId>,
+    pub imports: HashMap<ModuleIdentifier, HashMap<String, Src<ModuleId>>>,
 }
 
 impl ResolvedFunctions {
@@ -94,12 +96,12 @@ impl ResolvedFunctions {
         &self,
         current_module: &ModuleIdentifier,
         function_id: &ModuleId,
-        imports: &HashMap<String, Src<ModuleId>>,
     ) -> Option<&ResolvedFunctionHeader> {
+        let current_imports = self.imports.get(current_module).unwrap();
         if function_id.module_path.len() == 0 && !function_id.module_path.absolute {
             if let Some(builtin_module_id) = self.builtin_functions.get(&function_id.name) {
                 return self.functions.get(builtin_module_id);
-            } else if let Some(imported_module_id) = imports.get(&function_id.name) {
+            } else if let Some(imported_module_id) = current_imports.get(&function_id.name) {
                 return self.functions.get(&imported_module_id.value);
             }
         }
@@ -108,6 +110,16 @@ impl ResolvedFunctions {
             module_path: current_module.resolve(&function_id.module_path),
         };
         self.functions.get(&resolved_module_id)
+    }
+    pub fn resolve_member_function(
+        &self,
+        type_id: &TypeId,
+        function_name: &String,
+    ) -> Option<&ResolvedFunctionHeader> {
+        let type_functions = self.type_functions.get(type_id)?;
+        type_functions
+            .get(function_name)
+            .and_then(|id| self.functions.get(id))
     }
 }
 
@@ -159,7 +171,7 @@ impl Display for TypeId {
                 2 => write!(f, "short"),
                 4 => write!(f, "int"),
                 8 => write!(f, "long"),
-                _ => write!(f, "i{}", size * 8),
+                _ => unreachable!("Invalid integer size: {}", size),
             },
             TypeId::Pointer(inner) => write!(f, "&{}", inner),
             TypeId::StructType(module_id) => write!(f, "{}", module_id.name),
@@ -213,6 +225,10 @@ pub enum MergedExpressionKind {
     },
     FunctionCall {
         function_id: ModuleId,
+        args: Vec<MergedExpression>,
+    },
+    MemberFunctionCall {
+        function_name: String,
         args: Vec<MergedExpression>,
     },
 }

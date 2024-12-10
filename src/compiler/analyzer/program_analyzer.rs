@@ -11,7 +11,7 @@ use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
 pub struct AnalyzerContext<'a> {
-    pub function_headers: &'a ResolvedFunctions,
+    pub resolved_functions: &'a ResolvedFunctions,
     pub local_variables: HashMap<String, LocalVariable>,
     pub structs: &'a HashMap<TypeId, ResolvedStruct>,
     pub return_type: &'a TypeId,
@@ -75,7 +75,7 @@ pub fn analyze_function(
 
     let return_type = header.return_type.clone();
     let mut context = AnalyzerContext {
-        function_headers: resolved_functions,
+        resolved_functions: resolved_functions,
         structs: &resolved_types.structs,
         local_variables: HashMap::new(),
         return_type: &return_type,

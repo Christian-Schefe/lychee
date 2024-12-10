@@ -4,7 +4,9 @@ use crate::compiler::parser::parsed_expression::{
     ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryMathOp, UnaryOp,
 };
 use crate::compiler::parser::parser_error::ParseResult;
-use crate::compiler::parser::primary_expr_parser::parse_primary_expression;
+use crate::compiler::parser::primary_expr_parser::{
+    parse_primary_expression, parse_seperated_expressions,
+};
 use crate::compiler::parser::program_parser::{parse_expression, parse_identifier, pop_expected};
 
 fn parse_prefix_unary<F>(
@@ -105,13 +107,32 @@ fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression>
             Token::Static(StaticToken::Dot) => {
                 tokens.pop();
                 let member_name = parse_identifier(tokens)?.value;
-                expr = ParsedExpression::new(
-                    ParsedExpressionKind::Unary {
-                        expr: Box::new(expr),
-                        op: UnaryOp::Member(member_name),
-                    },
-                    location.clone(),
-                );
+                if tokens.peek().value == Token::Static(StaticToken::OpenParen) {
+                    let (_, args, _) = parse_seperated_expressions(
+                        tokens,
+                        Token::Static(StaticToken::OpenParen),
+                        Token::Static(StaticToken::CloseParen),
+                        Token::Static(StaticToken::Comma),
+                        false,
+                        "function call arguments",
+                    )?;
+                    expr = ParsedExpression::new(
+                        ParsedExpressionKind::MemberFunctionCall {
+                            object: Box::new(expr),
+                            function_name: member_name,
+                            args,
+                        },
+                        location.clone(),
+                    );
+                } else {
+                    expr = ParsedExpression::new(
+                        ParsedExpressionKind::Unary {
+                            expr: Box::new(expr),
+                            op: UnaryOp::Member(member_name),
+                        },
+                        location.clone(),
+                    );
+                }
             }
             Token::Static(StaticToken::OpenBracket) => {
                 tokens.pop();

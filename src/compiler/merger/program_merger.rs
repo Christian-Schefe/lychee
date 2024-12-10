@@ -66,6 +66,29 @@ pub fn merge_module(
         );
     }
 
+    for type_impl in &parsed_module.type_implementations {
+        let resolved_type = resolved_types.resolve_type(
+            &parsed_module.module_path,
+            &type_impl.value.impl_type,
+            &parsed_module.imports,
+        )?;
+        for function in &type_impl.value.functions {
+            let name = format!("{}@{}", resolved_type, function.value.function_name);
+            let module_id = ModuleId {
+                name,
+                module_path: parsed_module.module_path.clone(),
+            };
+            let merged_function = merge_function(&context, function)?;
+            functions.insert(
+                module_id,
+                Src {
+                    location: function.location.clone(),
+                    value: merged_function,
+                },
+            );
+        }
+    }
+
     validate_imports(&context)?;
 
     Ok(())

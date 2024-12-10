@@ -1,31 +1,12 @@
-module loop_test;
-module variables_test;
-module std;
+module various_test;
 
-import loop_test::test;
-import std::strings::read_line;
-import std::strings::write_string;
-import std::strings::from_literal;
-import std::strings::concat;
+import various_test::Test;
 
 int main() {
-    variables_test::test();
-    test();
-    let var t = new test {
-        a: 5
+    let var test = new various_test::Test {
+        a: 10
     };
-    write_char('\n');
-    let var str = read_line();
-    let var str2 = from_literal("Hello, ");
-    let var concat_str = concat(&str2, &str);
-    write_string(&concat_str);
-    ::write_char('\n');
-    std::strings::free_string(&str);
-    exit(5);
-    0
-}
-
-unit write_char(char c) {
-    write(&c, 1);
-    write(&c, 1);
+    let int a = test.get_a();
+    let var t = test.clone().nothing();
+    a.add1()
 }
