@@ -891,8 +891,6 @@ pub fn analyze_expression(
                 } => {
                     let new_len = output.len() - args.len();
                     let analyzed_args = output.split_off(new_len);
-                    println!("Args: {:?}", args);
-                    println!("Analyzed: {:?}", analyzed_args);
 
                     let module_id = location.file.id.clone();
                     let object_ty = analyzed_args[0].ty.clone();

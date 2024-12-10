@@ -44,16 +44,25 @@ impl IntArray {
 }
 
 unit write_num(int num) {
-    if num == 0 {
-        write_char((num % 10 + '0' as int) as char);
-        return;
-    } else if num < 0 {
+    if num < 0 {
         write_char('-');
         num = -num;
     };
-
-    if num >= 10 {
-        write_num(num / 10);
+    if num <= 9 {
+        write_char((num % 10 + '0' as int) as char);
+        return;
     };
-    write_char((num % 10 + '0' as int) as char);
+
+    let var divisor = 1;
+
+    while num / divisor >= 10 {
+        divisor *= 10;
+    };
+
+    while divisor > 0 {
+        let var digit = num / divisor;
+        write_char((digit + '0' as int) as char);
+        num %= divisor;
+        divisor /= 10;
+    };
 }

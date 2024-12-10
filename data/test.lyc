@@ -8,9 +8,16 @@ import std::arrays::IntArray@set;
 
 int main() {
     let var int_arr = IntArray@create(500);
-    int_arr.fill(2);
+    int_arr.fill(-8);
     int_arr.set(0, 1);
     int_arr.print();
     IntArray@print(int_arr);
+    (int_arr.data[0]).test();
     0
+}
+
+impl int {
+    unit test(int a) {
+        std::arrays::write_num(a);
+    }
 }

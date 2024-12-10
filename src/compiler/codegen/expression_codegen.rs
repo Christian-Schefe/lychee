@@ -298,8 +298,8 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
                 context.current_stack_size += expression.value_data.size;
                 generate_assignable_expression_pointer_code(context, lhs);
                 context.mov("r1", "r0");
-                context.load(expression.value_data.size, "r2", "[r1]");
-                context.pop(expression.value_data.size, "r0");
+                context.load(expression.value_data.size, "r0", "[r1]");
+                context.pop(expression.value_data.size, "r2");
                 context.current_stack_size -= expression.value_data.size;
                 do_math_op(context, math_op, "r0", "r2");
                 context.store(expression.value_data.size, "r0", "[r1]");

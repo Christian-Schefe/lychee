@@ -91,21 +91,6 @@ int parse_int(&String str) {
     num * sign
 }
 
-unit write_num(int num) {
-    if num == 0 {
-        write_char((num % 10 + '0' as int) as char);
-        return;
-    } else if num < 0 {
-        write_char('-');
-        num = -num;
-    };
-
-    if num >= 10 {
-        write_num(num / 10);
-    };
-    write_char((num % 10 + '0' as int) as char);
-}
-
 unit print_literal(&char literal) {
     let int i = 0;
     while (literal[i] != '\0') {
