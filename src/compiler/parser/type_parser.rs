@@ -11,7 +11,7 @@ pub fn parse_type(tokens: &mut TokenStack) -> ParseResult<ParsedType> {
     let token = tokens.pop().clone();
     match token.value {
         Token::Identifier(name) => {
-            let module_id = parse_module_path(tokens, name, false)?;
+            let module_id = parse_module_path(tokens, name, false, false)?;
             Ok(ParsedType::new(
                 ParsedTypeKind::Named(module_id),
                 token.location,
@@ -19,7 +19,7 @@ pub fn parse_type(tokens: &mut TokenStack) -> ParseResult<ParsedType> {
         }
         Token::Static(StaticToken::DoubleColon) => {
             let first_id = parse_identifier(tokens)?;
-            let module_id = parse_module_path(tokens, first_id.value, true)?;
+            let module_id = parse_module_path(tokens, first_id.value, true, false)?;
             Ok(ParsedType::new(
                 ParsedTypeKind::Named(module_id),
                 token.location,
@@ -43,6 +43,7 @@ pub fn parse_module_path(
     tokens: &mut TokenStack,
     name: String,
     is_absolute: bool,
+    allow_at: bool,
 ) -> ParseResult<ModuleId> {
     let mut path = Vec::new();
     let mut cur_name = name;
@@ -52,6 +53,13 @@ pub fn parse_module_path(
         let next_token = parse_identifier(tokens)?;
         cur_name = next_token.value;
     }
+
+    if allow_at && tokens.peek().value == Token::Static(StaticToken::At) {
+        tokens.pop();
+        let at_id = parse_identifier(tokens)?;
+        cur_name = format!("{}@{}", cur_name, at_id.value);
+    }
+
     let module_id = ModuleId {
         module_path: ModuleIdentifier {
             path,

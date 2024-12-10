@@ -1,55 +1,46 @@
-int main() {
-    let var arr = newIntArray(5);
-    set(&arr, 0, 5);
-    set(&arr, 1, -8);
-    set(&arr, 2, random() as int);
-    set(&arr, 1, 12);
-    printArray(&arr);
-    0
-}
-
 struct IntArray {
     &int data;
     int size;
 }
 
-IntArray newIntArray(int size) {
-    let IntArray arr = new IntArray {
-        data: malloc(size * 4) as &int,
-        size: size
-    };
-    arr
-}
-
-int get(&IntArray arr, int index) {
-    return arr.data[index];
-}
-
-unit set(&IntArray arr, int index, int value) {
-    arr.data[index] = value;
-}
-
-unit fill(&IntArray arr, int value) {
-    let int i = 0;
-    while (i < arr.size) {
-        arr.data[i] = value;
-        i++;
+impl IntArray {
+    int get(IntArray this, int index) {
+        return this.data[index];
     }
-}
-
-unit printArray(&IntArray arr) {
-    let int i = 0;
-    write_char('[');
-    while (i < arr.size) {
-        if i > 0 {
-            write_char(',');
-            write_char(' ');
+    unit set(IntArray this, int index, int value) {
+        this.data[index] = value;
+    }
+    unit fill(IntArray this, int value) {
+        let int i = 0;
+        while (i < this.size) {
+            this.data[i] = value;
+            i++;
+        }
+    }
+    unit print(IntArray this) {
+        let int i = 0;
+        write_char('[');
+        while (i < this.size) {
+            if i > 0 {
+                write_char(',');
+                write_char(' ');
+            };
+            write_num(this.data[i]);
+            i++;
         };
-        write_num(arr.data[i]);
-        i++;
-    };
-    write_char(']');
-    write_char('\n');
+        write_char(']');
+        write_char('\n');
+    }
+    IntArray create(int size) {
+        let IntArray arr = new IntArray {
+            data: malloc(size * 4) as &int,
+            size: size
+        };
+        arr
+    }
+    unit free(IntArray this) {
+        free(this.data as &unit);
+    }
 }
 
 unit write_num(int num) {

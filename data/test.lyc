@@ -1,27 +1,16 @@
 module various_test;
+module std;
 
-import various_test::int@add1;
-import various_test::Test;
-import various_test::Test@get_a;
-import various_test::Test@clone;
-import various_test::Test@nothing;
+import std::arrays::IntArray@create;
+import std::arrays::IntArray@fill;
+import std::arrays::IntArray@print;
+import std::arrays::IntArray@set;
 
 int main() {
-    let var test = new Test {
-        a: 4,
-    };
-    let int adg = test.get_a();
-    //let var t = test.clone().nothing();
-    let int a = adg;
-    a.add1().add2()
+    let var int_arr = IntArray@create(500);
+    int_arr.fill(2);
+    int_arr.set(0, 1);
+    int_arr.print();
+    IntArray@print(int_arr);
+    0
 }
-
-impl int {
-    int add2(int self) {
-        self + 2
-    }
-}
-
-//struct Test {
-//int b;
-//}

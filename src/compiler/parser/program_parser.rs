@@ -176,14 +176,14 @@ pub fn parse_module(
 pub fn parse_import(tokens: &mut TokenStack) -> ParseResult<ModuleId> {
     pop_expected(tokens, Token::Keyword(Keyword::Import))?;
     let token = tokens.pop().clone();
-    let mut mod_id = match &token.value {
+    let mod_id = match &token.value {
         Token::Identifier(module_name) => {
-            let id = parse_module_path(tokens, module_name.clone(), false)?;
+            let id = parse_module_path(tokens, module_name.clone(), false, true)?;
             id
         }
         Token::Static(StaticToken::DoubleColon) => {
             let first_id = parse_identifier(tokens)?;
-            let id = parse_module_path(tokens, first_id.value, true)?;
+            let id = parse_module_path(tokens, first_id.value, true, true)?;
             id
         }
         _ => Err(LocationError::new(
@@ -191,12 +191,6 @@ pub fn parse_import(tokens: &mut TokenStack) -> ParseResult<ModuleId> {
             token.location,
         ))?,
     };
-    if tokens.peek().value == Token::Static(StaticToken::At) {
-        tokens.pop();
-        let at_id = parse_identifier(tokens)?.value;
-        let new_name = format!("{}@{}", mod_id.name, at_id);
-        mod_id.name = new_name;
-    }
     pop_expected(tokens, Token::Static(StaticToken::Semicolon))?;
     Ok(mod_id)
 }

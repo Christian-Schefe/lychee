@@ -9,7 +9,7 @@ use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::program_parser::{parse_expression, parse_identifier, pop_expected};
 use crate::compiler::parser::type_parser::{parse_module_path, parse_type};
 use anyhow::Context;
-use std::collections::{HashSet};
+use std::collections::HashSet;
 
 pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
     let token = tokens.peek().clone();
@@ -19,6 +19,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             match tokens.peek().value {
                 Token::Static(StaticToken::OpenParen) => {}
                 Token::Static(StaticToken::DoubleColon) => {}
+                Token::Static(StaticToken::At) => {}
                 _ => {
                     return Ok(ParsedExpression::new(
                         ParsedExpressionKind::Variable(name),
@@ -27,7 +28,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
                 }
             }
 
-            let module_id = parse_module_path(tokens, name, false)
+            let module_id = parse_module_path(tokens, name, false, true)
                 .with_context(|| format!("Failed to parse module path at {}.", token.location))?;
 
             let (_, args, _) = parse_seperated_expressions(
@@ -49,7 +50,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
         Token::Static(StaticToken::DoubleColon) => {
             tokens.pop();
             let first_id = parse_identifier(tokens)?;
-            let module_id = parse_module_path(tokens, first_id.value, true)
+            let module_id = parse_module_path(tokens, first_id.value, true, true)
                 .with_context(|| format!("Failed to parse module path at {}.", token.location))?;
             let (_, args, _) = parse_seperated_expressions(
                 tokens,
