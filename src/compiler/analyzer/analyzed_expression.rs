@@ -1,7 +1,7 @@
 use crate::compiler::lexer::location::Location;
-use crate::compiler::merger::merged_expression::{
-    ModuleId, ResolvedFunctions, ResolvedTypes, TypeId,
-};
+use crate::compiler::merger::merged_expression::{FunctionId, TypeId};
+use crate::compiler::merger::resolved_functions::ResolvedFunctions;
+use crate::compiler::merger::resolved_types::ResolvedTypes;
 use crate::compiler::parser::parsed_expression::{
     BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, UnaryMathOp,
 };
@@ -15,7 +15,7 @@ pub struct AnalyzedProgram {
 
 #[derive(Debug, Clone)]
 pub struct AnalyzedFunction {
-    pub name: ModuleId,
+    pub name: FunctionId,
     pub body: AnalyzedExpression,
 }
 
@@ -72,7 +72,7 @@ pub enum AnalyzedExpressionKind {
         expr: AssignableExpression,
     },
     FunctionCall {
-        function_name: ModuleId,
+        function_name: FunctionId,
         args: Vec<AnalyzedExpression>,
     },
     FieldAccess {
@@ -107,7 +107,7 @@ pub enum AssignableExpressionKind {
     LocalVariable(String),
     Dereference(Box<AnalyzedExpression>),
     FieldAccess(Box<AssignableExpression>, String),
-    PointerFieldAccess(Box<AnalyzedExpression>, String),
+    PointerFieldAccess(Box<AnalyzedExpression>, String, usize),
     ArrayIndex(Box<AnalyzedExpression>, Box<AnalyzedExpression>),
 }
 

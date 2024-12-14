@@ -1,5 +1,5 @@
 use crate::compiler::lexer::location::Src;
-use crate::compiler::merger::merged_expression::ModuleId;
+use crate::compiler::parser::item_id::{ParsedFunctionId, ParsedTypeId};
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
@@ -14,7 +14,14 @@ pub struct ParsedModule {
     pub functions: Vec<Src<ParsedFunction>>,
     pub struct_definitions: Vec<Src<ParsedStructDefinition>>,
     pub type_implementations: Vec<Src<ParsedTypeImplementation>>,
-    pub imports: HashMap<String, Src<ModuleId>>,
+    pub imports: Vec<Src<ParsedImport>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ParsedImport {
+    pub imported_object: Option<String>,
+    pub impl_type: Option<ParsedType>,
+    pub module_id: ModuleIdentifier,
 }
 
 #[derive(Debug, Clone)]
@@ -77,12 +84,12 @@ pub enum ParsedExpressionKind {
         right: Box<ParsedExpression>,
     },
     FunctionCall {
-        function_id: ModuleId,
+        id: ParsedFunctionId,
         args: Vec<ParsedExpression>,
     },
     MemberFunctionCall {
         object: Box<ParsedExpression>,
-        function_name: String,
+        id: ParsedFunctionId,
         args: Vec<ParsedExpression>,
     },
 }
@@ -91,8 +98,12 @@ pub type ParsedType = Src<ParsedTypeKind>;
 
 #[derive(Debug, Clone)]
 pub enum ParsedTypeKind {
-    Named(ModuleId),
+    Struct(ParsedTypeId),
     Pointer(Box<ParsedType>),
+    Unit,
+    Bool,
+    Char,
+    Integer(usize),
 }
 
 #[derive(Debug, Clone)]
@@ -113,6 +124,7 @@ pub enum BinaryOp {
     Assign,
     MathAssign(BinaryMathOp),
     LogicAssign(BinaryLogicOp),
+    Index,
 }
 
 impl BinaryOp {
@@ -147,6 +159,7 @@ impl BinaryOp {
             BinaryOp::Assign => 110,
             BinaryOp::MathAssign(_) => 110,
             BinaryOp::LogicAssign(_) => 110,
+            BinaryOp::Index => 120,
         }
     }
 }
@@ -191,7 +204,6 @@ pub enum UnaryOp {
     Decrement { is_prefix: bool },
     Cast(ParsedType),
     Member(String),
-    Index(Box<ParsedExpression>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

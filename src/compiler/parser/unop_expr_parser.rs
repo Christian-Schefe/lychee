@@ -1,13 +1,14 @@
 use crate::compiler::lexer::token::{StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::parsed_expression::{
-    ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryMathOp, UnaryOp,
+    BinaryOp, ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryMathOp, UnaryOp,
 };
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::primary_expr_parser::{
     parse_primary_expression, parse_seperated_expressions,
 };
 use crate::compiler::parser::program_parser::{parse_expression, parse_identifier, pop_expected};
+use crate::compiler::parser::type_parser::parse_function_id;
 
 fn parse_prefix_unary<F>(
     tokens: &mut TokenStack,
@@ -106,41 +107,98 @@ fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression>
             }
             Token::Static(StaticToken::Dot) => {
                 tokens.pop();
-                let member_name = parse_identifier(tokens)?.value;
-                if tokens.peek().value == Token::Static(StaticToken::OpenParen) {
-                    let (_, args, _) = parse_seperated_expressions(
-                        tokens,
-                        Token::Static(StaticToken::OpenParen),
-                        Token::Static(StaticToken::CloseParen),
-                        Token::Static(StaticToken::Comma),
-                        false,
-                        "function call arguments",
-                    )?;
-                    expr = ParsedExpression::new(
-                        ParsedExpressionKind::MemberFunctionCall {
-                            object: Box::new(expr),
-                            function_name: member_name,
-                            args,
-                        },
-                        location.clone(),
-                    );
-                } else {
-                    expr = ParsedExpression::new(
-                        ParsedExpressionKind::Unary {
-                            expr: Box::new(expr),
-                            op: UnaryOp::Member(member_name),
-                        },
-                        location.clone(),
-                    );
+                match &tokens.peek().value {
+                    Token::Identifier(name) => {
+                        let member_name = name.clone();
+                        tokens.pop();
+                        let function_identifier = parse_function_id(
+                            tokens,
+                            member_name.clone(),
+                            false,
+                            &location.file.id,
+                        )?;
+                        if tokens.peek().value == Token::Static(StaticToken::OpenParen) {
+                            let (_, args, _) = parse_seperated_expressions(
+                                tokens,
+                                Token::Static(StaticToken::OpenParen),
+                                Token::Static(StaticToken::CloseParen),
+                                Token::Static(StaticToken::Comma),
+                                false,
+                                "function call arguments",
+                            )?;
+                            expr = ParsedExpression::new(
+                                ParsedExpressionKind::MemberFunctionCall {
+                                    object: Box::new(expr),
+                                    id: function_identifier,
+                                    args,
+                                },
+                                location.clone(),
+                            );
+                        } else {
+                            if !function_identifier.is_module_local {
+                                return Err(anyhow::anyhow!(
+                                    "Invalid member access expression at {}: function id: {}",
+                                    location,
+                                    function_identifier.item_id
+                                ))?;
+                            }
+                            expr = ParsedExpression::new(
+                                ParsedExpressionKind::Unary {
+                                    expr: Box::new(expr),
+                                    op: UnaryOp::Member(member_name),
+                                },
+                                location.clone(),
+                            );
+                        }
+                    }
+                    Token::Static(StaticToken::DoubleColon) => {
+                        tokens.pop();
+                        let member_name = parse_identifier(tokens)?.value;
+                        let function_identifier = parse_function_id(
+                            tokens,
+                            member_name.clone(),
+                            true,
+                            &location.file.id,
+                        )?;
+                        let (_, args, _) = parse_seperated_expressions(
+                            tokens,
+                            Token::Static(StaticToken::OpenParen),
+                            Token::Static(StaticToken::CloseParen),
+                            Token::Static(StaticToken::Comma),
+                            false,
+                            "function call arguments",
+                        )?;
+                        if function_identifier.impl_type.is_some() {
+                            return Err(anyhow::anyhow!(
+                                "Cannot call member function on type at {}",
+                                location
+                            ))?;
+                        }
+                        expr = ParsedExpression::new(
+                            ParsedExpressionKind::MemberFunctionCall {
+                                object: Box::new(expr),
+                                id: function_identifier,
+                                args,
+                            },
+                            location.clone(),
+                        );
+                    }
+                    _ => {
+                        return Err(anyhow::anyhow!(
+                            "Expected identifier or '::', found '{}'",
+                            tokens.peek().value
+                        ))?;
+                    }
                 }
             }
             Token::Static(StaticToken::OpenBracket) => {
                 tokens.pop();
                 let index_expr = parse_expression(tokens)?;
                 expr = ParsedExpression::new(
-                    ParsedExpressionKind::Unary {
-                        expr: Box::new(expr),
-                        op: UnaryOp::Index(Box::new(index_expr)),
+                    ParsedExpressionKind::Binary {
+                        left: Box::new(expr),
+                        right: Box::new(index_expr),
+                        op: BinaryOp::Index,
                     },
                     location.clone(),
                 );

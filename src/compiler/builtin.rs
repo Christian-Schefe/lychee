@@ -1,5 +1,6 @@
 use crate::compiler::codegen::CodegenContext;
-use crate::compiler::merger::merged_expression::{ModuleId, ResolvedFunctionHeader, TypeId};
+use crate::compiler::merger::merged_expression::{FunctionId, ResolvedFunctionHeader, TypeId};
+use crate::compiler::parser::item_id::ItemId;
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
@@ -25,13 +26,10 @@ impl BuiltinFunction {
         }
     }
 
-    fn module_id(&self) -> ModuleId {
-        ModuleId {
-            name: self.name.clone(),
-            module_path: ModuleIdentifier {
-                path: vec![],
-                absolute: false,
-            },
+    fn function_id(&self) -> ItemId {
+        ItemId {
+            module_id: ModuleIdentifier { path: vec![] },
+            item_name: self.name.clone(),
         }
     }
 
@@ -169,8 +167,21 @@ impl BuiltinFunction {
         ]
     }
 
+    pub fn add_builtin_function_ids(function_ids: &mut HashMap<String, FunctionId>) {
+        for function in BuiltinFunction::all_functions() {
+            let id = function.function_id();
+            function_ids.insert(
+                function.name.clone(),
+                FunctionId {
+                    item_id: id,
+                    impl_type: None,
+                },
+            );
+        }
+    }
+
     pub fn add_builtin_function_headers(
-        function_headers: &mut HashMap<ModuleId, ResolvedFunctionHeader>,
+        function_headers: &mut HashMap<ItemId, ResolvedFunctionHeader>,
     ) {
         for function in BuiltinFunction::all_functions() {
             let mut parameter_order = Vec::new();
@@ -180,11 +191,10 @@ impl BuiltinFunction {
                 parameter_types.insert(name.clone(), ty.clone());
             }
 
-            let id = function.module_id();
+            let id = function.function_id();
             function_headers.insert(
-                id.clone(),
+                id,
                 ResolvedFunctionHeader {
-                    id,
                     return_type: function.return_type,
                     parameter_types,
                     parameter_order,
@@ -195,7 +205,7 @@ impl BuiltinFunction {
 
     pub fn generate_builtin_function_code(context: &mut CodegenContext) {
         for function in BuiltinFunction::all_functions() {
-            let id = function.module_id();
+            let id = function.function_id();
             let identifier = id.to_string();
             let label = context.new_label(&identifier);
             context.function_labels.insert(identifier, label.clone());

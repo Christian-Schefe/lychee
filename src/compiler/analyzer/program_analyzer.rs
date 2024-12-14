@@ -2,18 +2,18 @@ use crate::compiler::analyzer::analyzed_expression::{AnalyzedFunction, AnalyzedP
 use crate::compiler::analyzer::iterative_expression_analyzer::analyze_expression;
 use crate::compiler::analyzer::return_analyzer::always_calls_return;
 use crate::compiler::analyzer::AnalyzerResult;
-use crate::compiler::lexer::location::Src;
-use crate::compiler::merger::merged_expression::{
-    MergedFunction, MergedProgram, ModuleId, ResolvedFunctions, ResolvedStruct, ResolvedTypes,
-    TypeId,
-};
+use crate::compiler::merger::merged_expression::{FunctionId, MergedProgram, TypeId};
+use crate::compiler::merger::resolved_functions::ResolvedFunctions;
+use crate::compiler::merger::resolved_types::ResolvedTypes;
+use crate::compiler::parser::item_id::ItemId;
+use crate::compiler::parser::parsed_expression::ParsedExpression;
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
 pub struct AnalyzerContext<'a> {
     pub resolved_functions: &'a ResolvedFunctions,
+    pub resolved_types: &'a ResolvedTypes,
     pub local_variables: HashMap<String, LocalVariable>,
-    pub structs: &'a HashMap<TypeId, ResolvedStruct>,
     pub return_type: &'a TypeId,
 }
 
@@ -24,14 +24,14 @@ pub struct LocalVariable {
 }
 
 pub fn analyze_program(program: &MergedProgram) -> AnalyzerResult<AnalyzedProgram> {
-    let mut analyzed_functions = Vec::with_capacity(program.functions.len());
+    let mut analyzed_functions = Vec::with_capacity(program.function_bodies.len());
 
-    for (id, function) in &program.functions {
+    for (id, body) in &program.function_bodies {
         let analyzed_function = analyze_function(
             id,
             &program.resolved_types,
             &program.resolved_functions,
-            function,
+            body,
         )?;
         analyzed_functions.push(analyzed_function);
     }
@@ -39,12 +39,9 @@ pub fn analyze_program(program: &MergedProgram) -> AnalyzerResult<AnalyzedProgra
     let main_function_header = program
         .resolved_functions
         .functions
-        .get(&ModuleId {
-            name: "main".to_string(),
-            module_path: ModuleIdentifier {
-                path: Vec::new(),
-                absolute: true,
-            },
+        .get(&ItemId {
+            item_name: "main".to_string(),
+            module_id: ModuleIdentifier { path: Vec::new() },
         })
         .ok_or_else(|| anyhow::anyhow!("Main function not found"))?;
 
@@ -63,20 +60,23 @@ pub fn analyze_program(program: &MergedProgram) -> AnalyzerResult<AnalyzedProgra
 }
 
 pub fn analyze_function(
-    id: &ModuleId,
+    id: &FunctionId,
     resolved_types: &ResolvedTypes,
     resolved_functions: &ResolvedFunctions,
-    function: &Src<MergedFunction>,
+    body: &ParsedExpression,
 ) -> AnalyzerResult<AnalyzedFunction> {
-    let header = resolved_functions
-        .functions
-        .get(id)
-        .ok_or_else(|| anyhow::anyhow!("Function not found: {}", id.name))?;
+    let header = resolved_functions.get_header(id).ok_or_else(|| {
+        anyhow::anyhow!(
+            "Function header not found for function {:?} at {}",
+            id,
+            body.location
+        )
+    })?;
 
     let return_type = header.return_type.clone();
     let mut context = AnalyzerContext {
-        resolved_functions: resolved_functions,
-        structs: &resolved_types.structs,
+        resolved_types,
+        resolved_functions,
         local_variables: HashMap::new(),
         return_type: &return_type,
     };
@@ -91,7 +91,7 @@ pub fn analyze_function(
         );
     }
 
-    let analyzed_body = analyze_expression(&mut context, &function.value.body)?;
+    let analyzed_body = analyze_expression(&mut context, body)?;
 
     if analyzed_body.ty != return_type {
         if analyzed_body.ty != TypeId::Unit || !always_calls_return(&analyzed_body) {
@@ -99,7 +99,7 @@ pub fn analyze_function(
                 "All code paths in function body must return {:?}, found {:?} at {}",
                 return_type,
                 analyzed_body.ty,
-                function.location
+                body.location
             ));
         }
     }

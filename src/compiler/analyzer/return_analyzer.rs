@@ -81,6 +81,6 @@ fn always_calls_return_assignable(expression: &AssignableExpression) -> bool {
         AssignableExpressionKind::ArrayIndex(arr_expr, index_expr) => {
             always_calls_return(arr_expr) || always_calls_return(index_expr)
         }
-        AssignableExpressionKind::PointerFieldAccess(expr, _) => always_calls_return(expr),
+        AssignableExpressionKind::PointerFieldAccess(expr, _, _) => always_calls_return(expr),
     }
 }

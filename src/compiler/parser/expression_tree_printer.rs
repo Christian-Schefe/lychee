@@ -53,11 +53,15 @@ pub fn print_program(program: &ParsedProgram) {
 
 pub fn print_module(printer: &mut Printer, expr: &ParsedModule) {
     printer.add_line(format!("Module({})", expr.module_path.get_identifier()));
-    for (name, import) in &expr.imports {
+    for import in &expr.imports {
         printer.add_line(format!(
             "Import({} from {})",
-            name,
-            import.value.module_path.get_identifier()
+            import
+                .value
+                .imported_object
+                .clone()
+                .unwrap_or("*".to_string()),
+            import.value.module_id.get_identifier()
         ));
     }
     for struct_def in &expr.struct_definitions {
@@ -203,7 +207,7 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
             printer.dedent();
         }
         ParsedExpressionKind::FunctionCall {
-            function_id: function_name,
+            id: function_name,
             args,
         } => {
             printer.add_line(format!("FunctionCall({:?})", function_name));
@@ -213,12 +217,8 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
             }
             printer.dedent();
         }
-        ParsedExpressionKind::MemberFunctionCall {
-            object,
-            function_name,
-            args,
-        } => {
-            printer.add_line(format!("MemberFunctionCall({})", function_name));
+        ParsedExpressionKind::MemberFunctionCall { object, id, args } => {
+            printer.add_line(format!("MemberFunctionCall({})", id.item_id));
             printer.indent();
             print_expression(printer, object);
             for arg in args {

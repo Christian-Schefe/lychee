@@ -7,12 +7,13 @@ use crate::compiler::parser::parsed_expression::{
 };
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::program_parser::{parse_expression, parse_identifier, pop_expected};
-use crate::compiler::parser::type_parser::{parse_module_path, parse_type};
+use crate::compiler::parser::type_parser::{parse_function_id, parse_type};
 use anyhow::Context;
 use std::collections::HashSet;
 
 pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
     let token = tokens.peek().clone();
+    let current_module = &token.location.file.id;
     match token.value {
         Token::Identifier(name) => {
             tokens.pop();
@@ -28,7 +29,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
                 }
             }
 
-            let module_id = parse_module_path(tokens, name, false, true)
+            let module_id = parse_function_id(tokens, name, false, current_module)
                 .with_context(|| format!("Failed to parse module path at {}.", token.location))?;
 
             let (_, args, _) = parse_seperated_expressions(
@@ -41,7 +42,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             )?;
             Ok(ParsedExpression::new(
                 ParsedExpressionKind::FunctionCall {
-                    function_id: module_id,
+                    id: module_id,
                     args,
                 },
                 token.location,
@@ -50,7 +51,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
         Token::Static(StaticToken::DoubleColon) => {
             tokens.pop();
             let first_id = parse_identifier(tokens)?;
-            let module_id = parse_module_path(tokens, first_id.value, true, true)
+            let module_id = parse_function_id(tokens, first_id.value, true, current_module)
                 .with_context(|| format!("Failed to parse module path at {}.", token.location))?;
             let (_, args, _) = parse_seperated_expressions(
                 tokens,
@@ -62,7 +63,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             )?;
             Ok(ParsedExpression::new(
                 ParsedExpressionKind::FunctionCall {
-                    function_id: module_id,
+                    id: module_id,
                     args,
                 },
                 token.location,
@@ -262,13 +263,13 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             let ty = parse_type(tokens)
                 .with_context(|| format!("Failed to parse type at {}.", type_location))?;
             match &ty.value {
-                ParsedTypeKind::Named(_) => {
+                ParsedTypeKind::Struct(_) => {
                     parse_struct_literal(tokens, ty, token.location.clone()).with_context(|| {
                         format!("Failed to parse struct literal at {}.", token.location)
                     })
                 }
                 _ => Err(LocationError::new(
-                    "Expected named type or array type for new expression.".to_string(),
+                    "Expected named type for new expression.".to_string(),
                     type_location,
                 ))?,
             }

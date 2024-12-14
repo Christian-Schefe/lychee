@@ -356,8 +356,11 @@ fn generate_assignable_expression_pointer_code(
             context.muli("r1", *element_size as isize);
             context.add("r0", "r1");
         }
-        ResolvedAssignableExpression::PointerFieldAccess(expr, field_offset) => {
+        ResolvedAssignableExpression::PointerFieldAccess(expr, field_offset, indirections) => {
             generate_expression_code(context, expr);
+            for _ in 0..(*indirections - 1) {
+                context.load(8, "r0", "[r0]");
+            }
             context.addi("r0", *field_offset as isize);
         }
     }
@@ -397,8 +400,11 @@ fn generate_assignable_expression_value_code(
             context.add("r1", "r0");
             load_from_value_data(context, data, "r0", "[r1]");
         }
-        ResolvedAssignableExpression::PointerFieldAccess(expr, field_offset) => {
+        ResolvedAssignableExpression::PointerFieldAccess(expr, field_offset, indirections) => {
             generate_expression_code(context, expr);
+            for _ in 0..(*indirections - 1) {
+                context.load(8, "r0", "[r0]");
+            }
             load_from_value_data(context, data, "r1", &format!("[r0;{}]", field_offset));
             if let ValueLocation::Register = data.location {
                 context.mov("r0", "r1");

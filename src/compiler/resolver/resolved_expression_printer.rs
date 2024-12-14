@@ -218,8 +218,11 @@ fn print_assignable_expression(printer: &mut Printer, expr: &ResolvedAssignableE
             print_expression(printer, index);
             printer.dedent();
         }
-        ResolvedAssignableExpression::PointerFieldAccess(expr, offset) => {
-            printer.add_line(format!("PointerFieldAccess (offset: {})", offset));
+        ResolvedAssignableExpression::PointerFieldAccess(expr, offset, indirections) => {
+            printer.add_line(format!(
+                "PointerFieldAccess (offset: {}, indirections: {})",
+                offset, indirections
+            ));
             printer.indent();
             print_expression(printer, expr);
             printer.dedent();

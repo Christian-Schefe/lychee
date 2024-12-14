@@ -2,10 +2,13 @@ use crate::compiler::merger::merged_expression::MergedProgram;
 use crate::compiler::parser::parsed_expression::ParsedProgram;
 use anyhow::Error;
 
+mod function_collector;
 mod function_resolver;
-mod iterative_expression_merger;
 pub mod merged_expression;
 mod program_merger;
+pub mod resolved_functions;
+pub mod resolved_types;
+mod type_collector;
 mod type_resolver;
 
 pub type MergerResult<T> = Result<T, Error>;

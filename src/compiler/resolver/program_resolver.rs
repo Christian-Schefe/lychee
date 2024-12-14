@@ -1,5 +1,6 @@
 use crate::compiler::analyzer::analyzed_expression::{AnalyzedFunction, AnalyzedProgram};
-use crate::compiler::merger::merged_expression::{ResolvedFunctions, ResolvedTypes};
+use crate::compiler::merger::resolved_functions::ResolvedFunctions;
+use crate::compiler::merger::resolved_types::ResolvedTypes;
 use crate::compiler::resolver::expression_resolver::resolve_expression;
 use crate::compiler::resolver::resolved_expression::{
     FunctionReturnLocation, ResolvedFunction, ResolvedProgram, ValueData, ValueLocation,
@@ -59,8 +60,7 @@ fn resolve_function(
 
     let header = context
         .resolved_functions
-        .functions
-        .get(&function.name)
+        .get_header(&function.name)
         .expect("Function header not found");
 
     let mut param_offset = 16;

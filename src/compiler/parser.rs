@@ -6,6 +6,7 @@ use std::path::PathBuf;
 mod binop_constructor;
 mod binop_expr_parser;
 pub mod expression_tree_printer;
+pub mod item_id;
 pub mod parsed_expression;
 mod parser_error;
 mod primary_expr_parser;
@@ -16,7 +17,6 @@ mod unop_expr_parser;
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct ModuleIdentifier {
     pub path: Vec<String>,
-    pub absolute: bool,
 }
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
@@ -51,28 +51,20 @@ impl ModuleIdentifier {
             .map(|x| x.clone())
             .collect::<Vec<String>>()
             .join("::");
-        if self.absolute {
-            format!("::{}", relative)
-        } else {
-            relative
-        }
+        format!("::{}", relative)
     }
-    pub fn resolve(&self, other: &ModuleIdentifier) -> ModuleIdentifier {
-        if other.absolute {
-            other.clone()
+    pub fn resolve(&self, other: &Vec<String>, absolute: bool) -> ModuleIdentifier {
+        if absolute {
+            ModuleIdentifier {
+                path: other.clone(),
+            }
         } else {
             let mut new_path = self.path.clone();
-            for name in &other.path {
+            for name in other {
                 new_path.push(name.clone());
             }
-            ModuleIdentifier {
-                path: new_path,
-                absolute: self.absolute,
-            }
+            ModuleIdentifier { path: new_path }
         }
-    }
-    pub fn len(&self) -> usize {
-        self.path.len()
     }
 }
 
@@ -83,10 +75,7 @@ pub fn parse(root_module_path: &PathBuf) -> ParsedProgram {
         &mut visited_modules,
         &mut module_tree,
         ModulePath {
-            id: ModuleIdentifier {
-                path: Vec::new(),
-                absolute: true,
-            },
+            id: ModuleIdentifier { path: Vec::new() },
             file: root_module_path.clone(),
         },
     )

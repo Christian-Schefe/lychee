@@ -6,16 +6,16 @@ use crate::compiler::analyzer::analyzed_expression::{
 use crate::compiler::analyzer::expression_analyzer::{analyze_assignable_expression, can_cast_to};
 use crate::compiler::analyzer::program_analyzer::{AnalyzerContext, LocalVariable};
 use crate::compiler::analyzer::AnalyzerResult;
-use crate::compiler::merger::merged_expression::{
-    MergedExpression, MergedExpressionKind, MergedLiteral, MergedUnaryOp, TypeId,
+use crate::compiler::merger::merged_expression::TypeId;
+use crate::compiler::parser::parsed_expression::{
+    BinaryComparisonOp, BinaryOp, ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryOp,
 };
-use crate::compiler::parser::parsed_expression::{BinaryComparisonOp, BinaryOp};
 use anyhow::Context;
 use std::collections::HashMap;
 
 pub fn analyze_expression(
     context: &mut AnalyzerContext,
-    expression: &MergedExpression,
+    expression: &ParsedExpression,
 ) -> AnalyzerResult<AnalyzedExpression> {
     let mut local_var_stack = vec![];
     let mut stack = vec![(expression, false, false)];
@@ -26,7 +26,7 @@ pub fn analyze_expression(
         if !was_visited {
             stack.push((stack_expr, true, in_loop));
             match &stack_expr.value {
-                MergedExpressionKind::Block { expressions, .. } => {
+                ParsedExpressionKind::Block { expressions, .. } => {
                     local_var_stack.push(context.local_variables.clone());
                     context
                         .local_variables
@@ -36,18 +36,18 @@ pub fn analyze_expression(
                         stack.push((expression, false, in_loop));
                     }
                 }
-                MergedExpressionKind::Return(maybe_expr) => {
+                ParsedExpressionKind::Return(maybe_expr) => {
                     if let Some(expr) = maybe_expr {
                         stack.push((expr, false, in_loop));
                     }
                 }
-                MergedExpressionKind::Continue => {}
-                MergedExpressionKind::Break(maybe_expr) => {
+                ParsedExpressionKind::Continue => {}
+                ParsedExpressionKind::Break(maybe_expr) => {
                     if let Some(expr) = maybe_expr {
                         stack.push((expr, false, in_loop));
                     }
                 }
-                MergedExpressionKind::If {
+                ParsedExpressionKind::If {
                     condition,
                     then_block,
                     else_expr,
@@ -58,7 +58,7 @@ pub fn analyze_expression(
                     stack.push((then_block, false, in_loop));
                     stack.push((condition, false, in_loop));
                 }
-                MergedExpressionKind::Loop {
+                ParsedExpressionKind::Loop {
                     init,
                     condition,
                     step,
@@ -79,13 +79,22 @@ pub fn analyze_expression(
                         stack.push((init, false, in_loop));
                     }
                 }
-                MergedExpressionKind::Declaration { value, .. } => {
+                ParsedExpressionKind::Declaration { value, .. } => {
                     stack.push((value, false, in_loop));
                 }
-                MergedExpressionKind::Variable(_) => {}
-                MergedExpressionKind::Literal(lit) => match lit {
-                    MergedLiteral::Struct(ty, fields) => {
-                        let struct_decl = context.structs.get(&ty).unwrap();
+                ParsedExpressionKind::Variable(_) => {}
+                ParsedExpressionKind::Literal(lit) => match lit {
+                    ParsedLiteral::Struct(ty, fields) => {
+                        let resolved_type =
+                            context.resolved_types.resolve_type(ty).ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "Struct type '{:?}' not found at {}.",
+                                    ty.value,
+                                    ty.location
+                                )
+                            })?;
+                        let struct_decl =
+                            context.resolved_types.get_struct(&resolved_type).unwrap();
                         let mut present_fields = fields
                             .iter()
                             .map(|x| (&x.0, &x.1))
@@ -112,22 +121,18 @@ pub fn analyze_expression(
                     }
                     _ => {}
                 },
-                MergedExpressionKind::Unary { op, expr } => {
+                ParsedExpressionKind::Unary { op, expr } => {
                     let expr_is_assignable = match op {
-                        MergedUnaryOp::Index(index) => {
-                            stack.push((index, false, in_loop));
-                            false
+                        UnaryOp::Increment { .. } | UnaryOp::Decrement { .. } | UnaryOp::Borrow => {
+                            true
                         }
-                        MergedUnaryOp::Increment { .. }
-                        | MergedUnaryOp::Decrement { .. }
-                        | MergedUnaryOp::Borrow => true,
                         _ => false,
                     };
                     if !expr_is_assignable {
                         stack.push((expr, false, in_loop));
                     }
                 }
-                MergedExpressionKind::Binary { left, right, op } => {
+                ParsedExpressionKind::Binary { left, right, op } => {
                     let left_is_assignable = match op {
                         BinaryOp::Assign | BinaryOp::MathAssign(_) | BinaryOp::LogicAssign(_) => {
                             true
@@ -139,23 +144,21 @@ pub fn analyze_expression(
                         stack.push((left, false, in_loop));
                     }
                 }
-                MergedExpressionKind::FunctionCall { args, .. } => {
+                ParsedExpressionKind::FunctionCall { args, .. } => {
                     for arg in args.iter().rev() {
                         stack.push((arg, false, in_loop));
                     }
                 }
-                MergedExpressionKind::MemberFunctionCall {
-                    args,
-                    function_name: _,
-                } => {
+                ParsedExpressionKind::MemberFunctionCall { args, object, .. } => {
                     for arg in args.iter().rev() {
                         stack.push((arg, false, in_loop));
                     }
+                    stack.push((object, false, in_loop));
                 }
             }
         } else {
             let (ty, analyzed) = match &stack_expr.value {
-                MergedExpressionKind::Block {
+                ParsedExpressionKind::Block {
                     expressions,
                     returns_value,
                 } => {
@@ -175,7 +178,7 @@ pub fn analyze_expression(
                         },
                     )
                 }
-                MergedExpressionKind::Return(maybe_expr) => {
+                ParsedExpressionKind::Return(maybe_expr) => {
                     let analyzed_expr =
                         maybe_expr.as_ref().map(|_| Box::new(output.pop().unwrap()));
                     let return_ty = analyzed_expr
@@ -191,13 +194,13 @@ pub fn analyze_expression(
                     }
                     (TypeId::Unit, AnalyzedExpressionKind::Return(analyzed_expr))
                 }
-                MergedExpressionKind::Continue => {
+                ParsedExpressionKind::Continue => {
                     if !in_loop {
                         Err(anyhow::anyhow!("Continue outside of loop at {}.", location))?;
                     }
                     (TypeId::Unit, AnalyzedExpressionKind::Continue)
                 }
-                MergedExpressionKind::Break(maybe_expr) => {
+                ParsedExpressionKind::Break(maybe_expr) => {
                     if !in_loop {
                         Err(anyhow::anyhow!("Break outside of loop at {}.", location))?;
                     }
@@ -205,7 +208,7 @@ pub fn analyze_expression(
                         maybe_expr.as_ref().map(|_| Box::new(output.pop().unwrap()));
                     (TypeId::Unit, AnalyzedExpressionKind::Break(analyzed_expr))
                 }
-                MergedExpressionKind::If { else_expr, .. } => {
+                ParsedExpressionKind::If { else_expr, .. } => {
                     let analyzed_else = else_expr.as_ref().map(|_| Box::new(output.pop().unwrap()));
                     let analyzed_then = output.pop().unwrap();
                     let analyzed_condition = output.pop().unwrap();
@@ -244,7 +247,7 @@ pub fn analyze_expression(
                         },
                     )
                 }
-                MergedExpressionKind::Loop {
+                ParsedExpressionKind::Loop {
                     init,
                     condition,
                     step,
@@ -322,20 +325,30 @@ pub fn analyze_expression(
                         },
                     )
                 }
-                MergedExpressionKind::Declaration {
+                ParsedExpressionKind::Declaration {
                     value,
                     var_type,
                     var_name,
                 } => {
                     let analyzed_value = output.pop().unwrap();
                     if let Some(declared_type) = var_type {
-                        if analyzed_value.ty != *declared_type {
+                        let resolved_type = context
+                            .resolved_types
+                            .resolve_type(declared_type)
+                            .ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "Declaration type '{:?}' not found at {}.",
+                                    declared_type.value,
+                                    declared_type.location
+                                )
+                            })?;
+                        if analyzed_value.ty != resolved_type {
                             Err(anyhow::anyhow!(
-                        "Declaration expression should be of type '{}', but was '{}' at {}.",
-                        declared_type,
-                        analyzed_value.ty,
-                        value.location
-                    ))?;
+                                "Declaration expression should be of type '{}', but was '{}' at {}.",
+                                resolved_type,
+                                analyzed_value.ty,
+                                value.location
+                            ))?;
                         }
                     }
                     if let Some(old_var) = context.local_variables.insert(
@@ -361,7 +374,7 @@ pub fn analyze_expression(
                         },
                     )
                 }
-                MergedExpressionKind::Variable(var_name) => {
+                ParsedExpressionKind::Variable(var_name) => {
                     let local_var = context.local_variables.get(var_name).ok_or_else(|| {
                         anyhow::anyhow!("Variable '{}' not declared at {}.", var_name, location)
                     })?;
@@ -373,20 +386,20 @@ pub fn analyze_expression(
                         }),
                     )
                 }
-                MergedExpressionKind::Literal(lit) => match lit {
-                    MergedLiteral::Unit => (
+                ParsedExpressionKind::Literal(lit) => match lit {
+                    ParsedLiteral::Unit => (
                         TypeId::Unit,
                         AnalyzedExpressionKind::Literal(AnalyzedLiteral::Unit),
                     ),
-                    MergedLiteral::Bool(b) => (
+                    ParsedLiteral::Bool(b) => (
                         TypeId::Bool,
                         AnalyzedExpressionKind::Literal(AnalyzedLiteral::Bool(*b)),
                     ),
-                    MergedLiteral::Char(c) => (
+                    ParsedLiteral::Char(c) => (
                         TypeId::Char,
                         AnalyzedExpressionKind::Literal(AnalyzedLiteral::Char(*c)),
                     ),
-                    MergedLiteral::Integer(val) => {
+                    ParsedLiteral::Integer(val) => {
                         let ty = if *val >= -2147483648 && *val <= 2147483647 {
                             TypeId::Integer(4)
                         } else {
@@ -397,7 +410,7 @@ pub fn analyze_expression(
                             AnalyzedExpressionKind::Literal(AnalyzedLiteral::Integer(*val)),
                         )
                     }
-                    MergedLiteral::String(val) => {
+                    ParsedLiteral::String(val) => {
                         let mut bytes = val.as_bytes().to_vec();
                         bytes.push(0);
                         (
@@ -407,10 +420,25 @@ pub fn analyze_expression(
                             )),
                         )
                     }
-                    MergedLiteral::Struct(ty, field_values) => {
-                        let struct_type = context.structs.get(ty).ok_or_else(|| {
-                            anyhow::anyhow!("Struct type '{}' not found at {}.", ty, location)
-                        })?;
+                    ParsedLiteral::Struct(ty, field_values) => {
+                        let resolved_type =
+                            context.resolved_types.resolve_type(ty).ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "Struct type '{:?}' not found at {}.",
+                                    ty.value,
+                                    ty.location
+                                )
+                            })?;
+                        let struct_type = context
+                            .resolved_types
+                            .get_struct(&resolved_type)
+                            .ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "Struct type '{}' not found at {}.",
+                                    resolved_type,
+                                    location
+                                )
+                            })?;
 
                         let mut analyzed_field_values = Vec::new();
                         let location_map = field_values
@@ -436,15 +464,15 @@ pub fn analyze_expression(
                         analyzed_field_values.reverse();
 
                         (
-                            ty.clone(),
+                            resolved_type,
                             AnalyzedExpressionKind::Literal(AnalyzedLiteral::Struct(
                                 analyzed_field_values,
                             )),
                         )
                     }
                 },
-                MergedExpressionKind::Unary { expr, op } => match op {
-                    MergedUnaryOp::Math(math_op) => {
+                ParsedExpressionKind::Unary { expr, op } => match op {
+                    UnaryOp::Math(math_op) => {
                         let analyzed_expr = output.pop().unwrap();
                         match analyzed_expr.ty {
                             TypeId::Integer(_) => {}
@@ -463,7 +491,7 @@ pub fn analyze_expression(
                             },
                         )
                     }
-                    MergedUnaryOp::LogicalNot => {
+                    UnaryOp::LogicalNot => {
                         let analyzed_expr = output.pop().unwrap();
                         if analyzed_expr.ty != TypeId::Bool {
                             Err(anyhow::anyhow!(
@@ -481,7 +509,7 @@ pub fn analyze_expression(
                             },
                         )
                     }
-                    MergedUnaryOp::Borrow => {
+                    UnaryOp::Borrow => {
                         let analyzed_expr = analyze_assignable_expression(context, expr)
                             .with_context(|| {
                                 format!(
@@ -496,7 +524,7 @@ pub fn analyze_expression(
                             },
                         )
                     }
-                    MergedUnaryOp::Dereference => {
+                    UnaryOp::Dereference => {
                         let analyzed_expr = output.pop().unwrap();
                         match analyzed_expr.ty.clone() {
                             TypeId::Pointer(inner) => (
@@ -515,7 +543,7 @@ pub fn analyze_expression(
                             ))?,
                         }
                     }
-                    MergedUnaryOp::Increment { is_prefix } => {
+                    UnaryOp::Increment { is_prefix } => {
                         let analyzed_expr = analyze_assignable_expression(context, expr)
                             .with_context(|| {
                                 format!(
@@ -536,7 +564,7 @@ pub fn analyze_expression(
                             AnalyzedExpressionKind::Increment(analyzed_expr, *is_prefix),
                         )
                     }
-                    MergedUnaryOp::Decrement { is_prefix } => {
+                    UnaryOp::Decrement { is_prefix } => {
                         let analyzed_expr = analyze_assignable_expression(context, expr)
                             .with_context(|| {
                                 format!(
@@ -557,11 +585,21 @@ pub fn analyze_expression(
                             AnalyzedExpressionKind::Decrement(analyzed_expr, *is_prefix),
                         )
                     }
-                    MergedUnaryOp::Cast(target_type) => {
+                    UnaryOp::Cast(target_type) => {
+                        let resolved_type = context
+                            .resolved_types
+                            .resolve_type(target_type)
+                            .ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "Cast type '{:?}' not found at {}.",
+                                    target_type.value,
+                                    target_type.location
+                                )
+                            })?;
                         let analyzed_expr = output.pop().unwrap();
-                        if can_cast_to(&analyzed_expr.ty, target_type) {
+                        if can_cast_to(&analyzed_expr.ty, &resolved_type) {
                             (
-                                target_type.clone(),
+                                resolved_type,
                                 AnalyzedExpressionKind::Unary {
                                     op: AnalyzedUnaryOp::Cast,
                                     expr: Box::new(analyzed_expr),
@@ -571,88 +609,62 @@ pub fn analyze_expression(
                             Err(anyhow::anyhow!(
                                 "Cast expression has type '{}', but expected '{}' at {}.",
                                 analyzed_expr.ty,
-                                target_type,
+                                resolved_type,
                                 location
                             ))?
                         }
                     }
-                    MergedUnaryOp::Member(member) => {
+                    UnaryOp::Member(member) => {
                         let analyzed_expr = output.pop().unwrap();
-                        match &analyzed_expr.ty {
-                            TypeId::StructType(_) => {
-                                let struct_type =
-                                    context.structs.get(&analyzed_expr.ty).ok_or_else(|| {
-                                        anyhow::anyhow!(
-                                            "Struct type '{}' not found at {}.",
-                                            analyzed_expr.ty,
-                                            expr.location
-                                        )
-                                    })?;
-                                let field_type =
-                                    struct_type.field_types.get(member).ok_or_else(|| {
-                                        anyhow::anyhow!(
-                                            "Struct type '{}' does not have field '{}' at {}.",
-                                            analyzed_expr.ty,
-                                            member,
-                                            expr.location
-                                        )
-                                    })?;
-                                (
-                                    field_type.clone(),
-                                    AnalyzedExpressionKind::FieldAccess {
-                                        field_name: member.clone(),
-                                        expr: Box::new(analyzed_expr),
-                                    },
+                        let mut inner_ty = &analyzed_expr.ty;
+                        let mut indirections = 0;
+                        while let TypeId::Pointer(inner) = inner_ty {
+                            inner_ty = inner;
+                            indirections += 1;
+                        }
+                        let struct_type = context
+                            .resolved_types
+                            .get_pointer_struct(&analyzed_expr.ty)
+                            .ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "Struct type '{}' not found at {}.",
+                                    analyzed_expr.ty,
+                                    expr.location
                                 )
-                            }
-                            TypeId::Pointer(inner) => {
-                                if let TypeId::StructType(_) = inner.as_ref() {
-                                    let struct_type =
-                                        context.structs.get(inner).ok_or_else(|| {
-                                            anyhow::anyhow!(
-                                                "Struct type '{}' not found at {}.",
-                                                inner,
-                                                expr.location
-                                            )
-                                        })?;
-                                    let field_type =
-                                        struct_type.field_types.get(member).ok_or_else(|| {
-                                            anyhow::anyhow!(
-                                                "Struct type '{}' does not have field '{}' at {}.",
-                                                inner,
-                                                member,
-                                                expr.location
-                                            )
-                                        })?;
-
-                                    (
-                                        field_type.clone(),
-                                        AnalyzedExpressionKind::ValueOfAssignable(
-                                            AssignableExpression {
-                                                kind: AssignableExpressionKind::PointerFieldAccess(
-                                                    Box::new(analyzed_expr),
-                                                    member.clone(),
-                                                ),
-                                                ty: field_type.clone(),
-                                            },
-                                        ),
-                                    )
-                                } else {
-                                    Err(anyhow::anyhow!(
-                                        "Expected struct type, found '{}' at {}.",
-                                        analyzed_expr.ty,
-                                        expr.location
-                                    ))?
-                                }
-                            }
-                            _ => Err(anyhow::anyhow!(
-                                "Expected struct type, found '{}' at {}.",
+                            })?;
+                        let field_type = struct_type.field_types.get(member).ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "Struct type '{}' does not have field '{}' at {}.",
                                 analyzed_expr.ty,
+                                member,
                                 expr.location
-                            ))?,
+                            )
+                        })?;
+                        if indirections == 0 {
+                            (
+                                field_type.clone(),
+                                AnalyzedExpressionKind::FieldAccess {
+                                    field_name: member.clone(),
+                                    expr: Box::new(analyzed_expr),
+                                },
+                            )
+                        } else {
+                            (
+                                field_type.clone(),
+                                AnalyzedExpressionKind::ValueOfAssignable(AssignableExpression {
+                                    kind: AssignableExpressionKind::PointerFieldAccess(
+                                        Box::new(analyzed_expr),
+                                        member.clone(),
+                                        1,
+                                    ),
+                                    ty: field_type.clone(),
+                                }),
+                            )
                         }
                     }
-                    MergedUnaryOp::Index(index) => {
+                },
+                ParsedExpressionKind::Binary { left, op, right } => match op {
+                    BinaryOp::Index => {
                         let analyzed_index = output.pop().unwrap();
                         let analyzed_expr = output.pop().unwrap();
                         match &analyzed_index.ty {
@@ -660,7 +672,7 @@ pub fn analyze_expression(
                             _ => Err(anyhow::anyhow!(
                                 "Index expression has non-integer type '{}' at {}.",
                                 analyzed_index.ty,
-                                index.location
+                                right.location
                             ))?,
                         }
                         match analyzed_expr.ty.clone() {
@@ -677,12 +689,10 @@ pub fn analyze_expression(
                             _ => Err(anyhow::anyhow!(
                                 "Index expression has non-array type '{}' at {}.",
                                 analyzed_expr.ty,
-                                expr.location
+                                left.location
                             ))?,
                         }
                     }
-                },
-                MergedExpressionKind::Binary { left, op, right } => match op {
                     BinaryOp::Math(math_op) => {
                         let analyzed_right = output.pop().unwrap();
                         let analyzed_left = output.pop().unwrap();
@@ -765,8 +775,8 @@ pub fn analyze_expression(
                     }
                     BinaryOp::Assign => {
                         let analyzed_right = output.pop().unwrap();
-                        let analyzed_left =
-                            analyze_assignable_expression(context, left).with_context(|| {
+                        let analyzed_left = analyze_assignable_expression(context, left)
+                            .with_context(|| {
                                 format!(
                                     "Failed to analyze type of assign binary left expression at {}.",
                                     location
@@ -837,11 +847,16 @@ pub fn analyze_expression(
                         )
                     }
                 },
-                MergedExpressionKind::FunctionCall { function_id, args } => {
+                ParsedExpressionKind::FunctionCall { id, args } => {
+                    let function_id = context
+                        .resolved_functions
+                        .map_function_id(id, context.resolved_types)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!("Function '{}' not found at {}.", id.item_id, location)
+                        })?;
                     let function_header = context
                         .resolved_functions
-                        .functions
-                        .get(function_id)
+                        .get_header(&function_id)
                         .ok_or_else(|| {
                             anyhow::anyhow!("Function '{}' not found at {}.", function_id, location)
                         })?;
@@ -885,33 +900,43 @@ pub fn analyze_expression(
                         },
                     )
                 }
-                MergedExpressionKind::MemberFunctionCall {
-                    function_name,
+                ParsedExpressionKind::MemberFunctionCall {
+                    id,
                     args,
+                    object: _,
                 } => {
-                    let new_len = output.len() - args.len();
+                    let new_len = output.len() - (args.len() + 1);
                     let analyzed_args = output.split_off(new_len);
-
-                    let module_id = location.file.id.clone();
-                    let object_ty = analyzed_args[0].ty.clone();
-                    let function_header = context
+                    let obj_ty = &analyzed_args[0].ty;
+                    let function_id = context
                         .resolved_functions
-                        .resolve_member_function(&object_ty, function_name, &module_id)
+                        .collected_function_data
+                        .map_member_function_id(id, Some(obj_ty))
                         .ok_or_else(|| {
                             anyhow::anyhow!(
-                                "Member function '{}' not found for type '{}' at {}.",
-                                function_name,
-                                object_ty,
+                                "Member function '{}' not found at {}.",
+                                id.item_id,
                                 location
                             )
                         })?;
 
-                    if args.len() != function_header.parameter_order.len() {
+                    let function_header = context
+                        .resolved_functions
+                        .get_header(&function_id)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "Member function '{}' not found at {}.",
+                                id.item_id,
+                                location
+                            )
+                        })?;
+
+                    if analyzed_args.len() != function_header.parameter_order.len() {
                         Err(anyhow::anyhow!(
                             "Member function '{}' expects {} arguments, but got {} at {}.",
-                            function_name,
+                            id.item_id,
                             function_header.parameter_order.len(),
-                            args.len(),
+                            analyzed_args.len(),
                             location
                         ))?;
                     }
@@ -935,7 +960,7 @@ pub fn analyze_expression(
                     (
                         function_header.return_type.clone(),
                         AnalyzedExpressionKind::FunctionCall {
-                            function_name: function_header.id.clone(),
+                            function_name: function_id,
                             args: analyzed_args,
                         },
                     )
@@ -1069,7 +1094,7 @@ fn assert_break_return_type_assignable(
         AssignableExpressionKind::FieldAccess(expr, _) => {
             assert_break_return_type_assignable(break_type, expr)
         }
-        AssignableExpressionKind::PointerFieldAccess(expr, _) => {
+        AssignableExpressionKind::PointerFieldAccess(expr, _, _) => {
             assert_break_return_type(break_type, expr)
         }
         AssignableExpressionKind::ArrayIndex(arr, index) => {

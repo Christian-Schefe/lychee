@@ -1,78 +1,42 @@
 use crate::compiler::lexer::location::Src;
-use crate::compiler::merger::merged_expression::{ModuleId, ResolvedStruct, ResolvedTypes, TypeId};
+use crate::compiler::merger::merged_expression::{ResolvedStruct, TypeId};
+use crate::compiler::merger::resolved_types::ResolvedTypes;
+use crate::compiler::merger::type_collector::{collect_type_data, CollectedTypeData};
 use crate::compiler::merger::MergerResult;
+use crate::compiler::parser::item_id::ItemId;
 use crate::compiler::parser::parsed_expression::{
-    ParsedModule, ParsedProgram, ParsedStructDefinition, ParsedType, ParsedTypeKind,
+    ParsedModule, ParsedProgram, ParsedStructDefinition,
 };
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::{HashMap, HashSet};
 
-pub fn build_resolved_types(parsed_program: &ParsedProgram) -> MergerResult<ResolvedTypes> {
-    let mut struct_defs = HashMap::new();
-    extract_module_struct_types(&mut struct_defs, &parsed_program.module_tree)?;
-
-    let mut known_type_names = HashMap::new();
-    let builtin_types = [
-        ("unit".to_string(), TypeId::Unit),
-        ("bool".to_string(), TypeId::Bool),
-        ("char".to_string(), TypeId::Char),
-        ("byte".to_string(), TypeId::Integer(1)),
-        ("short".to_string(), TypeId::Integer(2)),
-        ("int".to_string(), TypeId::Integer(4)),
-        ("long".to_string(), TypeId::Integer(8)),
-    ]
-    .into_iter()
-    .collect::<HashMap<_, _>>();
-
-    builtin_types.iter().for_each(|(name, type_id)| {
-        known_type_names.insert(
-            ModuleId {
-                name: name.clone(),
-                module_path: ModuleIdentifier {
-                    path: Vec::new(),
-                    absolute: false,
-                },
-            },
-            type_id.clone(),
-        );
-    });
-
-    for (id, struct_def) in &struct_defs {
-        let struct_id = ModuleId {
-            name: struct_def.value.struct_name.clone(),
-            module_path: id.module_path.clone(),
-        };
-        if builtin_types.contains_key(&struct_id.name) {
-            return Err(anyhow::anyhow!(
-                "Struct name '{}' conflicts with builtin type at {}",
-                struct_id.name,
-                struct_def.location
-            ));
-        }
-        known_type_names.insert(struct_id.clone(), TypeId::StructType(struct_id));
-    }
+pub fn build_resolved_types(program: &ParsedProgram) -> MergerResult<ResolvedTypes> {
+    let collected_type_data = collect_type_data(program)?;
+    let struct_defs = extract_module_struct_types(&program.module_tree)?;
 
     let mut resolved_structs = HashMap::new();
-    for (id, struct_def) in &struct_defs {
-        let resolved_struct = resolve_struct_definition(struct_def.clone(), &known_type_names)?;
-        let type_id = known_type_names.get(id).unwrap().clone();
-        resolved_structs.insert(type_id, resolved_struct);
+
+    for (module_id, module_struct_defs) in &struct_defs {
+        for (_, struct_def) in module_struct_defs {
+            let resolved_struct =
+                resolve_struct_definition(struct_def, &collected_type_data, module_id)?;
+            resolved_structs.insert(resolved_struct.id.clone(), resolved_struct);
+        }
     }
 
-    let type_sizes = compute_type_sizes(&known_type_names, &resolved_structs);
+    let type_sizes = compute_type_sizes(&resolved_structs, &collected_type_data);
 
     compute_struct_field_offsets(&mut resolved_structs, &type_sizes);
 
     Ok(ResolvedTypes {
         structs: resolved_structs,
         type_sizes,
-        known_types: known_type_names,
-        builtin_types,
+        collected_type_data,
     })
 }
 
 fn compute_struct_field_offsets(
-    resolved_structs: &mut HashMap<TypeId, ResolvedStruct>,
+    resolved_structs: &mut HashMap<ItemId, ResolvedStruct>,
     type_sizes: &HashMap<TypeId, usize>,
 ) {
     for (_, resolved_struct) in resolved_structs {
@@ -87,27 +51,10 @@ fn compute_struct_field_offsets(
     }
 }
 
-fn map_parsed_type(
-    known_types: &HashMap<ModuleId, TypeId>,
-    parsed_type: &ParsedType,
-) -> MergerResult<TypeId> {
-    match &parsed_type.value {
-        ParsedTypeKind::Named(module_id) => known_types.get(&module_id).cloned().ok_or_else(|| {
-            anyhow::Error::msg(format!(
-                "Unknown type '{}' at {}",
-                module_id, parsed_type.location
-            ))
-        }),
-        ParsedTypeKind::Pointer(inner) => Ok(TypeId::Pointer(Box::new(map_parsed_type(
-            known_types,
-            inner,
-        )?))),
-    }
-}
-
 fn resolve_struct_definition(
-    struct_def: Src<ParsedStructDefinition>,
-    known_types: &HashMap<ModuleId, TypeId>,
+    struct_def: &Src<ParsedStructDefinition>,
+    collected_type_data: &CollectedTypeData,
+    module_path: &ModuleIdentifier,
 ) -> MergerResult<ResolvedStruct> {
     let mut field_types = HashMap::new();
     let mut field_order = Vec::new();
@@ -116,11 +63,24 @@ fn resolve_struct_definition(
         field_order.push(field_name.clone());
         field_types.insert(
             field_name.clone(),
-            map_parsed_type(known_types, field_type)?,
+            collected_type_data
+                .map_parsed_type(field_type)
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Failed to resolve type for field '{}' in struct '{}' at {}",
+                        field_name,
+                        struct_def.value.struct_name,
+                        struct_def.location
+                    )
+                })?,
         );
     }
 
     Ok(ResolvedStruct {
+        id: ItemId {
+            module_id: module_path.clone(),
+            item_name: struct_def.value.struct_name.clone(),
+        },
         field_types,
         field_order,
         field_offsets: HashMap::new(),
@@ -128,17 +88,15 @@ fn resolve_struct_definition(
 }
 
 fn extract_module_struct_types(
-    structs: &mut HashMap<ModuleId, Src<ParsedStructDefinition>>,
     module_tree: &HashMap<ModuleIdentifier, ParsedModule>,
-) -> MergerResult<()> {
+) -> MergerResult<HashMap<ModuleIdentifier, HashMap<String, Src<ParsedStructDefinition>>>> {
+    let mut struct_defs = HashMap::new();
     for module in module_tree.values() {
+        let mut module_structs = HashMap::new();
         for struct_def in &module.struct_definitions {
-            let struct_id = ModuleId {
-                name: struct_def.value.struct_name.clone(),
-                module_path: module.module_path.clone(),
-            };
-
-            if let Some(_) = structs.insert(struct_id.clone(), struct_def.clone()) {
+            if let Some(_) =
+                module_structs.insert(struct_def.value.struct_name.clone(), struct_def.clone())
+            {
                 return Err(anyhow::anyhow!(
                     "Duplicate struct definition '{}' at {}",
                     struct_def.value.struct_name.clone(),
@@ -146,20 +104,23 @@ fn extract_module_struct_types(
                 ));
             }
         }
+        struct_defs.insert(module.module_path.clone(), module_structs);
     }
-    Ok(())
+    Ok(struct_defs)
 }
 
 fn compute_type_sizes(
-    known_types: &HashMap<ModuleId, TypeId>,
-    resolved_structs: &HashMap<TypeId, ResolvedStruct>,
+    resolved_structs: &HashMap<ItemId, ResolvedStruct>,
+    collected_type_data: &CollectedTypeData,
 ) -> HashMap<TypeId, usize> {
     let mut type_sizes = HashMap::new();
 
-    for (_, type_id) in known_types {
-        let mut visited = HashSet::new();
-        let size = compute_type_size(type_id, resolved_structs, known_types, &mut visited).unwrap();
-        type_sizes.insert(type_id.clone(), size);
+    for (_, module_structs) in &collected_type_data.structs {
+        for (_, structs) in module_structs {
+            let mut visited = HashSet::new();
+            let size = compute_type_size(&structs, resolved_structs, &mut visited).unwrap();
+            type_sizes.insert(structs.clone(), size);
+        }
     }
 
     type_sizes
@@ -167,8 +128,7 @@ fn compute_type_sizes(
 
 fn compute_type_size(
     type_id: &TypeId,
-    resolved_structs: &HashMap<TypeId, ResolvedStruct>,
-    known_types: &HashMap<ModuleId, TypeId>,
+    resolved_structs: &HashMap<ItemId, ResolvedStruct>,
     visited: &mut HashSet<TypeId>,
 ) -> MergerResult<usize> {
     match type_id {
@@ -176,12 +136,11 @@ fn compute_type_size(
             if !visited.insert(type_id.clone()) {
                 return Err(anyhow::anyhow!("Type cycle detected: {:?}", type_id));
             }
-            let type_id = known_types.get(id).unwrap();
-            let resolved_struct = resolved_structs.get(type_id).unwrap();
+            let resolved_struct = resolved_structs.get(&id).unwrap();
             let mut size = 0;
             for field_name in &resolved_struct.field_order {
                 let field_type = resolved_struct.field_types.get(field_name).unwrap();
-                size += compute_type_size(field_type, resolved_structs, known_types, visited)?;
+                size += compute_type_size(field_type, resolved_structs, visited)?;
             }
             Ok(size)
         }

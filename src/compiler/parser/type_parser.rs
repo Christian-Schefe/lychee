@@ -1,27 +1,48 @@
 use crate::compiler::lexer::lexer_error::LocationError;
 use crate::compiler::lexer::token::{StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
-use crate::compiler::merger::merged_expression::ModuleId;
-use crate::compiler::parser::parsed_expression::{ParsedType, ParsedTypeKind};
+use crate::compiler::parser::item_id::{ItemId, ParsedFunctionId, ParsedTypeId};
+use crate::compiler::parser::parsed_expression::{ParsedImport, ParsedType, ParsedTypeKind};
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::program_parser::parse_identifier;
 use crate::compiler::parser::ModuleIdentifier;
 
 pub fn parse_type(tokens: &mut TokenStack) -> ParseResult<ParsedType> {
     let token = tokens.pop().clone();
+    let current_module = &token.location.file.id;
     match token.value {
         Token::Identifier(name) => {
-            let module_id = parse_module_path(tokens, name, false, false)?;
+            let parsed_type_id = parse_type_id(tokens, name, false, current_module)?;
+            if parsed_type_id.is_module_local {
+                match parsed_type_id.item_id.item_name.as_str() {
+                    "unit" => return Ok(ParsedType::new(ParsedTypeKind::Unit, token.location)),
+                    "bool" => return Ok(ParsedType::new(ParsedTypeKind::Bool, token.location)),
+                    "char" => return Ok(ParsedType::new(ParsedTypeKind::Char, token.location)),
+                    "byte" => {
+                        return Ok(ParsedType::new(ParsedTypeKind::Integer(1), token.location))
+                    }
+                    "short" => {
+                        return Ok(ParsedType::new(ParsedTypeKind::Integer(2), token.location))
+                    }
+                    "int" => {
+                        return Ok(ParsedType::new(ParsedTypeKind::Integer(4), token.location))
+                    }
+                    "long" => {
+                        return Ok(ParsedType::new(ParsedTypeKind::Integer(8), token.location))
+                    }
+                    _ => {}
+                }
+            }
             Ok(ParsedType::new(
-                ParsedTypeKind::Named(module_id),
+                ParsedTypeKind::Struct(parsed_type_id),
                 token.location,
             ))
         }
         Token::Static(StaticToken::DoubleColon) => {
             let first_id = parse_identifier(tokens)?;
-            let module_id = parse_module_path(tokens, first_id.value, true, false)?;
+            let parsed_type_id = parse_type_id(tokens, first_id.value, false, current_module)?;
             Ok(ParsedType::new(
-                ParsedTypeKind::Named(module_id),
+                ParsedTypeKind::Struct(parsed_type_id),
                 token.location,
             ))
         }
@@ -39,12 +60,12 @@ pub fn parse_type(tokens: &mut TokenStack) -> ParseResult<ParsedType> {
     }
 }
 
-pub fn parse_module_path(
+pub fn parse_type_id(
     tokens: &mut TokenStack,
     name: String,
     is_absolute: bool,
-    allow_at: bool,
-) -> ParseResult<ModuleId> {
+    current_module: &ModuleIdentifier,
+) -> ParseResult<ParsedTypeId> {
     let mut path = Vec::new();
     let mut cur_name = name;
     while tokens.peek().value == Token::Static(StaticToken::DoubleColon) {
@@ -54,18 +75,75 @@ pub fn parse_module_path(
         cur_name = next_token.value;
     }
 
-    if allow_at && tokens.peek().value == Token::Static(StaticToken::At) {
+    let is_module_local = path.is_empty() && !is_absolute;
+    let module_id = current_module.resolve(&path, is_absolute);
+    Ok(ParsedTypeId {
+        item_id: ItemId {
+            module_id,
+            item_name: cur_name,
+        },
+        is_module_local,
+    })
+}
+
+pub fn parse_function_id(
+    tokens: &mut TokenStack,
+    name: String,
+    is_absolute: bool,
+    current_module: &ModuleIdentifier,
+) -> ParseResult<ParsedFunctionId> {
+    let parsed_type_id = parse_type_id(tokens, name, is_absolute, current_module)?;
+    let impl_type = parse_impl_type(tokens)?;
+
+    Ok(ParsedFunctionId {
+        item_id: parsed_type_id.item_id,
+        impl_type,
+        is_module_local: parsed_type_id.is_module_local,
+    })
+}
+
+fn parse_impl_type(tokens: &mut TokenStack) -> ParseResult<Option<ParsedType>> {
+    if tokens.peek().value == Token::Static(StaticToken::At) {
         tokens.pop();
-        let at_id = parse_identifier(tokens)?;
-        cur_name = format!("{}@{}", cur_name, at_id.value);
+        let ty = parse_type(tokens)?;
+        match ty.value {
+            ParsedTypeKind::Pointer(_) => Err(LocationError::new(
+                "Expected non-pointer type after '@'".to_string(),
+                ty.location,
+            ))?,
+            _ => Ok(Some(ty)),
+        }
+    } else {
+        Ok(None)
+    }
+}
+
+pub fn parse_import_id(
+    tokens: &mut TokenStack,
+    name: String,
+    is_absolute: bool,
+    current_module: &ModuleIdentifier,
+) -> ParseResult<ParsedImport> {
+    let mut path = Vec::new();
+    let mut cur_name = Some(name);
+    while tokens.peek().value == Token::Static(StaticToken::DoubleColon) {
+        tokens.pop();
+        path.push(cur_name.unwrap().clone());
+        if tokens.peek().value == Token::Static(StaticToken::Asterisk) {
+            tokens.pop();
+            cur_name = None;
+            break;
+        }
+        let next_token = parse_identifier(tokens)?;
+        cur_name = Some(next_token.value);
     }
 
-    let module_id = ModuleId {
-        module_path: ModuleIdentifier {
-            path,
-            absolute: is_absolute,
-        },
-        name: cur_name,
-    };
-    Ok(module_id)
+    let module_id = current_module.resolve(&path, is_absolute);
+    let impl_type = parse_impl_type(tokens)?;
+
+    Ok(ParsedImport {
+        imported_object: cur_name,
+        module_id,
+        impl_type,
+    })
 }

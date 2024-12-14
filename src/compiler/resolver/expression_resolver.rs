@@ -347,10 +347,14 @@ fn resolve_assignable_expression(
                 element_size,
             )
         }
-        AssignableExpressionKind::PointerFieldAccess(inner, field_name) => {
+        AssignableExpressionKind::PointerFieldAccess(inner, field_name, indirections) => {
             let resolved_inner = resolve_expression(context, inner, false);
             let field_offset = field_offset(context, &inner.ty, field_name);
-            ResolvedAssignableExpression::PointerFieldAccess(Box::new(resolved_inner), field_offset)
+            ResolvedAssignableExpression::PointerFieldAccess(
+                Box::new(resolved_inner),
+                field_offset,
+                *indirections,
+            )
         }
     }
 }
@@ -363,8 +367,7 @@ fn field_offset(context: &ResolverContext, type_id: &TypeId, field_name: &str) -
     };
     context
         .resolved_types
-        .structs
-        .get(struct_type)
+        .get_struct(struct_type)
         .unwrap_or_else(|| panic!("Unknown struct type: {:?}", struct_type))
         .field_offsets
         .get(field_name)
