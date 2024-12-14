@@ -103,6 +103,19 @@ fn collect_struct_imports(
                         ));
                     }
                 }
+            } else {
+                for (name, id) in module_structs {
+                    if module_struct_imports
+                        .insert(name.clone(), id.clone())
+                        .is_some()
+                    {
+                        return Err(anyhow::anyhow!(
+                            "Duplicate struct import '{}' at {}",
+                            name,
+                            import.location
+                        ));
+                    }
+                }
             }
         }
         struct_imports.insert(module_id.clone(), module_struct_imports);

@@ -195,53 +195,80 @@ fn collect_function_imports(
         let mut module_function_imports = HashMap::new();
         let mut module_member_function_imports = HashMap::new();
         for import in &module.imports {
+            if import.value.impl_type.is_some() {
+                continue;
+            }
             let module_functions = functions.get(&import.value.module_id).unwrap();
             if let Some(obj) = &import.value.imported_object {
-                if import.value.impl_type.is_none() {
-                    if let Some(id) = module_functions.get(obj) {
-                        if module_function_imports
-                            .insert(obj.clone(), id.clone())
-                            .is_some()
-                        {
-                            return Err(anyhow::anyhow!(
-                                "Duplicate function import '{}' at {}",
-                                obj,
-                                import.location
-                            ));
-                        }
+                if let Some(id) = module_functions.get(obj) {
+                    if module_function_imports
+                        .insert(obj.clone(), id.clone())
+                        .is_some()
+                    {
+                        return Err(anyhow::anyhow!(
+                            "Duplicate function import '{}' at {}",
+                            obj,
+                            import.location
+                        ));
+                    }
+                }
+            } else {
+                for (name, id) in module_functions {
+                    if module_function_imports
+                        .insert(name.clone(), id.clone())
+                        .is_some()
+                    {
+                        return Err(anyhow::anyhow!(
+                            "Duplicate function import '{}' at {}",
+                            name,
+                            import.location
+                        ));
                     }
                 }
             }
         }
         function_imports.insert(module_id.clone(), module_function_imports);
         for import in &module.imports {
+            if import.value.impl_type.is_none() {
+                continue;
+            }
+            let impl_type = import.value.impl_type.as_ref().unwrap();
             let module_member_functions = member_functions.get(&import.value.module_id).unwrap();
-            if let Some(obj) = &import.value.imported_object {
-                if let Some(impl_type) = &import.value.impl_type {
-                    let resolved_type =
-                        resolved_types.resolve_type(impl_type).ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "Type {:?} not found at {}",
-                                impl_type.value,
+            let resolved_type = resolved_types.resolve_type(impl_type).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Type {:?} not found at {}",
+                    impl_type.value,
+                    import.location
+                )
+            })?;
+            let type_member_functions = module_member_function_imports
+                .entry(resolved_type.clone())
+                .or_insert_with(HashMap::new);
+            if let Some(module_type_functions) = module_member_functions.get(&resolved_type) {
+                if let Some(obj) = &import.value.imported_object {
+                    if let Some(id) = module_type_functions.get(obj) {
+                        if type_member_functions
+                            .insert(obj.clone(), id.clone())
+                            .is_some()
+                        {
+                            return Err(anyhow::anyhow!(
+                                "Duplicate member function import '{}' at {}",
+                                obj,
                                 import.location
-                            )
-                        })?;
-                    let type_member_functions = module_member_function_imports
-                        .entry(resolved_type.clone())
-                        .or_insert_with(HashMap::new);
-                    if let Some(module_type_functions) = module_member_functions.get(&resolved_type)
-                    {
-                        if let Some(id) = module_type_functions.get(obj) {
-                            if type_member_functions
-                                .insert(obj.clone(), id.clone())
-                                .is_some()
-                            {
-                                return Err(anyhow::anyhow!(
-                                    "Duplicate member function import '{}' at {}",
-                                    obj,
-                                    import.location
-                                ));
-                            }
+                            ));
+                        }
+                    }
+                } else {
+                    for (name, id) in module_type_functions {
+                        if type_member_functions
+                            .insert(name.clone(), id.clone())
+                            .is_some()
+                        {
+                            return Err(anyhow::anyhow!(
+                                "Duplicate member function import '{}' at {}",
+                                name,
+                                import.location
+                            ));
                         }
                     }
                 }

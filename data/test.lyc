@@ -2,13 +2,10 @@ module various_test;
 module std;
 
 import std::arrays::IntArray;
-import std::arrays::create@IntArray;
-import std::arrays::fill@IntArray;
-import std::arrays::print@IntArray;
-import std::arrays::set@IntArray;
+import std::arrays::*@IntArray;
 
 int main() {
-    let var int_arr = create@IntArray(500);
+    let var int_arr = create@IntArray(50);
     int_arr.fill(-8);
     int_arr.set(0, 1);
     int_arr.print();
