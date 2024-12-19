@@ -196,7 +196,6 @@ dependencies = [
  "anyhow",
  "clap",
  "lazy_static",
- "rand",
  "thiserror",
 ]
 
