@@ -22,6 +22,11 @@ pub enum OpCode {
     PeekMem,
     Alloc,
     Free,
+    FileOpen,
+    FileClose,
+    FileRead,
+    FileWrite,
+    MemCopy,
 }
 
 impl OpCode {
@@ -49,6 +54,11 @@ impl OpCode {
             OpCode::PeekMem => 0x38,
             OpCode::Alloc => 0x39,
             OpCode::Free => 0x3A,
+            OpCode::FileOpen => 0x3B,
+            OpCode::FileClose => 0x3C,
+            OpCode::FileRead => 0x3D,
+            OpCode::FileWrite => 0x3E,
+            OpCode::MemCopy => 0x3F,
         }
     }
 }

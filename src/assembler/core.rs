@@ -43,7 +43,7 @@ pub(crate) fn convert_line(line: &str) -> AssemblyInstruction {
         OpCode::Binop(_) | OpCode::Alloc => InstructionKind::parse_two_registers(parts),
         OpCode::BinopImmediate(_) => InstructionKind::parse_register_immediate(parts),
         OpCode::Call | OpCode::Jump(_) => InstructionKind::parse_address(parts),
-        OpCode::Unop(_) | OpCode::Set(_) | OpCode::Free | OpCode::Rand => {
+        OpCode::Unop(_) | OpCode::Set(_) | OpCode::Free | OpCode::Rand | OpCode::FileClose => {
             InstructionKind::parse_register(parts)
         }
         OpCode::ReadStdin
@@ -51,7 +51,10 @@ pub(crate) fn convert_line(line: &str) -> AssemblyInstruction {
         | OpCode::Lea
         | OpCode::PushMem
         | OpCode::PopMem
-        | OpCode::PeekMem => InstructionKind::parse_register_address(parts),
+        | OpCode::PeekMem
+        | OpCode::FileOpen => InstructionKind::parse_register_address(parts),
+        OpCode::FileRead | OpCode::FileWrite => InstructionKind::parse_two_registers_address(parts),
+        OpCode::MemCopy => InstructionKind::parse_register_two_addresses(parts),
     };
 
     let instruction = Instruction {
@@ -170,6 +173,11 @@ lazy_static! {
             ("peekmem".to_string(), OpCode::PeekMem),
             ("alloc".to_string(), OpCode::Alloc),
             ("free".to_string(), OpCode::Free),
+            ("fileopen".to_string(), OpCode::FileOpen),
+            ("fileclose".to_string(), OpCode::FileClose),
+            ("fileread".to_string(), OpCode::FileRead),
+            ("filewrite".to_string(), OpCode::FileWrite),
+            ("memcopy".to_string(), OpCode::MemCopy),
         ])
     };
     pub static ref REGISTER_MAP: HashMap<String, RegisterCode> = {

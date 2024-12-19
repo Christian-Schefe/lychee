@@ -131,6 +131,11 @@ pub fn run(memory: &mut Memory, heap: &mut Heap, debug_print: bool) -> i64 {
             0x38 => popmem(pc, memory, true, debug_print),
             0x39 => alloc(pc, memory, heap, debug_print),
             0x3A => free(pc, memory, heap, debug_print),
+            0x3B => file_open(pc, memory, debug_print),
+            0x3C => file_close(pc, memory, debug_print),
+            0x3D => file_read(pc, memory, debug_print),
+            0x3E => file_write(pc, memory, debug_print),
+            0x3F => mem_copy(pc, memory, debug_print),
             _ => panic!("Unknown opcode: {}", opcode),
         };
         if debug_print {
@@ -562,5 +567,109 @@ fn free(pc: usize, memory: &mut Memory, heap: &mut Heap, debug_print: bool) {
 
     if debug_print {
         println!("Freed memory at address {}", address);
+    }
+}
+
+fn file_open(pc: usize, memory: &mut Memory, debug_print: bool) {
+    let register = memory.data[pc + 1];
+    let address = read_address(pc + 2, memory) as usize;
+
+    let filename = memory.read_string(address);
+
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open(&filename)
+        .unwrap();
+
+    let file_id = memory.files.len();
+    memory.files.push(Some(file));
+    memory.registers[register as usize] = file_id as u64;
+    memory.registers[constants::PC] += 2;
+
+    if debug_print {
+        println!("Opened file '{}' with ID {}", filename, file_id);
+    }
+}
+
+fn file_close(pc: usize, memory: &mut Memory, debug_print: bool) {
+    let register = memory.data[pc + 1] as usize;
+    let file_id = memory.registers[register] as usize;
+    let file = std::mem::replace(&mut memory.files[file_id], None).unwrap();
+    file.sync_all().unwrap();
+    file.metadata().unwrap();
+    file.sync_data().unwrap();
+    drop(file);
+    memory.registers[constants::PC] += 2;
+    let mut new_len = memory.files.len();
+    while new_len > 0 && memory.files[new_len - 1].is_none() {
+        new_len -= 1;
+    }
+    memory.files.truncate(new_len);
+
+    if debug_print {
+        println!("Closed file with ID {}", file_id);
+    }
+}
+
+fn file_read(pc: usize, memory: &mut Memory, debug_print: bool) {
+    let byte1 = memory.data[pc + 1];
+    let file_id_register = (byte1 & 0x0F) as usize;
+    let size_register = ((byte1 & 0xF0) >> 4) as usize;
+    let file_id = memory.registers[file_id_register] as usize;
+    let size = memory.registers[size_register] as usize;
+    let address = read_address(pc + 2, memory) as usize;
+
+    let file = memory.files[file_id].as_mut().unwrap();
+    let mut buffer = vec![0; size];
+    file.read_exact(&mut buffer).unwrap();
+    memory.write_bytes(address, &buffer);
+    memory.registers[constants::PC] += 2;
+
+    if debug_print {
+        println!(
+            "Read {} bytes from file with ID {} into address {}",
+            size, file_id, address
+        );
+    }
+}
+
+fn file_write(pc: usize, memory: &mut Memory, debug_print: bool) {
+    let byte1 = memory.data[pc + 1];
+    let file_id_register = (byte1 & 0x0F) as usize;
+    let size_register = ((byte1 & 0xF0) >> 4) as usize;
+    let file_id = memory.registers[file_id_register] as usize;
+    let size = memory.registers[size_register] as usize;
+    let address = read_address(pc + 2, memory) as usize;
+
+    let buffer = memory.read_bytes(address, size);
+    let file = memory.files[file_id].as_mut().unwrap();
+    file.write_all(&buffer).unwrap();
+    memory.registers[constants::PC] += 2;
+
+    if debug_print {
+        println!(
+            "Wrote {} bytes to file with ID {} from address {}",
+            size, file_id, address
+        );
+    }
+}
+
+fn mem_copy(pc: usize, memory: &mut Memory, debug_print: bool) {
+    let size_register = memory.data[pc + 1];
+    let size = memory.registers[size_register as usize] as usize;
+    let dest_address = read_address(pc + 2, memory) as usize;
+    let new_pc = memory.registers[constants::PC] as usize;
+    let src_address = read_address(new_pc + 2, memory) as usize;
+
+    memory.memory_copy(src_address, dest_address, size);
+    memory.registers[constants::PC] += 2;
+
+    if debug_print {
+        println!(
+            "Copied {} bytes from address {} to address {}",
+            size, src_address, dest_address
+        );
     }
 }

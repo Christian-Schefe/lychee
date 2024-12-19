@@ -216,6 +216,37 @@ impl CodegenContext {
     pub fn rand(&mut self, register: &str) {
         self.lines.push(format!("rand {register}"));
     }
+
+    pub fn memcopy(&mut self, size_register: &str, dest_address: &str, source_address: &str) {
+        self.lines.push(format!(
+            "memcopy {size_register} {dest_address} {source_address}"
+        ));
+    }
+
+    pub fn file_open(&mut self, pointer_register: &str, filename_address: &str) {
+        self.lines
+            .push(format!("fileopen {pointer_register} {filename_address}"));
+    }
+    pub fn file_close(&mut self, pointer_register: &str) {
+        self.lines.push(format!("fileclose {pointer_register}"));
+    }
+
+    pub fn file_read(&mut self, pointer_register: &str, size_register: &str, buffer_address: &str) {
+        self.lines.push(format!(
+            "fileread {pointer_register} {size_register} {buffer_address}"
+        ));
+    }
+
+    pub fn file_write(
+        &mut self,
+        pointer_register: &str,
+        size_register: &str,
+        buffer_address: &str,
+    ) {
+        self.lines.push(format!(
+            "filewrite {pointer_register} {size_register} {buffer_address}"
+        ));
+    }
 }
 
 pub fn gen_code(program: ResolvedProgram, output: &PathBuf) {

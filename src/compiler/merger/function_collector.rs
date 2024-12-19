@@ -39,12 +39,10 @@ impl CollectedFunctionData {
         if let Some(resolved_type) = impl_type {
             let module_member_functions = self
                 .member_functions
-                .get(&parsed_function_id.item_id.module_id)
-                .unwrap();
+                .get(&parsed_function_id.item_id.module_id)?;
             let module_member_function_imports = self
                 .member_function_imports
-                .get(&parsed_function_id.item_id.module_id)
-                .unwrap();
+                .get(&parsed_function_id.item_id.module_id)?;
             if let Some(type_functions) = module_member_functions.get(&resolved_type) {
                 if let Some(function_id) = type_functions.get(&parsed_function_id.item_id.item_name)
                 {
@@ -61,14 +59,10 @@ impl CollectedFunctionData {
                 }
             }
         } else {
-            let module_functions = self
-                .functions
-                .get(&parsed_function_id.item_id.module_id)
-                .unwrap();
+            let module_functions = self.functions.get(&parsed_function_id.item_id.module_id)?;
             let module_function_imports = self
                 .function_imports
-                .get(&parsed_function_id.item_id.module_id)
-                .unwrap();
+                .get(&parsed_function_id.item_id.module_id)?;
             if let Some(function_id) = module_functions.get(&parsed_function_id.item_id.item_name) {
                 return Some(function_id.clone());
             }

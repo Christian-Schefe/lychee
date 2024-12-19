@@ -128,6 +128,16 @@ pub enum InstructionKind {
         left_register: u8,
         right_register: u8,
     },
+    TwoRegistersAddress {
+        left_register: u8,
+        right_register: u8,
+        address: MemoryAddress,
+    },
+    RegisterTwoAddresses {
+        register: u8,
+        address1: MemoryAddress,
+        address2: MemoryAddress,
+    },
 }
 
 impl InstructionKind {
@@ -183,6 +193,28 @@ impl InstructionKind {
         InstructionKind::TwoRegisters {
             left_register,
             right_register,
+        }
+    }
+
+    pub fn parse_two_registers_address(parts: Vec<&str>) -> Self {
+        let left_register = parse_register_code(parts[1]);
+        let right_register = parse_register_code(parts[2]);
+        let address = MemoryAddress::from_str(parts[3]);
+        InstructionKind::TwoRegistersAddress {
+            left_register,
+            right_register,
+            address,
+        }
+    }
+
+    pub fn parse_register_two_addresses(parts: Vec<&str>) -> Self {
+        let register = parse_register_code(parts[1]);
+        let address1 = MemoryAddress::from_str(parts[2]);
+        let address2 = MemoryAddress::from_str(parts[3]);
+        InstructionKind::RegisterTwoAddresses {
+            register,
+            address1,
+            address2,
         }
     }
 }
@@ -243,6 +275,23 @@ impl Instruction {
                 right_register,
             } => {
                 bytes.push(left_register | (right_register << 4));
+            }
+            InstructionKind::TwoRegistersAddress {
+                left_register,
+                right_register,
+                address,
+            } => {
+                bytes.push(left_register | (right_register << 4));
+                address.add_bytes(bytes, labels, label_placeholders);
+            }
+            InstructionKind::RegisterTwoAddresses {
+                register,
+                address1,
+                address2,
+            } => {
+                bytes.push(*register);
+                address1.add_bytes(bytes, labels, label_placeholders);
+                address2.add_bytes(bytes, labels, label_placeholders);
             }
         };
     }

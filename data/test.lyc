@@ -1,8 +1,9 @@
 module various_test;
 module std;
 
-import std::arrays::IntArray;
+import std::arrays::*;
 import std::arrays::*@IntArray;
+import std::io::*@int;
 
 int main() {
     let var int_arr = create@IntArray(50);
@@ -11,6 +12,10 @@ int main() {
     int_arr.print();
     print@IntArray(int_arr);
     (int_arr.data[0]).test();
+    (int_arr.data[1]).::test();
+    write_char('\n');
+    std::io::file_test();
+    write_char('\n');
     0
 }
 

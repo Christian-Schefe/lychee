@@ -33,7 +33,7 @@ impl BuiltinFunction {
         }
     }
 
-    pub fn read_char() -> BuiltinFunction {
+    fn read_char() -> BuiltinFunction {
         BuiltinFunction::new(
             "read_char".to_string(),
             TypeId::Char,
@@ -48,7 +48,7 @@ impl BuiltinFunction {
         )
     }
 
-    pub fn write_char() -> BuiltinFunction {
+    fn write_char() -> BuiltinFunction {
         BuiltinFunction::new(
             "write_char".to_string(),
             TypeId::Unit,
@@ -61,7 +61,7 @@ impl BuiltinFunction {
         )
     }
 
-    pub fn write() -> BuiltinFunction {
+    fn write() -> BuiltinFunction {
         BuiltinFunction::new(
             "write".to_string(),
             TypeId::Unit,
@@ -81,7 +81,7 @@ impl BuiltinFunction {
         )
     }
 
-    pub fn read() -> BuiltinFunction {
+    fn read() -> BuiltinFunction {
         BuiltinFunction::new(
             "read".to_string(),
             TypeId::Unit,
@@ -101,7 +101,7 @@ impl BuiltinFunction {
         )
     }
 
-    pub fn malloc() -> BuiltinFunction {
+    fn malloc() -> BuiltinFunction {
         BuiltinFunction::new(
             "malloc".to_string(),
             TypeId::Pointer(Box::new(TypeId::Unit)),
@@ -114,7 +114,7 @@ impl BuiltinFunction {
         )
     }
 
-    pub fn free() -> BuiltinFunction {
+    fn free() -> BuiltinFunction {
         BuiltinFunction::new(
             "free".to_string(),
             TypeId::Unit,
@@ -129,8 +129,7 @@ impl BuiltinFunction {
             }),
         )
     }
-
-    pub fn random() -> BuiltinFunction {
+    fn random() -> BuiltinFunction {
         BuiltinFunction::new(
             "random".to_string(),
             TypeId::Integer(8),
@@ -142,7 +141,7 @@ impl BuiltinFunction {
         )
     }
 
-    pub fn exit() -> BuiltinFunction {
+    fn exit() -> BuiltinFunction {
         BuiltinFunction::new(
             "exit".to_string(),
             TypeId::Unit,
@@ -150,6 +149,96 @@ impl BuiltinFunction {
             Box::new(|context| {
                 context.load(4, "r0", "[sp;8]");
                 context.exit();
+            }),
+        )
+    }
+
+    fn memcopy() -> BuiltinFunction {
+        BuiltinFunction::new(
+            "memcopy".to_string(),
+            TypeId::Unit,
+            vec![
+                ("dest".to_string(), TypeId::Pointer(Box::new(TypeId::Char))),
+                ("src".to_string(), TypeId::Pointer(Box::new(TypeId::Char))),
+                ("length".to_string(), TypeId::Integer(4)),
+            ],
+            Box::new(|context| {
+                context.load(4, "r0", "[sp;8]");
+                context.memcopy("r0", "[sp;12]", "[sp;20]");
+                context.ret();
+            }),
+        )
+    }
+
+    fn fopen() -> BuiltinFunction {
+        BuiltinFunction::new(
+            "fopen".to_string(),
+            TypeId::Integer(4),
+            vec![(
+                "filename".to_string(),
+                TypeId::Pointer(Box::new(TypeId::Char)),
+            )],
+            Box::new(|context| {
+                context.load(8, "r0", "[sp;8]");
+                context.file_open("r0", "[r0]");
+                context.ret();
+            }),
+        )
+    }
+
+    fn fclose() -> BuiltinFunction {
+        BuiltinFunction::new(
+            "fclose".to_string(),
+            TypeId::Unit,
+            vec![("file".to_string(), TypeId::Integer(4))],
+            Box::new(|context| {
+                context.load(4, "r0", "[sp;8]");
+                context.file_close("r0");
+                context.ret();
+            }),
+        )
+    }
+
+    fn fread() -> BuiltinFunction {
+        BuiltinFunction::new(
+            "fread".to_string(),
+            TypeId::Unit,
+            vec![
+                (
+                    "buffer".to_string(),
+                    TypeId::Pointer(Box::new(TypeId::Char)),
+                ),
+                ("length".to_string(), TypeId::Integer(4)),
+                ("file".to_string(), TypeId::Integer(4)),
+            ],
+            Box::new(|context| {
+                context.load(4, "r0", "[sp;8]");
+                context.load(4, "r1", "[sp;12]");
+                context.load(8, "r2", "[sp;16]");
+                context.file_read("r0", "r1", "[r2]");
+                context.ret();
+            }),
+        )
+    }
+
+    fn fwrite() -> BuiltinFunction {
+        BuiltinFunction::new(
+            "fwrite".to_string(),
+            TypeId::Unit,
+            vec![
+                (
+                    "buffer".to_string(),
+                    TypeId::Pointer(Box::new(TypeId::Char)),
+                ),
+                ("length".to_string(), TypeId::Integer(4)),
+                ("file".to_string(), TypeId::Integer(4)),
+            ],
+            Box::new(|context| {
+                context.load(4, "r0", "[sp;8]");
+                context.load(4, "r1", "[sp;12]");
+                context.load(8, "r2", "[sp;16]");
+                context.file_write("r0", "r1", "[r2]");
+                context.ret();
             }),
         )
     }
@@ -164,6 +253,11 @@ impl BuiltinFunction {
             BuiltinFunction::free(),
             BuiltinFunction::random(),
             BuiltinFunction::exit(),
+            BuiltinFunction::memcopy(),
+            BuiltinFunction::fopen(),
+            BuiltinFunction::fclose(),
+            BuiltinFunction::fread(),
+            BuiltinFunction::fwrite(),
         ]
     }
 

@@ -900,18 +900,15 @@ pub fn analyze_expression(
                         },
                     )
                 }
-                ParsedExpressionKind::MemberFunctionCall {
-                    id,
-                    args,
-                    object: _,
-                } => {
+                ParsedExpressionKind::MemberFunctionCall { id, args, object } => {
                     let new_len = output.len() - (args.len() + 1);
                     let analyzed_args = output.split_off(new_len);
                     let obj_ty = &analyzed_args[0].ty;
+                    let (impl_ty, _) = remove_indirection(obj_ty);
                     let function_id = context
                         .resolved_functions
                         .collected_function_data
-                        .map_member_function_id(id, Some(obj_ty))
+                        .map_member_function_id(id, Some(&impl_ty))
                         .ok_or_else(|| {
                             anyhow::anyhow!(
                                 "Member function '{}' not found at {}.",
@@ -941,10 +938,13 @@ pub fn analyze_expression(
                         ))?;
                     }
 
+                    let mut arg_exprs = vec![object.as_ref()];
+                    arg_exprs.extend(args.iter());
+
                     for ((analyzed_arg, arg_name), arg_expr) in analyzed_args
                         .iter()
                         .zip(function_header.parameter_order.iter())
-                        .zip(args.iter())
+                        .zip(arg_exprs.iter())
                     {
                         let arg_type = function_header.parameter_types.get(arg_name).unwrap();
                         if analyzed_arg.ty != *arg_type {
@@ -1102,4 +1102,14 @@ fn assert_break_return_type_assignable(
             assert_break_return_type(actual.as_ref(), index)
         }
     }
+}
+
+fn remove_indirection(ty: &TypeId) -> (&TypeId, usize) {
+    fn remove_inner(ty: &TypeId, indirections: usize) -> (&TypeId, usize) {
+        match ty {
+            TypeId::Pointer(inner) => remove_inner(inner, indirections + 1),
+            _ => (ty, indirections),
+        }
+    }
+    remove_inner(ty, 0)
 }

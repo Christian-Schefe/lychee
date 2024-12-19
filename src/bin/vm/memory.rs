@@ -10,6 +10,7 @@ pub struct Memory {
     pub(crate) data: Vec<u8>,
     pub(crate) registers: [u64; 16],
     pub(crate) flags: Flags,
+    pub(crate) files: Vec<Option<std::fs::File>>,
 }
 
 impl Memory {
@@ -21,6 +22,7 @@ impl Memory {
                 zero: false,
                 positive: false,
             },
+            files: Vec::new(),
         };
         memory.data[..program.len()].copy_from_slice(&program);
 
@@ -110,6 +112,14 @@ impl Memory {
 
     pub fn memory_copy(&mut self, src: usize, dest: usize, bytes: usize) {
         self.data.copy_within(src..src + bytes, dest);
+    }
+
+    pub fn read_string(&self, address: usize) -> String {
+        let mut i = address;
+        while self.data[i] != 0 {
+            i += 1;
+        }
+        String::from_utf8(self.data[address..i].to_vec()).unwrap()
     }
 
     pub fn print_registers(&self) {
