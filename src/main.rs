@@ -16,6 +16,8 @@ struct Args {
     assembly_output: Option<PathBuf>,
     #[arg(long, default_value("false"))]
     assemble_only: bool,
+    #[arg(long)]
+    bundle_vm: Option<PathBuf>,
 }
 
 fn main() {
@@ -35,4 +37,18 @@ fn main() {
         compile(&args.input, &assembly_output);
         assemble(&assembly_output, &output);
     }
+
+    if let Some(vm_path) = args.bundle_vm {
+        bundle_vm(&output, &vm_path);
+    }
+}
+
+fn bundle_vm(program_path: &PathBuf, vm_path: &PathBuf) {
+    let program = std::fs::read(program_path).unwrap();
+    let program_size = program.len() as u64;
+    let program_size_bytes = program_size.to_le_bytes();
+    let mut vm_binary = std::fs::read(vm_path).unwrap();
+    vm_binary.extend(program);
+    vm_binary.extend(&program_size_bytes);
+    std::fs::write(program_path.with_extension("exe"), vm_binary).unwrap();
 }

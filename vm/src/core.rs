@@ -1,37 +1,25 @@
-use crate::heap::Heap;
-use crate::memory::Memory;
-use clap::Parser;
+use crate::core::heap::Heap;
+use crate::core::memory::Memory;
 use lychee_compiler::{BinopType, UnopType, DATA_SIZE_64};
 use std::io::{Read, Write};
-use std::path::PathBuf;
 
-mod constants;
-mod heap;
-mod input;
-mod memory;
+pub mod constants;
+pub mod heap;
+pub mod memory;
 
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Args {
-    input: PathBuf,
-    #[arg(short, long, default_value("false"))]
-    debug_print: bool,
-}
-
-fn main() {
-    let args = Args::parse();
-    let program = input::read_obj_file(&args.input);
-
+pub fn execute(program: Vec<u8>, debug_print: bool) {
     let size = 0x200000;
     let heap_size = 0x100000;
     let heap_offset = program.len();
     let mut memory = Memory::new(size, program);
     let mut heap = Heap::new(&mut memory, heap_offset, heap_size);
     let start_instant = std::time::Instant::now();
-    let exit_code = run(&mut memory, &mut heap, args.debug_print);
-    let elapsed = start_instant.elapsed();
-    println!("Elapsed: {:?}", elapsed);
-    println!("Exit Code: {}", exit_code);
+    let exit_code = run(&mut memory, &mut heap, debug_print);
+    if debug_print {
+        let elapsed = start_instant.elapsed();
+        println!("Elapsed: {:?}", elapsed);
+        println!("Exit Code: {}", exit_code);
+    }
 }
 
 pub fn run(memory: &mut Memory, heap: &mut Heap, debug_print: bool) -> i64 {

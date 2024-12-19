@@ -9,3 +9,8 @@ clap = { version = "4.5.21", features = ["derive"] }
 lazy_static = "1.5.0"
 rand = "0.8.5"
 thiserror = "2.0.3"
+
+[workspace]
+members = [
+    "vm",
+]

@@ -1,5 +1,5 @@
-use crate::memory::Memory;
 use lychee_compiler::{DATA_SIZE_32, DATA_SIZE_64};
+use crate::core::memory::Memory;
 
 #[derive(Debug)]
 pub struct Heap {
