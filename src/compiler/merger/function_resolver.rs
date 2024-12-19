@@ -65,7 +65,7 @@ fn extract_module_functions(
                         type_impl.location
                     )
                 })?;
-            let mut impl_functions = member_functions
+            let impl_functions = member_functions
                 .entry(resolved_type.clone())
                 .or_insert_with(HashMap::new);
             for func_def in &type_impl.value.functions {

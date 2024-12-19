@@ -1,6 +1,5 @@
 use crate::compiler::merger::merged_expression::{ResolvedStruct, TypeId};
 use crate::compiler::merger::type_collector::CollectedTypeData;
-use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::item_id::ItemId;
 use crate::compiler::parser::parsed_expression::ParsedType;
 use std::collections::HashMap;

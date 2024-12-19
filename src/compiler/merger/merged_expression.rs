@@ -56,25 +56,6 @@ impl Display for TypeId {
     }
 }
 
-impl TypeId {
-    pub fn type_name(&self) -> String {
-        match self {
-            TypeId::Unit => "unit".to_string(),
-            TypeId::Bool => "bool".to_string(),
-            TypeId::Char => "char".to_string(),
-            TypeId::Integer(size) => match size {
-                1 => "byte".to_string(),
-                2 => "short".to_string(),
-                4 => "int".to_string(),
-                8 => "long".to_string(),
-                _ => unreachable!("Invalid integer size: {}", size),
-            },
-            TypeId::Pointer(inner) => format!("&{}", inner.type_name()),
-            TypeId::StructType(module_id) => module_id.item_name.clone(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FunctionId {
     pub item_id: ItemId,
