@@ -4,12 +4,13 @@ use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::item_id::{ItemId, ParsedFunctionId, ParsedTypeId};
 use crate::compiler::parser::parsed_expression::{ParsedImport, ParsedType, ParsedTypeKind};
 use crate::compiler::parser::parser_error::ParseResult;
+use crate::compiler::parser::primary_expr_parser::parse_generic_args;
 use crate::compiler::parser::program_parser::parse_identifier;
 use crate::compiler::parser::ModuleIdentifier;
 
 pub fn parse_type(tokens: &mut TokenStack) -> ParseResult<ParsedType> {
     let token = tokens.pop().clone();
-    let current_module = &token.location.file.id;
+    let current_module = &token.location.file.as_ref().unwrap().id;
     match token.value {
         Token::Identifier(name) => {
             let parsed_type_id = parse_type_id(tokens, name, false, current_module)?;
@@ -33,23 +34,25 @@ pub fn parse_type(tokens: &mut TokenStack) -> ParseResult<ParsedType> {
                     _ => {}
                 }
             }
+            let generic_args = parse_generic_args(tokens)?;
             Ok(ParsedType::new(
-                ParsedTypeKind::Struct(parsed_type_id),
+                ParsedTypeKind::Struct(parsed_type_id, generic_args),
                 token.location,
             ))
         }
         Token::Static(StaticToken::DoubleColon) => {
             let first_id = parse_identifier(tokens)?;
             let parsed_type_id = parse_type_id(tokens, first_id.value, false, current_module)?;
+            let generic_args = parse_generic_args(tokens)?;
             Ok(ParsedType::new(
-                ParsedTypeKind::Struct(parsed_type_id),
+                ParsedTypeKind::Struct(parsed_type_id, generic_args),
                 token.location,
             ))
         }
         Token::Static(StaticToken::Ampersand) => {
             let inner = parse_type(tokens)?;
             Ok(ParsedType::new(
-                ParsedTypeKind::Pointer(Box::new(inner)),
+                ParsedTypeKind::Pointer(Box::new(inner.value)),
                 token.location,
             ))
         }

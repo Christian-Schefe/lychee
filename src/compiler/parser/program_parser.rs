@@ -7,10 +7,10 @@ use crate::compiler::lexer::SrcToken;
 use crate::compiler::parser::binop_expr_parser::parse_binop_expression;
 use crate::compiler::parser::parsed_expression::{
     ParsedExpression, ParsedFunction, ParsedImport, ParsedModule, ParsedStructDefinition,
-    ParsedTypeImplementation,
+    ParsedTypeImplementation, ParsedTypeKind,
 };
 use crate::compiler::parser::parser_error::ParseResult;
-use crate::compiler::parser::primary_expr_parser::parse_block_expression;
+use crate::compiler::parser::primary_expr_parser::{parse_block_expression, parse_generic_params};
 use crate::compiler::parser::type_parser::{parse_import_id, parse_type};
 use crate::compiler::parser::{ModuleIdentifier, ModulePath};
 use anyhow::Context;
@@ -158,7 +158,7 @@ pub fn parse_module(
 pub fn parse_import(tokens: &mut TokenStack) -> ParseResult<ParsedImport> {
     pop_expected(tokens, Token::Keyword(Keyword::Import))?;
     let token = tokens.pop().clone();
-    let current_module = &token.location.file.id;
+    let current_module = &token.location.file.as_ref().unwrap().id;
     let parsed_import = match &token.value {
         Token::Identifier(module_name) => {
             parse_import_id(tokens, module_name.clone(), false, current_module)?
@@ -179,9 +179,20 @@ pub fn parse_import(tokens: &mut TokenStack) -> ParseResult<ParsedImport> {
 pub fn parse_type_impl(tokens: &mut TokenStack) -> ParseResult<Src<ParsedTypeImplementation>> {
     let location = tokens.location().clone();
     pop_expected(tokens, Token::Keyword(Keyword::Impl))?;
+    let generic_params = parse_generic_params(tokens)?;
     let impl_type = parse_type(tokens)
         .with_context(|| format!("Failed to parse impl type at {}.", location))?;
     pop_expected(tokens, Token::Static(StaticToken::OpenBrace))?;
+
+    match impl_type.value {
+        ParsedTypeKind::Pointer(_) => {
+            Err(anyhow::anyhow!(
+                "Cannot implement a pointer type at {}",
+                impl_type.location,
+            ))?;
+        }
+        _ => {}
+    }
 
     let mut functions = Vec::new();
     while tokens.peek().value != Token::Static(StaticToken::CloseBrace) {
@@ -195,6 +206,7 @@ pub fn parse_type_impl(tokens: &mut TokenStack) -> ParseResult<Src<ParsedTypeImp
         ParsedTypeImplementation {
             impl_type,
             functions,
+            generics: generic_params,
         },
         location,
     ))
@@ -212,6 +224,7 @@ pub fn parse_struct_definition(
 ) -> ParseResult<Src<ParsedStructDefinition>> {
     let location = pop_expected(tokens, Token::Keyword(Keyword::Struct))?.location;
     let struct_name = parse_identifier(tokens)?.value;
+    let generics = parse_generic_params(tokens)?;
     pop_expected(tokens, Token::Static(StaticToken::OpenBrace))?;
 
     let mut fields = Vec::new();
@@ -241,6 +254,7 @@ pub fn parse_struct_definition(
         ParsedStructDefinition {
             struct_name,
             fields,
+            generics,
         },
         location,
     ))
@@ -251,6 +265,7 @@ pub fn parse_function(tokens: &mut TokenStack) -> ParseResult<Src<ParsedFunction
     let return_type = parse_type(tokens)
         .with_context(|| format!("Failed to parse return type at {}.", location))?;
     let function_name = parse_identifier(tokens)?.value;
+    let generics = parse_generic_params(tokens)?;
     pop_expected(tokens, Token::Static(StaticToken::OpenParen))?;
 
     let mut args = Vec::new();
@@ -288,6 +303,7 @@ pub fn parse_function(tokens: &mut TokenStack) -> ParseResult<Src<ParsedFunction
         ParsedFunction {
             function_name,
             return_type,
+            generics,
             args,
             body,
         },

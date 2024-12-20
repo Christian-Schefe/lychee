@@ -1,7 +1,8 @@
+use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
 use crate::compiler::builtin;
 use crate::compiler::lexer::location::Src;
 use crate::compiler::merger::function_collector::collect_function_data;
-use crate::compiler::merger::merged_expression::{ResolvedFunctionHeader, TypeId};
+use crate::compiler::merger::merged_expression::ResolvedFunctionHeader;
 use crate::compiler::merger::resolved_functions::ResolvedFunctions;
 use crate::compiler::merger::resolved_types::ResolvedTypes;
 use crate::compiler::merger::MergerResult;
@@ -37,7 +38,7 @@ pub fn build_resolved_functions(
 fn extract_module_functions(
     resolved_types: &ResolvedTypes,
     functions: &mut HashMap<ItemId, ResolvedFunctionHeader>,
-    member_functions: &mut HashMap<TypeId, HashMap<ItemId, ResolvedFunctionHeader>>,
+    member_functions: &mut HashMap<AnalyzedTypeId, HashMap<ItemId, ResolvedFunctionHeader>>,
     module_tree: &HashMap<ModuleIdentifier, ParsedModule>,
 ) -> MergerResult<()> {
     for module in module_tree.values() {
@@ -46,7 +47,7 @@ fn extract_module_functions(
                 item_name: func_def.value.function_name.clone(),
                 module_id: module.module_path.clone(),
             };
-            let header = extract_function(resolved_types, func_def)?;
+            let header = extract_function(func_def, resolved_types)?;
 
             if functions.insert(func_id.clone(), header).is_some() {
                 return Err(anyhow::anyhow!(
@@ -57,7 +58,7 @@ fn extract_module_functions(
         }
         for type_impl in &module.type_implementations {
             let resolved_type = resolved_types
-                .resolve_type(&type_impl.value.impl_type)
+                .resolve_type(&type_impl.value.impl_type.value)
                 .ok_or_else(|| {
                     anyhow::anyhow!(
                         "Type {:?} not found at {}",
@@ -66,10 +67,10 @@ fn extract_module_functions(
                     )
                 })?;
             let impl_functions = member_functions
-                .entry(resolved_type.clone())
+                .entry(resolved_type)
                 .or_insert_with(HashMap::new);
             for func_def in &type_impl.value.functions {
-                let header = extract_function(resolved_types, func_def)?;
+                let header = extract_function(func_def, resolved_types)?;
                 let id = ItemId {
                     item_name: func_def.value.function_name.clone(),
                     module_id: module.module_path.clone(),
@@ -88,38 +89,45 @@ fn extract_module_functions(
 }
 
 fn extract_function(
-    resolved_types: &ResolvedTypes,
     func_def: &Src<ParsedFunction>,
+    resolved_types: &ResolvedTypes,
 ) -> MergerResult<ResolvedFunctionHeader> {
-    let return_type = resolved_types
-        .resolve_type(&func_def.value.return_type)
+    let mut parameter_order = Vec::with_capacity(func_def.value.args.len());
+    let mut parameter_types = HashMap::with_capacity(func_def.value.args.len());
+
+    for (arg_type, arg_name) in &func_def.value.args {
+        parameter_order.push(arg_name.clone());
+        let resolved_arg_type = resolved_types
+            .resolve_generic_type(&arg_type.value, &func_def.value.generics)
+            .ok_or_else(|| {
+                anyhow::anyhow!("Type {} not found at {}", arg_type.value, func_def.location)
+            })?;
+        if parameter_types
+            .insert(arg_name.clone(), resolved_arg_type)
+            .is_some()
+        {
+            return Err(anyhow::anyhow!(
+                "Duplicate parameter name: {}",
+                arg_name.clone()
+            ));
+        }
+    }
+
+    let resolved_return_type = resolved_types
+        .resolve_generic_type(&func_def.value.return_type.value, &func_def.value.generics)
         .ok_or_else(|| {
             anyhow::anyhow!(
-                "Return type {:?} not found at {}",
+                "Return type {} not found at {}",
                 func_def.value.return_type.value,
                 func_def.location
             )
         })?;
 
-    let mut parameter_order = Vec::with_capacity(func_def.value.args.len());
-    let mut parameter_types = HashMap::with_capacity(func_def.value.args.len());
-
-    for (arg_type, arg_name) in &func_def.value.args {
-        let arg_type = resolved_types.resolve_type(arg_type).ok_or_else(|| {
-            anyhow::anyhow!(
-                "Parameter type {:?} not found at {}",
-                arg_type.value,
-                func_def.location
-            )
-        })?;
-        parameter_order.push(arg_name.clone());
-        parameter_types.insert(arg_name.clone(), arg_type);
-    }
-
     let header = ResolvedFunctionHeader {
-        return_type,
+        return_type: resolved_return_type,
         parameter_order,
         parameter_types,
+        generic_params: func_def.value.generics.clone(),
     };
 
     Ok(header)

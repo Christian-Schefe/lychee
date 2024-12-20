@@ -5,7 +5,7 @@ use crate::compiler::parser::parsed_expression::{
 };
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::primary_expr_parser::{
-    parse_primary_expression, parse_seperated_expressions,
+    parse_generic_args, parse_primary_expression, parse_seperated_expressions,
 };
 use crate::compiler::parser::program_parser::{parse_expression, parse_identifier, pop_expected};
 use crate::compiler::parser::type_parser::parse_function_id;
@@ -115,9 +115,12 @@ fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression>
                             tokens,
                             member_name.clone(),
                             false,
-                            &location.file.id,
+                            &location.file.as_ref().unwrap().id,
                         )?;
-                        if tokens.peek().value == Token::Static(StaticToken::OpenParen) {
+                        let generics = parse_generic_args(tokens)?;
+                        if generics.len() > 0
+                            || tokens.peek().value == Token::Static(StaticToken::OpenParen)
+                        {
                             let (_, args, _) = parse_seperated_expressions(
                                 tokens,
                                 Token::Static(StaticToken::OpenParen),
@@ -131,6 +134,7 @@ fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression>
                                     object: Box::new(expr),
                                     id: function_identifier,
                                     args,
+                                    generics,
                                 },
                                 location.clone(),
                             );
@@ -158,8 +162,9 @@ fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression>
                             tokens,
                             member_name.clone(),
                             true,
-                            &location.file.id,
+                            &location.file.as_ref().unwrap().id,
                         )?;
+                        let generics = parse_generic_args(tokens)?;
                         let (_, args, _) = parse_seperated_expressions(
                             tokens,
                             Token::Static(StaticToken::OpenParen),
@@ -179,6 +184,7 @@ fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression>
                                 object: Box::new(expr),
                                 id: function_identifier,
                                 args,
+                                generics,
                             },
                             location.clone(),
                         );

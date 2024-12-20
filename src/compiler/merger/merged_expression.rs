@@ -1,7 +1,8 @@
+use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
 use crate::compiler::merger::resolved_functions::ResolvedFunctions;
 use crate::compiler::merger::resolved_types::ResolvedTypes;
 use crate::compiler::parser::item_id::ItemId;
-use crate::compiler::parser::parsed_expression::ParsedExpression;
+use crate::compiler::parser::parsed_expression::{GenericParams, ParsedExpression};
 use std::collections::HashMap;
 use std::fmt::Display;
 
@@ -14,52 +15,24 @@ pub struct MergedProgram {
 
 #[derive(Debug, Clone)]
 pub struct ResolvedFunctionHeader {
-    pub return_type: TypeId,
-    pub parameter_types: HashMap<String, TypeId>,
+    pub return_type: AnalyzedTypeId,
+    pub parameter_types: HashMap<String, AnalyzedTypeId>,
     pub parameter_order: Vec<String>,
+    pub generic_params: Option<GenericParams>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ResolvedStruct {
     pub id: ItemId,
-    pub field_types: HashMap<String, TypeId>,
+    pub field_types: HashMap<String, AnalyzedTypeId>,
     pub field_order: Vec<String>,
-    pub field_offsets: HashMap<String, usize>,
-}
-
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
-pub enum TypeId {
-    Unit,
-    Bool,
-    Char,
-    Integer(usize),
-    Pointer(Box<TypeId>),
-    StructType(ItemId),
-}
-
-impl Display for TypeId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TypeId::Unit => write!(f, "unit"),
-            TypeId::Bool => write!(f, "bool"),
-            TypeId::Char => write!(f, "char"),
-            TypeId::Integer(size) => match size {
-                1 => write!(f, "byte"),
-                2 => write!(f, "short"),
-                4 => write!(f, "int"),
-                8 => write!(f, "long"),
-                _ => unreachable!("Invalid integer size: {}", size),
-            },
-            TypeId::Pointer(inner) => write!(f, "&{}", inner),
-            TypeId::StructType(module_id) => write!(f, "{}", module_id),
-        }
-    }
+    pub generic_params: Option<GenericParams>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FunctionId {
     pub item_id: ItemId,
-    pub impl_type: Option<TypeId>,
+    pub impl_type: Option<AnalyzedTypeId>,
 }
 
 impl Display for FunctionId {

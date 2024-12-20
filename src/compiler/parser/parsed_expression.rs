@@ -1,7 +1,9 @@
 use crate::compiler::lexer::location::Src;
 use crate::compiler::parser::item_id::{ParsedFunctionId, ParsedTypeId};
+use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::ModuleIdentifier;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::fmt::Display;
 
 #[derive(Debug, Clone)]
 pub struct ParsedProgram {
@@ -28,18 +30,45 @@ pub struct ParsedImport {
 pub struct ParsedStructDefinition {
     pub struct_name: String,
     pub fields: Vec<(String, ParsedType)>,
+    pub generics: Option<GenericParams>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ParsedTypeImplementation {
     pub impl_type: ParsedType,
     pub functions: Vec<Src<ParsedFunction>>,
+    pub generics: Option<GenericParams>,
+}
+
+#[derive(Debug, Clone)]
+pub struct GenericParams {
+    pub set: HashSet<String>,
+    pub order: Vec<String>,
+}
+
+impl GenericParams {
+    pub fn new(order: Vec<String>) -> ParseResult<Self> {
+        let mut set = HashSet::new();
+        for generic in &order {
+            if !set.insert(generic.clone()) {
+                return Err(anyhow::anyhow!("Duplicate generic parameter: {}", generic))?;
+            }
+        }
+        Ok(Self { set, order })
+    }
+    pub fn empty() -> Self {
+        Self {
+            set: HashSet::new(),
+            order: Vec::new(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct ParsedFunction {
     pub function_name: String,
     pub return_type: ParsedType,
+    pub generics: Option<GenericParams>,
     pub args: Vec<(ParsedType, String)>,
     pub body: ParsedExpression,
 }
@@ -86,20 +115,35 @@ pub enum ParsedExpressionKind {
     FunctionCall {
         id: ParsedFunctionId,
         args: Vec<ParsedExpression>,
+        generics: Vec<ParsedType>,
     },
     MemberFunctionCall {
         object: Box<ParsedExpression>,
         id: ParsedFunctionId,
         args: Vec<ParsedExpression>,
+        generics: Vec<ParsedType>,
     },
 }
 
 pub type ParsedType = Src<ParsedTypeKind>;
 
+impl Display for ParsedTypeKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            ParsedTypeKind::Struct(id, generics) => write!(f, "{}<{:?}>", id.item_id, generics),
+            ParsedTypeKind::Pointer(inner) => write!(f, "&{}", inner),
+            ParsedTypeKind::Unit => write!(f, "unit"),
+            ParsedTypeKind::Bool => write!(f, "bool"),
+            ParsedTypeKind::Char => write!(f, "char"),
+            ParsedTypeKind::Integer(size) => write!(f, "int{}", size),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum ParsedTypeKind {
-    Struct(ParsedTypeId),
-    Pointer(Box<ParsedType>),
+    Struct(ParsedTypeId, Vec<ParsedType>),
+    Pointer(Box<ParsedTypeKind>),
     Unit,
     Bool,
     Char,

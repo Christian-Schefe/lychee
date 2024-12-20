@@ -1,11 +1,13 @@
 use crate::compiler::analyzer::analyzed_expression::{
     AssignableExpression, AssignableExpressionKind,
 };
-use crate::compiler::analyzer::iterative_expression_analyzer::analyze_expression;
+use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
+use crate::compiler::analyzer::iterative_expression_analyzer::{
+    analyze_expression, resolve_generic_type,
+};
 use crate::compiler::analyzer::program_analyzer::AnalyzerContext;
 use crate::compiler::analyzer::AnalyzerResult;
 use crate::compiler::lexer::location::Location;
-use crate::compiler::merger::merged_expression::TypeId;
 use crate::compiler::parser::parsed_expression::{
     BinaryOp, ParsedExpression, ParsedExpressionKind, UnaryOp,
 };
@@ -71,7 +73,7 @@ pub fn analyze_assignable_expression(
                     )
                 })?;
                 match &analyzed_index.ty {
-                    TypeId::Integer(_) => {}
+                    AnalyzedTypeId::Integer(_) => {}
                     _ => Err(anyhow::anyhow!(
                         "Index expression has non-integer type '{}' at {}.",
                         analyzed_index.ty,
@@ -79,7 +81,7 @@ pub fn analyze_assignable_expression(
                     ))?,
                 }
                 match analyzed_expr.ty.clone() {
-                    TypeId::Pointer(inner) => Ok(AssignableExpression {
+                    AnalyzedTypeId::Pointer(inner) => Ok(AssignableExpression {
                         ty: *inner,
                         kind: AssignableExpressionKind::ArrayIndex(
                             Box::new(analyzed_expr),
@@ -122,7 +124,7 @@ pub fn analyze_assignable_expression(
                 )
             })?;
             match analyzed_expr.ty.clone() {
-                TypeId::Pointer(inner) => Ok(AssignableExpression {
+                AnalyzedTypeId::Pointer(inner) => Ok(AssignableExpression {
                     kind: AssignableExpressionKind::Dereference(Box::new(analyzed_expr)),
                     ty: *inner,
                 }),
@@ -153,13 +155,10 @@ fn try_as_assignable_field_access(
     let maybe_assignable_expr = analyze_assignable_expression(context, inner);
     if let Ok(analyzed_expr) = maybe_assignable_expr {
         match &analyzed_expr.ty {
-            TypeId::StructType(str_name) => {
-                let struct_type = context
-                    .resolved_types
-                    .get_struct(&analyzed_expr.ty)
-                    .ok_or_else(|| {
-                        anyhow::anyhow!("Struct type '{}' not found at {}.", str_name, location)
-                    })?;
+            AnalyzedTypeId::StructType(str_name, generic_args) => {
+                let struct_type = context.types.get_struct(&analyzed_expr.ty).ok_or_else(|| {
+                    anyhow::anyhow!("Struct type '{}' not found at {}.", str_name, location)
+                })?;
                 let field_type = struct_type.field_types.get(&member).ok_or_else(|| {
                     anyhow::anyhow!(
                         "Struct type '{}' does not have field '{}' at {}.",
@@ -168,15 +167,17 @@ fn try_as_assignable_field_access(
                         location
                     )
                 })?;
+                let actual_field_type =
+                    resolve_generic_type(field_type, &struct_type.generic_params, generic_args);
                 return Ok(AssignableExpression {
                     kind: AssignableExpressionKind::FieldAccess(
                         Box::new(analyzed_expr),
                         member.clone(),
                     ),
-                    ty: field_type.clone(),
+                    ty: actual_field_type,
                 });
             }
-            TypeId::Pointer(_) => {}
+            AnalyzedTypeId::Pointer(_) => {}
             _ => {
                 return Err(anyhow::anyhow!(
                     "Expected struct type, found '{}' at {}.",
@@ -195,7 +196,7 @@ fn try_as_assignable_field_access(
     })?;
     let mut inner_ty = &analyzed_expr.ty;
     let mut indirections = 0;
-    while let TypeId::Pointer(inner) = inner_ty {
+    while let AnalyzedTypeId::Pointer(inner) = inner_ty {
         inner_ty = inner;
         indirections += 1;
     }
@@ -207,8 +208,8 @@ fn try_as_assignable_field_access(
         ))?;
     }
 
-    if let TypeId::StructType(str_name) = inner_ty {
-        let struct_type = context.resolved_types.get_struct(inner_ty).ok_or_else(|| {
+    if let AnalyzedTypeId::StructType(str_name, generic_args) = inner_ty {
+        let struct_type = context.types.get_struct(inner_ty).ok_or_else(|| {
             anyhow::anyhow!("Struct type '{}' not found at {}.", str_name, location)
         })?;
         let field_type = struct_type.field_types.get(&member).ok_or_else(|| {
@@ -219,13 +220,15 @@ fn try_as_assignable_field_access(
                 location
             )
         })?;
+        let actual_field_type =
+            resolve_generic_type(field_type, &struct_type.generic_params, generic_args);
         Ok(AssignableExpression {
             kind: AssignableExpressionKind::PointerFieldAccess(
                 Box::new(analyzed_expr),
                 member.clone(),
                 indirections,
             ),
-            ty: field_type.clone(),
+            ty: actual_field_type,
         })
     } else {
         Err(anyhow::anyhow!(
@@ -236,17 +239,17 @@ fn try_as_assignable_field_access(
     }
 }
 
-pub fn can_cast_to(original_type: &TypeId, target_type: &TypeId) -> bool {
+pub fn can_cast_to(original_type: &AnalyzedTypeId, target_type: &AnalyzedTypeId) -> bool {
     if *original_type == *target_type {
         return true;
     }
     match (original_type, target_type) {
-        (TypeId::Integer(_), TypeId::Integer(_)) => true,
-        (TypeId::Char, TypeId::Integer(_)) => true,
-        (TypeId::Integer(_), TypeId::Char) => true,
-        (TypeId::Bool, TypeId::Integer(_)) => true,
-        (TypeId::Integer(_), TypeId::Bool) => true,
-        (TypeId::Pointer(_), TypeId::Pointer(_)) => true,
+        (AnalyzedTypeId::Integer(_), AnalyzedTypeId::Integer(_)) => true,
+        (AnalyzedTypeId::Char, AnalyzedTypeId::Integer(_)) => true,
+        (AnalyzedTypeId::Integer(_), AnalyzedTypeId::Char) => true,
+        (AnalyzedTypeId::Bool, AnalyzedTypeId::Integer(_)) => true,
+        (AnalyzedTypeId::Integer(_), AnalyzedTypeId::Bool) => true,
+        (AnalyzedTypeId::Pointer(_), AnalyzedTypeId::Pointer(_)) => true,
         _ => false,
     }
 }

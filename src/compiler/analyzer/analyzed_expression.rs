@@ -1,9 +1,11 @@
+use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
+use crate::compiler::analyzer::program_analyzer::GenericInstances;
 use crate::compiler::lexer::location::Location;
-use crate::compiler::merger::merged_expression::{FunctionId, TypeId};
+use crate::compiler::merger::merged_expression::FunctionId;
 use crate::compiler::merger::resolved_functions::ResolvedFunctions;
 use crate::compiler::merger::resolved_types::ResolvedTypes;
 use crate::compiler::parser::parsed_expression::{
-    BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, UnaryMathOp,
+    BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, GenericParams, UnaryMathOp,
 };
 
 #[derive(Debug, Clone)]
@@ -11,18 +13,21 @@ pub struct AnalyzedProgram {
     pub resolved_types: ResolvedTypes,
     pub resolved_functions: ResolvedFunctions,
     pub functions: Vec<AnalyzedFunction>,
+    pub generic_instances: GenericInstances,
 }
 
 #[derive(Debug, Clone)]
 pub struct AnalyzedFunction {
     pub name: FunctionId,
     pub body: AnalyzedExpression,
+    pub return_type: AnalyzedTypeId,
+    pub generic_params: Option<GenericParams>,
 }
 
 #[derive(Debug, Clone)]
 pub struct AnalyzedExpression {
     pub kind: AnalyzedExpressionKind,
-    pub ty: TypeId,
+    pub ty: AnalyzedTypeId,
     pub location: Location,
 }
 
@@ -100,7 +105,7 @@ pub enum AnalyzedConstant {
 #[derive(Debug, Clone)]
 pub struct AssignableExpression {
     pub kind: AssignableExpressionKind,
-    pub ty: TypeId,
+    pub ty: AnalyzedTypeId,
 }
 #[derive(Debug, Clone)]
 pub enum AssignableExpressionKind {

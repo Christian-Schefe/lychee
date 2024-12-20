@@ -1,26 +1,23 @@
-module various_test;
-module std;
-
-import std::arrays::*;
-import std::arrays::*@IntArray;
-import std::io::*@int;
-
 int main() {
-    let var int_arr = create@IntArray(50);
-    int_arr.fill(-8);
-    int_arr.set(0, 1);
-    int_arr.print();
-    print@IntArray(int_arr);
-    (int_arr.data[0]).test();
-    (int_arr.data[1]).::test();
-    write_char('\n');
-    std::io::file_test();
-    write_char('\n');
-    0
+    let int b = 35;
+    let int c = *generic_test[&int](&b);
+    let int d = generic_test2[int, int](5, b + 5);
+
+    let Option[int] a = new Option[int] {
+        value: 5,
+    };
+    a.value = 10;
+    a.value
 }
 
-impl int {
-    unit test(int a) {
-        std::arrays::write_num(a * 88);
-    }
+T generic_test<T>(T a) {
+    return a;
+}
+
+T2 generic_test2<T1, T2>(T1 b, T2 a) {
+    return a;
+}
+
+struct Option<T> {
+    T value;
 }

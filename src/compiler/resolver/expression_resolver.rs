@@ -2,7 +2,7 @@ use crate::compiler::analyzer::analyzed_expression::{
     AnalyzedConstant, AnalyzedExpression, AnalyzedExpressionKind, AnalyzedLiteral, AnalyzedUnaryOp,
     AssignableExpression, AssignableExpressionKind,
 };
-use crate::compiler::merger::merged_expression::TypeId;
+use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
 use crate::compiler::resolver::program_resolver::ResolverContext;
 use crate::compiler::resolver::resolved_expression::{
     ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedLiteral,
@@ -184,14 +184,14 @@ pub fn resolve_expression(
                 AnalyzedUnaryOp::Math(math_op) => ResolvedUnaryOp::Math(math_op.clone()),
                 AnalyzedUnaryOp::LogicalNot => ResolvedUnaryOp::LogicalNot,
                 AnalyzedUnaryOp::Cast => {
-                    let original_size = context.resolved_types.get_type_size(&expr.ty);
-                    let target_size = context.resolved_types.get_type_size(&expression.ty);
+                    let original_size = context.get_type_size(&expr.ty);
+                    let target_size = context.get_type_size(&expression.ty);
                     let smaller_size = original_size.min(target_size);
                     match &expression.ty {
-                        TypeId::Integer(_) => ResolvedUnaryOp::IntCast(smaller_size),
-                        TypeId::Bool => ResolvedUnaryOp::BoolCast,
-                        TypeId::Char => ResolvedUnaryOp::IntCast(smaller_size),
-                        TypeId::Pointer(_) => ResolvedUnaryOp::PointerCast,
+                        AnalyzedTypeId::Integer(_) => ResolvedUnaryOp::IntCast(smaller_size),
+                        AnalyzedTypeId::Bool => ResolvedUnaryOp::BoolCast,
+                        AnalyzedTypeId::Char => ResolvedUnaryOp::IntCast(smaller_size),
+                        AnalyzedTypeId::Pointer(_) => ResolvedUnaryOp::PointerCast,
                         _ => {
                             panic!("Unsupported cast: {:?}", expression.ty)
                         }
@@ -276,7 +276,7 @@ pub fn resolve_expression(
         }
         AnalyzedExpressionKind::FieldAccess { expr, field_name } => {
             let resolved_expr = resolve_expression(context, expr, false);
-            let field_offset = field_offset(context, &expr.ty, field_name);
+            let field_offset = context.get_field_offset(&expr.ty, field_name);
             let struct_size = resolved_expr.value_data.size;
 
             ResolvedExpression {
@@ -334,13 +334,13 @@ fn resolve_assignable_expression(
         }
         AssignableExpressionKind::FieldAccess(inner, field_name) => {
             let resolved_inner = resolve_assignable_expression(context, inner);
-            let field_offset = field_offset(context, &inner.ty, field_name);
+            let field_offset = context.get_field_offset(&inner.ty, field_name);
             ResolvedAssignableExpression::FieldAccess(Box::new(resolved_inner), field_offset)
         }
         AssignableExpressionKind::ArrayIndex(arr_expr, index_expr) => {
             let resolved_arr_expr = resolve_expression(context, arr_expr, false);
             let resolved_index_expr = resolve_expression(context, index_expr, false);
-            let element_size = context.resolved_types.get_type_size(&expr.ty);
+            let element_size = context.get_type_size(&expr.ty);
             ResolvedAssignableExpression::ArrayIndex(
                 Box::new(resolved_arr_expr),
                 Box::new(resolved_index_expr),
@@ -349,7 +349,7 @@ fn resolve_assignable_expression(
         }
         AssignableExpressionKind::PointerFieldAccess(inner, field_name, indirections) => {
             let resolved_inner = resolve_expression(context, inner, false);
-            let field_offset = field_offset(context, &inner.ty, field_name);
+            let field_offset = context.get_field_offset(&inner.ty, field_name);
             ResolvedAssignableExpression::PointerFieldAccess(
                 Box::new(resolved_inner),
                 field_offset,
@@ -357,20 +357,4 @@ fn resolve_assignable_expression(
             )
         }
     }
-}
-
-fn field_offset(context: &ResolverContext, type_id: &TypeId, field_name: &str) -> usize {
-    let struct_type = match type_id {
-        TypeId::StructType(_) => type_id,
-        TypeId::Pointer(inner) => inner,
-        _ => panic!("Expected struct type: {:?}", type_id),
-    };
-    context
-        .resolved_types
-        .get_struct(struct_type)
-        .unwrap_or_else(|| panic!("Unknown struct type: {:?}", struct_type))
-        .field_offsets
-        .get(field_name)
-        .unwrap()
-        .clone()
 }

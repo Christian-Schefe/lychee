@@ -1,21 +1,22 @@
+use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
 use crate::compiler::codegen::CodegenContext;
-use crate::compiler::merger::merged_expression::{FunctionId, ResolvedFunctionHeader, TypeId};
+use crate::compiler::merger::merged_expression::{FunctionId, ResolvedFunctionHeader};
 use crate::compiler::parser::item_id::ItemId;
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
 pub struct BuiltinFunction {
     pub name: String,
-    pub return_type: TypeId,
-    pub parameters: Vec<(String, TypeId)>,
+    pub return_type: AnalyzedTypeId,
+    pub parameters: Vec<(String, AnalyzedTypeId)>,
     pub code: Box<dyn Fn(&mut CodegenContext)>,
 }
 
 impl BuiltinFunction {
     fn new(
         name: String,
-        return_type: TypeId,
-        parameters: Vec<(String, TypeId)>,
+        return_type: AnalyzedTypeId,
+        parameters: Vec<(String, AnalyzedTypeId)>,
         code: Box<dyn Fn(&mut CodegenContext)>,
     ) -> BuiltinFunction {
         BuiltinFunction {
@@ -36,7 +37,7 @@ impl BuiltinFunction {
     fn read_char() -> BuiltinFunction {
         BuiltinFunction::new(
             "read_char".to_string(),
-            TypeId::Char,
+            AnalyzedTypeId::Char,
             vec![],
             Box::new(|context| {
                 context.movi("r0", 1);
@@ -51,8 +52,8 @@ impl BuiltinFunction {
     fn write_char() -> BuiltinFunction {
         BuiltinFunction::new(
             "write_char".to_string(),
-            TypeId::Unit,
-            vec![("ch".to_string(), TypeId::Char)],
+            AnalyzedTypeId::Unit,
+            vec![("ch".to_string(), AnalyzedTypeId::Char)],
             Box::new(|context| {
                 context.movi("r0", 1);
                 context.write("r0", "[sp;8]");
@@ -64,13 +65,13 @@ impl BuiltinFunction {
     fn write() -> BuiltinFunction {
         BuiltinFunction::new(
             "write".to_string(),
-            TypeId::Unit,
+            AnalyzedTypeId::Unit,
             vec![
                 (
                     "string".to_string(),
-                    TypeId::Pointer(Box::new(TypeId::Char)),
+                    AnalyzedTypeId::Pointer(Box::new(AnalyzedTypeId::Char)),
                 ),
-                ("length".to_string(), TypeId::Integer(4)),
+                ("length".to_string(), AnalyzedTypeId::Integer(4)),
             ],
             Box::new(|context| {
                 context.load(4, "r0", "[sp;8]");
@@ -84,13 +85,13 @@ impl BuiltinFunction {
     fn read() -> BuiltinFunction {
         BuiltinFunction::new(
             "read".to_string(),
-            TypeId::Unit,
+            AnalyzedTypeId::Unit,
             vec![
                 (
                     "string".to_string(),
-                    TypeId::Pointer(Box::new(TypeId::Char)),
+                    AnalyzedTypeId::Pointer(Box::new(AnalyzedTypeId::Char)),
                 ),
-                ("length".to_string(), TypeId::Integer(4)),
+                ("length".to_string(), AnalyzedTypeId::Integer(4)),
             ],
             Box::new(|context| {
                 context.load(4, "r0", "[sp;8]");
@@ -104,8 +105,8 @@ impl BuiltinFunction {
     fn malloc() -> BuiltinFunction {
         BuiltinFunction::new(
             "malloc".to_string(),
-            TypeId::Pointer(Box::new(TypeId::Unit)),
-            vec![("size".to_string(), TypeId::Integer(4))],
+            AnalyzedTypeId::Pointer(Box::new(AnalyzedTypeId::Unit)),
+            vec![("size".to_string(), AnalyzedTypeId::Integer(4))],
             Box::new(|context| {
                 context.load(4, "r1", "[sp;8]");
                 context.alloc("r1", "r0");
@@ -117,10 +118,10 @@ impl BuiltinFunction {
     fn free() -> BuiltinFunction {
         BuiltinFunction::new(
             "free".to_string(),
-            TypeId::Unit,
+            AnalyzedTypeId::Unit,
             vec![(
                 "pointer".to_string(),
-                TypeId::Pointer(Box::new(TypeId::Unit)),
+                AnalyzedTypeId::Pointer(Box::new(AnalyzedTypeId::Unit)),
             )],
             Box::new(|context| {
                 context.load(8, "r0", "[sp;8]");
@@ -132,7 +133,7 @@ impl BuiltinFunction {
     fn random() -> BuiltinFunction {
         BuiltinFunction::new(
             "random".to_string(),
-            TypeId::Integer(8),
+            AnalyzedTypeId::Integer(8),
             vec![],
             Box::new(|context| {
                 context.rand("r0");
@@ -144,8 +145,8 @@ impl BuiltinFunction {
     fn exit() -> BuiltinFunction {
         BuiltinFunction::new(
             "exit".to_string(),
-            TypeId::Unit,
-            vec![("code".to_string(), TypeId::Integer(4))],
+            AnalyzedTypeId::Unit,
+            vec![("code".to_string(), AnalyzedTypeId::Integer(4))],
             Box::new(|context| {
                 context.load(4, "r0", "[sp;8]");
                 context.exit();
@@ -156,11 +157,17 @@ impl BuiltinFunction {
     fn memcopy() -> BuiltinFunction {
         BuiltinFunction::new(
             "memcopy".to_string(),
-            TypeId::Unit,
+            AnalyzedTypeId::Unit,
             vec![
-                ("dest".to_string(), TypeId::Pointer(Box::new(TypeId::Char))),
-                ("src".to_string(), TypeId::Pointer(Box::new(TypeId::Char))),
-                ("length".to_string(), TypeId::Integer(4)),
+                (
+                    "dest".to_string(),
+                    AnalyzedTypeId::Pointer(Box::new(AnalyzedTypeId::Char)),
+                ),
+                (
+                    "src".to_string(),
+                    AnalyzedTypeId::Pointer(Box::new(AnalyzedTypeId::Char)),
+                ),
+                ("length".to_string(), AnalyzedTypeId::Integer(4)),
             ],
             Box::new(|context| {
                 context.load(4, "r0", "[sp;8]");
@@ -173,10 +180,10 @@ impl BuiltinFunction {
     fn fopen() -> BuiltinFunction {
         BuiltinFunction::new(
             "fopen".to_string(),
-            TypeId::Integer(4),
+            AnalyzedTypeId::Integer(4),
             vec![(
                 "filename".to_string(),
-                TypeId::Pointer(Box::new(TypeId::Char)),
+                AnalyzedTypeId::Pointer(Box::new(AnalyzedTypeId::Char)),
             )],
             Box::new(|context| {
                 context.load(8, "r0", "[sp;8]");
@@ -189,8 +196,8 @@ impl BuiltinFunction {
     fn fclose() -> BuiltinFunction {
         BuiltinFunction::new(
             "fclose".to_string(),
-            TypeId::Unit,
-            vec![("file".to_string(), TypeId::Integer(4))],
+            AnalyzedTypeId::Unit,
+            vec![("file".to_string(), AnalyzedTypeId::Integer(4))],
             Box::new(|context| {
                 context.load(4, "r0", "[sp;8]");
                 context.file_close("r0");
@@ -202,14 +209,14 @@ impl BuiltinFunction {
     fn fread() -> BuiltinFunction {
         BuiltinFunction::new(
             "fread".to_string(),
-            TypeId::Unit,
+            AnalyzedTypeId::Unit,
             vec![
                 (
                     "buffer".to_string(),
-                    TypeId::Pointer(Box::new(TypeId::Char)),
+                    AnalyzedTypeId::Pointer(Box::new(AnalyzedTypeId::Char)),
                 ),
-                ("length".to_string(), TypeId::Integer(4)),
-                ("file".to_string(), TypeId::Integer(4)),
+                ("length".to_string(), AnalyzedTypeId::Integer(4)),
+                ("file".to_string(), AnalyzedTypeId::Integer(4)),
             ],
             Box::new(|context| {
                 context.load(4, "r0", "[sp;8]");
@@ -224,14 +231,14 @@ impl BuiltinFunction {
     fn fwrite() -> BuiltinFunction {
         BuiltinFunction::new(
             "fwrite".to_string(),
-            TypeId::Unit,
+            AnalyzedTypeId::Unit,
             vec![
                 (
                     "buffer".to_string(),
-                    TypeId::Pointer(Box::new(TypeId::Char)),
+                    AnalyzedTypeId::Pointer(Box::new(AnalyzedTypeId::Char)),
                 ),
-                ("length".to_string(), TypeId::Integer(4)),
-                ("file".to_string(), TypeId::Integer(4)),
+                ("length".to_string(), AnalyzedTypeId::Integer(4)),
+                ("file".to_string(), AnalyzedTypeId::Integer(4)),
             ],
             Box::new(|context| {
                 context.load(4, "r0", "[sp;8]");
@@ -292,6 +299,7 @@ impl BuiltinFunction {
                     return_type: function.return_type,
                     parameter_types,
                     parameter_order,
+                    generic_params: None,
                 },
             );
         }

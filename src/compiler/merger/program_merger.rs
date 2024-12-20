@@ -43,7 +43,7 @@ pub fn merge_module(
 
     for type_impl in &parsed_module.type_implementations {
         let resolved_type = resolved_types
-            .resolve_type(&type_impl.value.impl_type)
+            .resolve_type(&type_impl.value.impl_type.value)
             .ok_or_else(|| {
                 anyhow::anyhow!(
                     "Type {:?} not found at {}",

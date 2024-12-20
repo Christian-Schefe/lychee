@@ -89,7 +89,10 @@ fn print_struct_definition(printer: &mut Printer, struct_def: &ParsedStructDefin
 }
 
 fn print_function(printer: &mut Printer, function: &ParsedFunction) {
-    printer.add_line(format!("fn {}(", function.function_name));
+    printer.add_line(format!(
+        "fn {}<{:?}>(",
+        function.function_name, function.generics
+    ));
     printer.indent();
     for (param_type, param_name) in &function.args {
         printer.add_line(format!("{}: {:?}", param_name, param_type.value));
@@ -209,16 +212,22 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
         ParsedExpressionKind::FunctionCall {
             id: function_name,
             args,
+            generics,
         } => {
-            printer.add_line(format!("FunctionCall({:?})", function_name));
+            printer.add_line(format!("FunctionCall<{:?}>({:?})", generics, function_name));
             printer.indent();
             for arg in args {
                 print_expression(printer, arg);
             }
             printer.dedent();
         }
-        ParsedExpressionKind::MemberFunctionCall { object, id, args } => {
-            printer.add_line(format!("MemberFunctionCall({})", id.item_id));
+        ParsedExpressionKind::MemberFunctionCall {
+            object,
+            id,
+            args,
+            generics,
+        } => {
+            printer.add_line(format!("MemberFunctionCall<{:?}({})", generics, id.item_id));
             printer.indent();
             print_expression(printer, object);
             for arg in args {

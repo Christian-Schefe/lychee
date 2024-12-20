@@ -17,7 +17,7 @@ impl<T> Src<T> {
 pub struct Location {
     pub line: usize,
     pub column: usize,
-    pub file: ModulePath,
+    pub file: Option<ModulePath>,
 }
 
 impl Display for Location {
@@ -27,7 +27,10 @@ impl Display for Location {
             "line {}, column {} ({})",
             self.line,
             self.column,
-            self.file.file.display()
+            self.file
+                .as_ref()
+                .map(|x| format!("{}", x.file.display()))
+                .unwrap_or("unknown".to_string())
         )
     }
 }
@@ -37,7 +40,15 @@ impl Location {
         Location {
             line: 1,
             column: 1,
-            file,
+            file: Some(file),
+        }
+    }
+
+    pub fn default() -> Self {
+        Location {
+            line: 1,
+            column: 1,
+            file: None,
         }
     }
 

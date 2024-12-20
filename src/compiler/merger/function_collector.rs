@@ -1,5 +1,6 @@
+use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
 use crate::compiler::builtin::BuiltinFunction;
-use crate::compiler::merger::merged_expression::{FunctionId, TypeId};
+use crate::compiler::merger::merged_expression::FunctionId;
 use crate::compiler::merger::resolved_types::ResolvedTypes;
 use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::item_id::{ItemId, ParsedFunctionId};
@@ -10,10 +11,11 @@ use std::collections::HashMap;
 #[derive(Debug, Clone)]
 pub struct CollectedFunctionData {
     pub functions: HashMap<ModuleIdentifier, HashMap<String, FunctionId>>,
-    pub member_functions: HashMap<ModuleIdentifier, HashMap<TypeId, HashMap<String, FunctionId>>>,
+    pub member_functions:
+        HashMap<ModuleIdentifier, HashMap<AnalyzedTypeId, HashMap<String, FunctionId>>>,
     pub function_imports: HashMap<ModuleIdentifier, HashMap<String, FunctionId>>,
     pub member_function_imports:
-        HashMap<ModuleIdentifier, HashMap<TypeId, HashMap<String, FunctionId>>>,
+        HashMap<ModuleIdentifier, HashMap<AnalyzedTypeId, HashMap<String, FunctionId>>>,
     pub builtin_functions: HashMap<String, FunctionId>,
 }
 
@@ -21,20 +23,7 @@ impl CollectedFunctionData {
     pub fn map_function_id(
         &self,
         parsed_function_id: &ParsedFunctionId,
-        resolved_types: &ResolvedTypes,
-    ) -> Option<FunctionId> {
-        if let Some(resolved_type) = &parsed_function_id.impl_type {
-            let resolved_type = resolved_types.resolve_type(resolved_type)?;
-            self.map_member_function_id(parsed_function_id, Some(&resolved_type))
-        } else {
-            self.map_member_function_id(parsed_function_id, None)
-        }
-    }
-
-    pub fn map_member_function_id(
-        &self,
-        parsed_function_id: &ParsedFunctionId,
-        impl_type: Option<&TypeId>,
+        impl_type: Option<&AnalyzedTypeId>,
     ) -> Option<FunctionId> {
         if let Some(resolved_type) = impl_type {
             let module_member_functions = self
@@ -107,7 +96,7 @@ fn collect_functions(
     resolved_types: &ResolvedTypes,
 ) -> MergerResult<(
     HashMap<ModuleIdentifier, HashMap<String, FunctionId>>,
-    HashMap<ModuleIdentifier, HashMap<TypeId, HashMap<String, FunctionId>>>,
+    HashMap<ModuleIdentifier, HashMap<AnalyzedTypeId, HashMap<String, FunctionId>>>,
 )> {
     let mut functions = HashMap::new();
     let mut member_functions = HashMap::new();
@@ -136,7 +125,7 @@ fn collect_functions(
         }
         for type_impl in &module.type_implementations {
             let resolved_type = resolved_types
-                .resolve_type(&type_impl.value.impl_type)
+                .resolve_type(&type_impl.value.impl_type.value)
                 .ok_or_else(|| {
                     anyhow::anyhow!(
                         "Type {:?} not found at {}",
@@ -177,11 +166,14 @@ fn collect_functions(
 fn collect_function_imports(
     program: &ParsedProgram,
     functions: &HashMap<ModuleIdentifier, HashMap<String, FunctionId>>,
-    member_functions: &HashMap<ModuleIdentifier, HashMap<TypeId, HashMap<String, FunctionId>>>,
+    member_functions: &HashMap<
+        ModuleIdentifier,
+        HashMap<AnalyzedTypeId, HashMap<String, FunctionId>>,
+    >,
     resolved_types: &ResolvedTypes,
 ) -> MergerResult<(
     HashMap<ModuleIdentifier, HashMap<String, FunctionId>>,
-    HashMap<ModuleIdentifier, HashMap<TypeId, HashMap<String, FunctionId>>>,
+    HashMap<ModuleIdentifier, HashMap<AnalyzedTypeId, HashMap<String, FunctionId>>>,
 )> {
     let mut function_imports = HashMap::new();
     let mut member_function_imports = HashMap::new();
@@ -228,13 +220,15 @@ fn collect_function_imports(
             }
             let impl_type = import.value.impl_type.as_ref().unwrap();
             let module_member_functions = member_functions.get(&import.value.module_id).unwrap();
-            let resolved_type = resolved_types.resolve_type(impl_type).ok_or_else(|| {
-                anyhow::anyhow!(
-                    "Type {:?} not found at {}",
-                    impl_type.value,
-                    import.location
-                )
-            })?;
+            let resolved_type = resolved_types
+                .resolve_type(&impl_type.value)
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Type {:?} not found at {}",
+                        impl_type.value,
+                        import.location
+                    )
+                })?;
             let type_member_functions = module_member_function_imports
                 .entry(resolved_type.clone())
                 .or_insert_with(HashMap::new);
