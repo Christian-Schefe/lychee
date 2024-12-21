@@ -115,13 +115,11 @@ pub enum ParsedExpressionKind {
     FunctionCall {
         id: ParsedFunctionId,
         args: Vec<ParsedExpression>,
-        generics: Vec<ParsedType>,
     },
     MemberFunctionCall {
         object: Box<ParsedExpression>,
         id: ParsedFunctionId,
         args: Vec<ParsedExpression>,
-        generics: Vec<ParsedType>,
     },
 }
 

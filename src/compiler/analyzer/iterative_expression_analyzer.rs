@@ -892,11 +892,7 @@ pub fn analyze_expression(
                         )
                     }
                 },
-                ParsedExpressionKind::FunctionCall {
-                    id,
-                    args,
-                    generics: generic_args,
-                } => {
+                ParsedExpressionKind::FunctionCall { id, args } => {
                     let function_id = context
                         .functions
                         .map_function_id(id, context.types)
@@ -918,7 +914,7 @@ pub fn analyze_expression(
                         ))?;
                     }
 
-                    let analyzed_generic_args = analyze_generic_args(context, &generic_args)?;
+                    let analyzed_generic_args = analyze_generic_args(context, &id.generic_args)?;
                     context
                         .generic_instances
                         .add_function(function_id.clone(), analyzed_generic_args.clone());
@@ -963,12 +959,7 @@ pub fn analyze_expression(
                         },
                     )
                 }
-                ParsedExpressionKind::MemberFunctionCall {
-                    id,
-                    args,
-                    object,
-                    generics: generic_args,
-                } => {
+                ParsedExpressionKind::MemberFunctionCall { id, args, object } => {
                     let new_len = output.len() - (args.len() + 1);
                     let analyzed_args = output.split_off(new_len);
                     let obj_ty = &analyzed_args[0].ty;
@@ -1003,7 +994,7 @@ pub fn analyze_expression(
                         ))?;
                     }
 
-                    let analyzed_generic_args = analyze_generic_args(context, &generic_args)?;
+                    let analyzed_generic_args = analyze_generic_args(context, &id.generic_args)?;
                     context
                         .generic_instances
                         .add_function(function_id.clone(), analyzed_generic_args.clone());
@@ -1219,6 +1210,13 @@ pub fn resolve_generic_type(
             generic_params,
             generic_args,
         ))),
+        AnalyzedTypeId::StructType(id, inner_generic_args) => {
+            let mut resolved_generic_args = Vec::new();
+            for arg in inner_generic_args.iter() {
+                resolved_generic_args.push(resolve_generic_type(arg, generic_params, generic_args));
+            }
+            AnalyzedTypeId::StructType(id.clone(), resolved_generic_args)
+        }
         _ => ty.clone(),
     }
 }

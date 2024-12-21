@@ -34,7 +34,6 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             let module_id = parse_function_id(tokens, name, false, current_module)
                 .with_context(|| format!("Failed to parse module path at {}.", token.location))?;
 
-            let generic_args = parse_generic_args(tokens)?;
             let (_, args, _) = parse_seperated_expressions(
                 tokens,
                 Token::Static(StaticToken::OpenParen),
@@ -46,7 +45,6 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             Ok(ParsedExpression::new(
                 ParsedExpressionKind::FunctionCall {
                     id: module_id,
-                    generics: generic_args,
                     args,
                 },
                 token.location,
@@ -57,7 +55,6 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             let first_id = parse_identifier(tokens)?;
             let module_id = parse_function_id(tokens, first_id.value, true, current_module)
                 .with_context(|| format!("Failed to parse module path at {}.", token.location))?;
-            let generic_args = parse_generic_args(tokens)?;
             let (_, args, _) = parse_seperated_expressions(
                 tokens,
                 Token::Static(StaticToken::OpenParen),
@@ -69,7 +66,6 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             Ok(ParsedExpression::new(
                 ParsedExpressionKind::FunctionCall {
                     id: module_id,
-                    generics: generic_args,
                     args,
                 },
                 token.location,
@@ -431,24 +427,24 @@ fn parse_optional_else_block(tokens: &mut TokenStack) -> ParseResult<Option<Pars
 }
 
 pub fn parse_generic_args(tokens: &mut TokenStack) -> ParseResult<Vec<ParsedType>> {
-    if let Token::Static(StaticToken::OpenBracket) = tokens.peek().value {
+    if let Token::Static(StaticToken::LessThan) = tokens.peek().value {
         tokens.pop();
         let mut generics = Vec::new();
-        while tokens.peek().value != Token::Static(StaticToken::CloseBracket) {
+        while tokens.peek().value != Token::Static(StaticToken::GreaterThan) {
             let generic = parse_type(tokens)?;
             generics.push(generic);
             match tokens.peek().value {
                 Token::Static(StaticToken::Comma) => {
                     tokens.pop();
                 }
-                Token::Static(StaticToken::CloseBracket) => {}
+                Token::Static(StaticToken::GreaterThan) => {}
                 _ => Err(LocationError::new(
                     "Expected comma or greater than after generic.".to_string(),
                     tokens.location().clone(),
                 ))?,
             }
         }
-        pop_expected(tokens, Token::Static(StaticToken::CloseBracket))?;
+        pop_expected(tokens, Token::Static(StaticToken::GreaterThan))?;
         Ok(generics)
     } else {
         Ok(Vec::new())

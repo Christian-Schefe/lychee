@@ -42,12 +42,19 @@ impl ResolverContext {
         get_type_size(&actual_ty, &self.resolved_structs.struct_sizes)
     }
     pub fn get_field_offset(&self, ty: &AnalyzedTypeId, field_name: &str) -> usize {
-        match ty {
+        let actual_ty = self.resolve_generic_type(ty);
+        match actual_ty {
             AnalyzedTypeId::StructType(_, _) => {
-                let field_offsets = self.resolved_structs.field_offsets.get(ty).unwrap();
+                let field_offsets = self
+                    .resolved_structs
+                    .field_offsets
+                    .get(&actual_ty)
+                    .unwrap_or_else(|| {
+                        panic!("Field offsets not found for struct {:?}", actual_ty);
+                    });
                 *field_offsets.get(field_name).unwrap()
             }
-            AnalyzedTypeId::Pointer(inner) => self.get_field_offset(inner, field_name),
+            AnalyzedTypeId::Pointer(inner) => self.get_field_offset(&inner, field_name),
             _ => unreachable!("Expected struct type"),
         }
     }

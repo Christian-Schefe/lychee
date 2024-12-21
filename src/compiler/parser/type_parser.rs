@@ -95,13 +95,15 @@ pub fn parse_function_id(
     is_absolute: bool,
     current_module: &ModuleIdentifier,
 ) -> ParseResult<ParsedFunctionId> {
-    let parsed_type_id = parse_type_id(tokens, name, is_absolute, current_module)?;
+    let (parsed_type_id, generic_args) =
+        parse_generic_type_id(tokens, name, is_absolute, current_module)?;
     let impl_type = parse_impl_type(tokens)?;
 
     Ok(ParsedFunctionId {
         item_id: parsed_type_id.item_id,
         impl_type,
         is_module_local: parsed_type_id.is_module_local,
+        generic_args,
     })
 }
 
@@ -149,4 +151,39 @@ pub fn parse_import_id(
         module_id,
         impl_type,
     })
+}
+
+pub fn parse_generic_type_id(
+    tokens: &mut TokenStack,
+    name: String,
+    is_absolute: bool,
+    current_module: &ModuleIdentifier,
+) -> ParseResult<(ParsedTypeId, Vec<ParsedType>)> {
+    let mut path = Vec::new();
+    let mut cur_name = name;
+    let mut generic_args = Vec::new();
+    while tokens.peek().value == Token::Static(StaticToken::DoubleColon) {
+        tokens.pop();
+        if tokens.peek().value == Token::Static(StaticToken::LessThan) {
+            generic_args = parse_generic_args(tokens)?;
+            break;
+        } else {
+            path.push(cur_name.clone());
+            let next_token = parse_identifier(tokens)?;
+            cur_name = next_token.value;
+        }
+    }
+
+    let is_module_local = path.is_empty() && !is_absolute;
+    let module_id = current_module.resolve(&path, is_absolute);
+    Ok((
+        ParsedTypeId {
+            item_id: ItemId {
+                module_id,
+                item_name: cur_name,
+            },
+            is_module_local,
+        },
+        generic_args,
+    ))
 }

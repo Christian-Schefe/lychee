@@ -117,10 +117,7 @@ fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression>
                             false,
                             &location.file.as_ref().unwrap().id,
                         )?;
-                        let generics = parse_generic_args(tokens)?;
-                        if generics.len() > 0
-                            || tokens.peek().value == Token::Static(StaticToken::OpenParen)
-                        {
+                        if tokens.peek().value == Token::Static(StaticToken::OpenParen) {
                             let (_, args, _) = parse_seperated_expressions(
                                 tokens,
                                 Token::Static(StaticToken::OpenParen),
@@ -134,12 +131,13 @@ fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression>
                                     object: Box::new(expr),
                                     id: function_identifier,
                                     args,
-                                    generics,
                                 },
                                 location.clone(),
                             );
                         } else {
-                            if !function_identifier.is_module_local {
+                            if !function_identifier.is_module_local
+                                || function_identifier.generic_args.len() > 0
+                            {
                                 return Err(anyhow::anyhow!(
                                     "Invalid member access expression at {}: function id: {}",
                                     location,
@@ -164,7 +162,6 @@ fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression>
                             true,
                             &location.file.as_ref().unwrap().id,
                         )?;
-                        let generics = parse_generic_args(tokens)?;
                         let (_, args, _) = parse_seperated_expressions(
                             tokens,
                             Token::Static(StaticToken::OpenParen),
@@ -184,7 +181,6 @@ fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression>
                                 object: Box::new(expr),
                                 id: function_identifier,
                                 args,
-                                generics,
                             },
                             location.clone(),
                         );

@@ -1,21 +1,37 @@
 int main() {
     let int b = 35;
-    let int c = *generic_test[&int](&b);
-    let int d = generic_test2[int, int](5, b + 5);
+    let int c = *generic_test::<&int>(&b);
+    let int d = generic_test2::<int, int>(5, b + 5);
 
-    let Option[int] a = new Option[int] {
+    let Option<int> a = new Option<int> {
         value: 5,
     };
+
+    let var res = new Result<int, int> {
+        value: a,
+        error: -10,
+    };
+
     a.value = 10;
-    a.value
+    let var ans = a.value + c + d + res.value.value + res.error;
+    unwrap::<int>(a) + ans
 }
 
 T generic_test<T>(T a) {
     return a;
 }
 
+T unwrap<T>(Option<T> a) {
+    return a.value;
+}
+
 T2 generic_test2<T1, T2>(T1 b, T2 a) {
     return a;
+}
+
+struct Result<T, E> {
+    Option<T> value;
+    E error;
 }
 
 struct Option<T> {
