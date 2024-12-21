@@ -37,7 +37,7 @@ pub struct ParsedStructDefinition {
 pub struct ParsedTypeImplementation {
     pub impl_type: ParsedType,
     pub functions: Vec<Src<ParsedFunction>>,
-    pub generics: Option<GenericParams>,
+    pub generic_params: Option<GenericParams>,
 }
 
 #[derive(Debug, Clone)]
@@ -61,6 +61,17 @@ impl GenericParams {
             set: HashSet::new(),
             order: Vec::new(),
         }
+    }
+    pub fn combine(&self, other: &Self) -> ParseResult<Self> {
+        let mut set = self.set.clone();
+        let mut order = self.order.clone();
+        for generic in &other.order {
+            if !set.insert(generic.clone()) {
+                return Err(anyhow::anyhow!("Duplicate generic parameter: {}", generic))?;
+            }
+            order.push(generic.clone());
+        }
+        Ok(Self { set, order })
     }
 }
 
@@ -128,7 +139,16 @@ pub type ParsedType = Src<ParsedTypeKind>;
 impl Display for ParsedTypeKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
-            ParsedTypeKind::Struct(id, generics) => write!(f, "{}<{:?}>", id.item_id, generics),
+            ParsedTypeKind::Struct(id, generics) => {
+                write!(f, "{}<", id.item_id)?;
+                for (i, generic) in generics.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", generic.value)?;
+                }
+                write!(f, ">")
+            }
             ParsedTypeKind::Pointer(inner) => write!(f, "&{}", inner),
             ParsedTypeKind::Unit => write!(f, "unit"),
             ParsedTypeKind::Bool => write!(f, "bool"),

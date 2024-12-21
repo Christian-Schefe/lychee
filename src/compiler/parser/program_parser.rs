@@ -206,7 +206,7 @@ pub fn parse_type_impl(tokens: &mut TokenStack) -> ParseResult<Src<ParsedTypeImp
         ParsedTypeImplementation {
             impl_type,
             functions,
-            generics: generic_params,
+            generic_params: generic_params,
         },
         location,
     ))

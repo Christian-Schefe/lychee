@@ -22,8 +22,21 @@ impl ResolvedTypes {
         ty: &ParsedTypeKind,
         generic_args: &Option<GenericParams>,
     ) -> Option<AnalyzedTypeId> {
-        self.collected_type_data
-            .map_generic_parsed_type(ty, generic_args)
+        let type_id = self
+            .collected_type_data
+            .map_generic_parsed_type(ty, generic_args);
+        if let Some(AnalyzedTypeId::StructType(id, generic_args)) = &type_id {
+            let resolved_struct = self.structs.get(&id)?;
+            let generic_count = resolved_struct
+                .generic_params
+                .as_ref()
+                .map(|x| x.order.len())
+                .unwrap_or(0);
+            if generic_args.len() != generic_count {
+                return None;
+            }
+        }
+        type_id
     }
     pub fn get_struct(&self, id: &AnalyzedTypeId) -> Option<&ResolvedStruct> {
         match id {

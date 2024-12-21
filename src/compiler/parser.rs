@@ -45,13 +45,11 @@ impl ModulePath {
 
 impl ModuleIdentifier {
     pub fn get_identifier(&self) -> String {
-        let relative = self
-            .path
+        self.path
             .iter()
             .map(|x| x.clone())
             .collect::<Vec<String>>()
-            .join("::");
-        format!("::{}", relative)
+            .join("::")
     }
     pub fn resolve(&self, other: &Vec<String>, absolute: bool) -> ModuleIdentifier {
         if absolute {

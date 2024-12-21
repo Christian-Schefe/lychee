@@ -12,11 +12,38 @@ use std::collections::HashMap;
 pub struct CollectedFunctionData {
     pub functions: HashMap<ModuleIdentifier, HashMap<String, FunctionId>>,
     pub member_functions:
-        HashMap<ModuleIdentifier, HashMap<AnalyzedTypeId, HashMap<String, FunctionId>>>,
+        HashMap<ModuleIdentifier, HashMap<GenericAnalyzedTypeId, HashMap<String, FunctionId>>>,
     pub function_imports: HashMap<ModuleIdentifier, HashMap<String, FunctionId>>,
     pub member_function_imports:
-        HashMap<ModuleIdentifier, HashMap<AnalyzedTypeId, HashMap<String, FunctionId>>>,
+        HashMap<ModuleIdentifier, HashMap<GenericAnalyzedTypeId, HashMap<String, FunctionId>>>,
     pub builtin_functions: HashMap<String, FunctionId>,
+}
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+pub enum GenericAnalyzedTypeId {
+    Unit,
+    Bool,
+    Char,
+    Integer(usize),
+    Pointer(Box<GenericAnalyzedTypeId>),
+    StructType(ItemId),
+    GenericType(String),
+}
+
+impl GenericAnalyzedTypeId {
+    pub fn from_analyzed_type_id(id: &AnalyzedTypeId) -> Self {
+        match id {
+            AnalyzedTypeId::Unit => GenericAnalyzedTypeId::Unit,
+            AnalyzedTypeId::Bool => GenericAnalyzedTypeId::Bool,
+            AnalyzedTypeId::Char => GenericAnalyzedTypeId::Char,
+            AnalyzedTypeId::Integer(size) => GenericAnalyzedTypeId::Integer(*size),
+            AnalyzedTypeId::Pointer(inner) => {
+                GenericAnalyzedTypeId::Pointer(Box::new(Self::from_analyzed_type_id(inner)))
+            }
+            AnalyzedTypeId::StructType(id, _) => GenericAnalyzedTypeId::StructType(id.clone()),
+            AnalyzedTypeId::GenericType(name) => GenericAnalyzedTypeId::GenericType(name.clone()),
+        }
+    }
 }
 
 impl CollectedFunctionData {
@@ -26,20 +53,23 @@ impl CollectedFunctionData {
         impl_type: Option<&AnalyzedTypeId>,
     ) -> Option<FunctionId> {
         if let Some(resolved_type) = impl_type {
+            let generic_resolved_type = GenericAnalyzedTypeId::from_analyzed_type_id(resolved_type);
             let module_member_functions = self
                 .member_functions
                 .get(&parsed_function_id.item_id.module_id)?;
             let module_member_function_imports = self
                 .member_function_imports
                 .get(&parsed_function_id.item_id.module_id)?;
-            if let Some(type_functions) = module_member_functions.get(&resolved_type) {
+            if let Some(type_functions) = module_member_functions.get(&generic_resolved_type) {
                 if let Some(function_id) = type_functions.get(&parsed_function_id.item_id.item_name)
                 {
                     return Some(function_id.clone());
                 }
             }
             if parsed_function_id.is_module_local {
-                if let Some(type_functions) = module_member_function_imports.get(&resolved_type) {
+                if let Some(type_functions) =
+                    module_member_function_imports.get(&generic_resolved_type)
+                {
                     if let Some(function_id) =
                         type_functions.get(&parsed_function_id.item_id.item_name)
                     {
@@ -96,7 +126,7 @@ fn collect_functions(
     resolved_types: &ResolvedTypes,
 ) -> MergerResult<(
     HashMap<ModuleIdentifier, HashMap<String, FunctionId>>,
-    HashMap<ModuleIdentifier, HashMap<AnalyzedTypeId, HashMap<String, FunctionId>>>,
+    HashMap<ModuleIdentifier, HashMap<GenericAnalyzedTypeId, HashMap<String, FunctionId>>>,
 )> {
     let mut functions = HashMap::new();
     let mut member_functions = HashMap::new();
@@ -125,16 +155,21 @@ fn collect_functions(
         }
         for type_impl in &module.type_implementations {
             let resolved_type = resolved_types
-                .resolve_type(&type_impl.value.impl_type.value)
+                .resolve_generic_type(
+                    &type_impl.value.impl_type.value,
+                    &type_impl.value.generic_params,
+                )
                 .ok_or_else(|| {
                     anyhow::anyhow!(
-                        "Type {:?} not found at {}",
+                        "Type {} not found at {}",
                         type_impl.value.impl_type.value,
                         type_impl.location
                     )
                 })?;
+            let generic_resolved_type =
+                GenericAnalyzedTypeId::from_analyzed_type_id(&resolved_type);
             let type_member_functions = module_member_functions
-                .entry(resolved_type.clone())
+                .entry(generic_resolved_type.clone())
                 .or_insert_with(HashMap::new);
             for function_def in &type_impl.value.functions {
                 validate_function_name(&function_def.value.function_name)?;
@@ -168,12 +203,12 @@ fn collect_function_imports(
     functions: &HashMap<ModuleIdentifier, HashMap<String, FunctionId>>,
     member_functions: &HashMap<
         ModuleIdentifier,
-        HashMap<AnalyzedTypeId, HashMap<String, FunctionId>>,
+        HashMap<GenericAnalyzedTypeId, HashMap<String, FunctionId>>,
     >,
     resolved_types: &ResolvedTypes,
 ) -> MergerResult<(
     HashMap<ModuleIdentifier, HashMap<String, FunctionId>>,
-    HashMap<ModuleIdentifier, HashMap<AnalyzedTypeId, HashMap<String, FunctionId>>>,
+    HashMap<ModuleIdentifier, HashMap<GenericAnalyzedTypeId, HashMap<String, FunctionId>>>,
 )> {
     let mut function_imports = HashMap::new();
     let mut member_function_imports = HashMap::new();
@@ -229,10 +264,13 @@ fn collect_function_imports(
                         import.location
                     )
                 })?;
+            let generic_resolved_type =
+                GenericAnalyzedTypeId::from_analyzed_type_id(&resolved_type);
             let type_member_functions = module_member_function_imports
-                .entry(resolved_type.clone())
+                .entry(generic_resolved_type.clone())
                 .or_insert_with(HashMap::new);
-            if let Some(module_type_functions) = module_member_functions.get(&resolved_type) {
+            if let Some(module_type_functions) = module_member_functions.get(&generic_resolved_type)
+            {
                 if let Some(obj) = &import.value.imported_object {
                     if let Some(id) = module_type_functions.get(obj) {
                         if type_member_functions

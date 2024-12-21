@@ -14,15 +14,18 @@ int main() {
 
     a.value = 10;
     let var ans = a.value + c + d + res.value.value + res.error;
-    unwrap::<int>(a) + ans
+    a.unwrapa::<int>() + ans
 }
 
 T generic_test<T>(T a) {
     return a;
 }
 
-T unwrap<T>(Option<T> a) {
-    return a.value;
+Option2<int,T> pass<T>(Option<T> a) {
+    return new Option2<int,T> {
+        value: 4,
+        value2: a.value,
+    };
 }
 
 T2 generic_test2<T1, T2>(T1 b, T2 a) {
@@ -36,4 +39,21 @@ struct Result<T, E> {
 
 struct Option<T> {
     T value;
+}
+
+struct Option2<Z,K> {
+    Z value;
+    K value2;
+}
+
+impl <T> Option<T> {
+    T unwrapa(Option<T> self) {
+        return self.value;
+    }
+}
+
+impl Option<int> {
+    int unwrapb(Option<int> self) {
+        return self.value;
+    }
 }

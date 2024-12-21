@@ -451,7 +451,7 @@ pub fn analyze_expression(
                                 )
                             })?;
 
-                        let resolved_generic_args = match &resolved_type {
+                        let analyzed_generic_args = match &resolved_type {
                             AnalyzedTypeId::StructType(_, args) => args,
                             _ => {
                                 return Err(anyhow::anyhow!(
@@ -463,7 +463,20 @@ pub fn analyze_expression(
                         };
                         context
                             .generic_instances
-                            .add_type(struct_type.id.clone(), resolved_generic_args.clone());
+                            .add_type(struct_type.id.clone(), analyzed_generic_args.clone());
+                        let generic_count = struct_type
+                            .generic_params
+                            .as_ref()
+                            .map_or(0, |x| x.order.len());
+                        if generic_count != analyzed_generic_args.len() {
+                            Err(anyhow::anyhow!(
+                                "Struct type '{}' has {} generic arguments, but {} were provided at {}.",
+                                resolved_type,
+                                generic_count,
+                                analyzed_generic_args.len(),
+                                location
+                            ))?;
+                        }
 
                         let mut analyzed_field_values = Vec::new();
                         let location_map = field_values
@@ -477,7 +490,7 @@ pub fn analyze_expression(
                             let actual_expected_type = resolve_generic_type(
                                 expected_type,
                                 &struct_type.generic_params,
-                                &resolved_generic_args,
+                                &analyzed_generic_args,
                             );
                             if analyzed_field_value.ty != actual_expected_type {
                                 Err(anyhow::anyhow!(
@@ -919,6 +932,21 @@ pub fn analyze_expression(
                         .generic_instances
                         .add_function(function_id.clone(), analyzed_generic_args.clone());
 
+                    let generic_count = function_header
+                        .generic_params
+                        .as_ref()
+                        .map(|x| x.order.len())
+                        .unwrap_or(0);
+                    if analyzed_generic_args.len() != generic_count {
+                        Err(anyhow::anyhow!(
+                            "Function '{}' expects {} generic arguments, but got {} at {}.",
+                            function_id,
+                            generic_count,
+                            analyzed_generic_args.len(),
+                            location
+                        ))?;
+                    }
+
                     let mut analyzed_args = Vec::new();
                     for (arg, arg_name) in args
                         .iter()
@@ -964,13 +992,15 @@ pub fn analyze_expression(
                     let analyzed_args = output.split_off(new_len);
                     let obj_ty = &analyzed_args[0].ty;
                     let (impl_ty, _) = remove_indirection(obj_ty);
+
                     let function_id = context
                         .functions
                         .map_member_function_id(id, Some(impl_ty))
                         .ok_or_else(|| {
                             anyhow::anyhow!(
-                                "Member function '{}' not found at {}.",
+                                "Member function '{}' not found for type {} at {}.",
                                 id.item_id,
+                                impl_ty,
                                 location
                             )
                         })?;
@@ -999,6 +1029,21 @@ pub fn analyze_expression(
                         .generic_instances
                         .add_function(function_id.clone(), analyzed_generic_args.clone());
 
+                    let generic_count = function_header
+                        .generic_params
+                        .as_ref()
+                        .map(|x| x.order.len())
+                        .unwrap_or(0);
+                    if analyzed_generic_args.len() != generic_count {
+                        Err(anyhow::anyhow!(
+                            "Member function '{}' expects {} generic arguments, but got {} at {}.",
+                            id.item_id,
+                            generic_count,
+                            analyzed_generic_args.len(),
+                            location
+                        ))?;
+                    }
+
                     let mut arg_exprs = vec![object.as_ref()];
                     arg_exprs.extend(args.iter());
 
@@ -1013,6 +1058,7 @@ pub fn analyze_expression(
                             &function_header.generic_params,
                             &analyzed_generic_args,
                         );
+                        println!("{:?}, {:?}", function_header, analyzed_generic_args);
                         if analyzed_arg.ty != actual_arg_type {
                             Err(anyhow::anyhow!(
                                 "Member function call argument has type '{}', but expected '{}' at {}.",

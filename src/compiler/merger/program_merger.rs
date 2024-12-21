@@ -5,13 +5,12 @@ use crate::compiler::merger::type_resolver::build_resolved_types;
 use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::item_id::ItemId;
 use crate::compiler::parser::parsed_expression::{ParsedExpression, ParsedModule, ParsedProgram};
-use std::collections::HashMap;
 
 pub fn merge_program(parsed_program: &ParsedProgram) -> MergerResult<MergedProgram> {
     let resolved_types = build_resolved_types(parsed_program)?;
     let resolved_functions = build_resolved_functions(parsed_program, &resolved_types)?;
 
-    let mut function_bodies = HashMap::new();
+    let mut function_bodies = Vec::new();
 
     for (_, parsed_module) in &parsed_program.module_tree {
         merge_module(&mut function_bodies, &resolved_types, parsed_module)?;
@@ -25,7 +24,7 @@ pub fn merge_program(parsed_program: &ParsedProgram) -> MergerResult<MergedProgr
 }
 
 pub fn merge_module(
-    functions: &mut HashMap<FunctionId, ParsedExpression>,
+    functions: &mut Vec<(FunctionId, ParsedExpression)>,
     resolved_types: &ResolvedTypes,
     parsed_module: &ParsedModule,
 ) -> MergerResult<()> {
@@ -38,15 +37,18 @@ pub fn merge_module(
             item_id,
             impl_type: None,
         };
-        functions.insert(func_id, function.value.body.clone());
+        functions.push((func_id, function.value.body.clone()));
     }
 
     for type_impl in &parsed_module.type_implementations {
         let resolved_type = resolved_types
-            .resolve_type(&type_impl.value.impl_type.value)
+            .resolve_generic_type(
+                &type_impl.value.impl_type.value,
+                &type_impl.value.generic_params,
+            )
             .ok_or_else(|| {
                 anyhow::anyhow!(
-                    "Type {:?} not found at {}",
+                    "Type {} not found at {}",
                     type_impl.value.impl_type.value,
                     type_impl.location
                 )
@@ -60,7 +62,7 @@ pub fn merge_module(
                 item_id,
                 impl_type: Some(resolved_type.clone()),
             };
-            functions.insert(func_id, function.value.body.clone());
+            functions.push((func_id, function.value.body.clone()));
         }
     }
 

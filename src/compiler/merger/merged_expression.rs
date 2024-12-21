@@ -8,7 +8,7 @@ use std::fmt::Display;
 
 #[derive(Debug, Clone)]
 pub struct MergedProgram {
-    pub function_bodies: HashMap<FunctionId, ParsedExpression>,
+    pub function_bodies: Vec<(FunctionId, ParsedExpression)>,
     pub resolved_functions: ResolvedFunctions,
     pub resolved_types: ResolvedTypes,
 }

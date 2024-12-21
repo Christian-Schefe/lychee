@@ -107,8 +107,10 @@ fn compute_type_size(
             let mut size = 0;
             for field_name in &resolved_struct.field_order {
                 let field_type = resolved_struct.field_types.get(field_name).unwrap();
+                let actual_field_type =
+                    resolve_generic_type(field_type, generic_params, generic_args);
                 size += compute_type_size(
-                    field_type,
+                    &actual_field_type,
                     resolved_structs,
                     visited,
                     generic_params,
@@ -122,7 +124,7 @@ fn compute_type_size(
         AnalyzedTypeId::Bool => Ok(1),
         AnalyzedTypeId::Char => Ok(1),
         AnalyzedTypeId::Integer(size) => Ok(size),
-        AnalyzedTypeId::GenericType(_) => unreachable!("Generic types should be resolved"),
+        AnalyzedTypeId::GenericType(name) => unreachable!("Generic type {} should be resolved", name),
     }
 }
 
