@@ -70,12 +70,6 @@ pub fn print_module(printer: &mut Printer, expr: &ParsedModule) {
     for function in &expr.functions {
         print_function(printer, &function.value);
     }
-    for struct_impl in &expr.type_implementations {
-        printer.add_line(format!("Impl({:?})", struct_impl.value.impl_type));
-        for function in &struct_impl.value.functions {
-            print_function(printer, &function.value);
-        }
-    }
 }
 
 fn print_struct_definition(printer: &mut Printer, struct_def: &ParsedStructDefinition) {
@@ -91,10 +85,10 @@ fn print_struct_definition(printer: &mut Printer, struct_def: &ParsedStructDefin
 fn print_function(printer: &mut Printer, function: &ParsedFunction) {
     printer.add_line(format!(
         "fn {}<{:?}>(",
-        function.function_name, function.generics
+        function.function_name, function.generic_params
     ));
     printer.indent();
-    for (param_type, param_name) in &function.args {
+    for (param_type, param_name) in &function.params {
         printer.add_line(format!("{}: {:?}", param_name, param_type.value));
     }
     printer.dedent();
@@ -210,20 +204,12 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
             printer.dedent();
         }
         ParsedExpressionKind::FunctionCall {
-            id: function_name,
+            id,
             args,
+            generic_args,
         } => {
-            printer.add_line(format!("FunctionCall({:?})", function_name));
+            printer.add_line(format!("FunctionCall<{:?}>({:?})", generic_args, id));
             printer.indent();
-            for arg in args {
-                print_expression(printer, arg);
-            }
-            printer.dedent();
-        }
-        ParsedExpressionKind::MemberFunctionCall { object, id, args } => {
-            printer.add_line(format!("MemberFunctionCall({})", id.item_id));
-            printer.indent();
-            print_expression(printer, object);
             for arg in args {
                 print_expression(printer, arg);
             }

@@ -2,7 +2,9 @@ use crate::compiler::lexer::lexer_error::LocationError;
 use crate::compiler::lexer::token::{StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::item_id::{ItemId, ParsedFunctionId, ParsedTypeId};
-use crate::compiler::parser::parsed_expression::{ParsedImport, ParsedType, ParsedTypeKind};
+use crate::compiler::parser::parsed_expression::{
+    GenericParams, ParsedImport, ParsedType, ParsedTypeKind,
+};
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::primary_expr_parser::parse_generic_args;
 use crate::compiler::parser::program_parser::parse_identifier;
@@ -94,33 +96,17 @@ pub fn parse_function_id(
     name: String,
     is_absolute: bool,
     current_module: &ModuleIdentifier,
-) -> ParseResult<ParsedFunctionId> {
+) -> ParseResult<(ParsedFunctionId, Vec<ParsedType>)> {
     let (parsed_type_id, generic_args) =
         parse_generic_type_id(tokens, name, is_absolute, current_module)?;
-    let impl_type = parse_impl_type(tokens)?;
 
-    Ok(ParsedFunctionId {
-        item_id: parsed_type_id.item_id,
-        impl_type,
-        is_module_local: parsed_type_id.is_module_local,
+    Ok((
+        ParsedFunctionId {
+            item_id: parsed_type_id.item_id,
+            is_module_local: parsed_type_id.is_module_local,
+        },
         generic_args,
-    })
-}
-
-fn parse_impl_type(tokens: &mut TokenStack) -> ParseResult<Option<ParsedType>> {
-    if tokens.peek().value == Token::Static(StaticToken::At) {
-        tokens.pop();
-        let ty = parse_type(tokens)?;
-        match ty.value {
-            ParsedTypeKind::Pointer(_) => Err(LocationError::new(
-                "Expected non-pointer type after '@'".to_string(),
-                ty.location,
-            ))?,
-            _ => Ok(Some(ty)),
-        }
-    } else {
-        Ok(None)
-    }
+    ))
 }
 
 pub fn parse_import_id(
@@ -144,12 +130,10 @@ pub fn parse_import_id(
     }
 
     let module_id = current_module.resolve(&path, is_absolute);
-    let impl_type = parse_impl_type(tokens)?;
 
     Ok(ParsedImport {
         imported_object: cur_name,
         module_id,
-        impl_type,
     })
 }
 

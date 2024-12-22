@@ -27,10 +27,14 @@ impl BuiltinFunction {
         }
     }
 
-    fn function_id(&self) -> ItemId {
-        ItemId {
-            module_id: ModuleIdentifier { path: vec![] },
-            item_name: self.name.clone(),
+    fn function_id(&self) -> FunctionId {
+        FunctionId {
+            id: ItemId {
+                module_id: ModuleIdentifier { path: vec![] },
+                item_name: self.name.clone(),
+            },
+            param_count: self.parameters.len(),
+            generic_count: 0,
         }
     }
 
@@ -271,18 +275,12 @@ impl BuiltinFunction {
     pub fn add_builtin_function_ids(function_ids: &mut HashMap<String, FunctionId>) {
         for function in BuiltinFunction::all_functions() {
             let id = function.function_id();
-            function_ids.insert(
-                function.name.clone(),
-                FunctionId {
-                    item_id: id,
-                    impl_type: None,
-                },
-            );
+            function_ids.insert(function.name.clone(), id);
         }
     }
 
     pub fn add_builtin_function_headers(
-        function_headers: &mut HashMap<ItemId, ResolvedFunctionHeader>,
+        function_headers: &mut HashMap<FunctionId, ResolvedFunctionHeader>,
     ) {
         for function in BuiltinFunction::all_functions() {
             let mut parameter_order = Vec::new();
@@ -294,8 +292,9 @@ impl BuiltinFunction {
 
             let id = function.function_id();
             function_headers.insert(
-                id,
+                id.clone(),
                 ResolvedFunctionHeader {
+                    id,
                     return_type: function.return_type,
                     parameter_types,
                     parameter_order,

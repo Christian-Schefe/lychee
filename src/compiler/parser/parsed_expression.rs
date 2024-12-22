@@ -1,3 +1,4 @@
+use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
 use crate::compiler::lexer::location::Src;
 use crate::compiler::parser::item_id::{ParsedFunctionId, ParsedTypeId};
 use crate::compiler::parser::parser_error::ParseResult;
@@ -15,14 +16,12 @@ pub struct ParsedModule {
     pub module_path: ModuleIdentifier,
     pub functions: Vec<Src<ParsedFunction>>,
     pub struct_definitions: Vec<Src<ParsedStructDefinition>>,
-    pub type_implementations: Vec<Src<ParsedTypeImplementation>>,
     pub imports: Vec<Src<ParsedImport>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ParsedImport {
     pub imported_object: Option<String>,
-    pub impl_type: Option<ParsedType>,
     pub module_id: ModuleIdentifier,
 }
 
@@ -30,14 +29,7 @@ pub struct ParsedImport {
 pub struct ParsedStructDefinition {
     pub struct_name: String,
     pub fields: Vec<(String, ParsedType)>,
-    pub generics: Option<GenericParams>,
-}
-
-#[derive(Debug, Clone)]
-pub struct ParsedTypeImplementation {
-    pub impl_type: ParsedType,
-    pub functions: Vec<Src<ParsedFunction>>,
-    pub generic_params: Option<GenericParams>,
+    pub generics: GenericParams,
 }
 
 #[derive(Debug, Clone)]
@@ -62,16 +54,20 @@ impl GenericParams {
             order: Vec::new(),
         }
     }
-    pub fn combine(&self, other: &Self) -> ParseResult<Self> {
-        let mut set = self.set.clone();
-        let mut order = self.order.clone();
-        for generic in &other.order {
-            if !set.insert(generic.clone()) {
-                return Err(anyhow::anyhow!("Duplicate generic parameter: {}", generic))?;
-            }
-            order.push(generic.clone());
+    pub fn resolve(
+        &self,
+        generic_name: &String,
+        generic_args: &Vec<AnalyzedTypeId>,
+    ) -> Option<AnalyzedTypeId> {
+        let index = self.order.iter().position(|x| x == generic_name)?;
+        Some(generic_args[index].clone())
+    }
+
+    pub fn get_generic(&self, generic_name: &String) -> Option<AnalyzedTypeId> {
+        if !self.set.contains(generic_name) {
+            return None;
         }
-        Ok(Self { set, order })
+        Some(AnalyzedTypeId::GenericType(generic_name.clone()))
     }
 }
 
@@ -79,8 +75,8 @@ impl GenericParams {
 pub struct ParsedFunction {
     pub function_name: String,
     pub return_type: ParsedType,
-    pub generics: Option<GenericParams>,
-    pub args: Vec<(ParsedType, String)>,
+    pub generic_params: GenericParams,
+    pub params: Vec<(ParsedType, String)>,
     pub body: ParsedExpression,
 }
 
@@ -126,11 +122,7 @@ pub enum ParsedExpressionKind {
     FunctionCall {
         id: ParsedFunctionId,
         args: Vec<ParsedExpression>,
-    },
-    MemberFunctionCall {
-        object: Box<ParsedExpression>,
-        id: ParsedFunctionId,
-        args: Vec<ParsedExpression>,
+        generic_args: Vec<ParsedType>,
     },
 }
 

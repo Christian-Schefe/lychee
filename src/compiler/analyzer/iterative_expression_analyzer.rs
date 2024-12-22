@@ -7,6 +7,7 @@ use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
 use crate::compiler::analyzer::expression_analyzer::{analyze_assignable_expression, can_cast_to};
 use crate::compiler::analyzer::program_analyzer::{AnalyzerContext, LocalVariable};
 use crate::compiler::analyzer::AnalyzerResult;
+use crate::compiler::merger::merged_expression::StructRef;
 use crate::compiler::parser::parsed_expression::{
     BinaryComparisonOp, BinaryOp, GenericParams, ParsedExpression, ParsedExpressionKind,
     ParsedLiteral, ParsedType, UnaryOp,
@@ -88,15 +89,20 @@ pub fn analyze_expression(
                     ParsedLiteral::Struct(ty, fields) => {
                         let resolved_type = context
                             .types
-                            .resolve_generic_type(&ty.value, context.generic_params)
+                            .map_generic_parsed_type(&ty.value, context.generic_params)
+                            .ok_or_else(|| {
+                                anyhow::anyhow!("Type '{}' not found at {}.", ty.value, ty.location)
+                            })?;
+                        let struct_decl = context
+                            .types
+                            .get_struct_from_type(&resolved_type)
                             .ok_or_else(|| {
                                 anyhow::anyhow!(
-                                    "Struct type '{:?}' not found at {}.",
-                                    ty.value,
+                                    "Type '{}' is not a struct type at {}.",
+                                    resolved_type,
                                     ty.location
                                 )
                             })?;
-                        let struct_decl = context.types.get_struct(&resolved_type).unwrap();
                         let mut present_fields = fields
                             .iter()
                             .map(|x| (&x.0, &x.1))
@@ -150,12 +156,6 @@ pub fn analyze_expression(
                     for arg in args.iter().rev() {
                         stack.push((arg, false, in_loop));
                     }
-                }
-                ParsedExpressionKind::MemberFunctionCall { args, object, .. } => {
-                    for arg in args.iter().rev() {
-                        stack.push((arg, false, in_loop));
-                    }
-                    stack.push((object, false, in_loop));
                 }
             }
         } else {
@@ -345,7 +345,7 @@ pub fn analyze_expression(
                     if let Some(declared_type) = var_type {
                         let resolved_type = context
                             .types
-                            .resolve_generic_type(&declared_type.value, context.generic_params)
+                            .map_generic_parsed_type(&declared_type.value, context.generic_params)
                             .ok_or_else(|| {
                                 anyhow::anyhow!(
                                     "Declaration type '{:?}' not found at {}.",
@@ -434,25 +434,13 @@ pub fn analyze_expression(
                     ParsedLiteral::Struct(ty, field_values) => {
                         let resolved_type = context
                             .types
-                            .resolve_generic_type(&ty.value, context.generic_params)
-                            .ok_or_else(|| {
-                                anyhow::anyhow!(
-                                    "Struct type '{:?}' not found at {}.",
-                                    ty.value,
-                                    ty.location
-                                )
-                            })?;
+                            .map_generic_parsed_type(&ty.value, context.generic_params)
+                            .unwrap();
                         let struct_type =
-                            context.types.get_struct(&resolved_type).ok_or_else(|| {
-                                anyhow::anyhow!(
-                                    "Struct type '{}' not found at {}.",
-                                    resolved_type,
-                                    location
-                                )
-                            })?;
+                            context.types.get_struct_from_type(&resolved_type).unwrap();
 
-                        let analyzed_generic_args = match &resolved_type {
-                            AnalyzedTypeId::StructType(_, args) => args,
+                        let struct_ref = match &resolved_type {
+                            AnalyzedTypeId::StructType(struct_ref) => struct_ref,
                             _ => {
                                 return Err(anyhow::anyhow!(
                                     "Resolved type '{}' is not a struct at {}.",
@@ -461,22 +449,6 @@ pub fn analyze_expression(
                                 ))?
                             }
                         };
-                        context
-                            .generic_instances
-                            .add_type(struct_type.id.clone(), analyzed_generic_args.clone());
-                        let generic_count = struct_type
-                            .generic_params
-                            .as_ref()
-                            .map_or(0, |x| x.order.len());
-                        if generic_count != analyzed_generic_args.len() {
-                            Err(anyhow::anyhow!(
-                                "Struct type '{}' has {} generic arguments, but {} were provided at {}.",
-                                resolved_type,
-                                generic_count,
-                                analyzed_generic_args.len(),
-                                location
-                            ))?;
-                        }
 
                         let mut analyzed_field_values = Vec::new();
                         let location_map = field_values
@@ -486,18 +458,15 @@ pub fn analyze_expression(
 
                         for field_name in struct_type.field_order.iter().rev() {
                             let analyzed_field_value = output.pop().unwrap();
-                            let expected_type = struct_type.field_types.get(field_name).unwrap();
-                            let actual_expected_type = resolve_generic_type(
-                                expected_type,
-                                &struct_type.generic_params,
-                                &analyzed_generic_args,
-                            );
-                            if analyzed_field_value.ty != actual_expected_type {
+                            let expected_type = struct_type
+                                .get_field_type(field_name, &struct_ref.generic_args)
+                                .unwrap();
+                            if analyzed_field_value.ty != expected_type {
                                 Err(anyhow::anyhow!(
                                     "Struct field '{}' has type '{}', but expected '{}' at {}.",
                                     field_name,
                                     analyzed_field_value.ty,
-                                    actual_expected_type,
+                                    expected_type,
                                     location_map.get(field_name).unwrap()
                                 ))?;
                             }
@@ -631,7 +600,7 @@ pub fn analyze_expression(
                     UnaryOp::Cast(target_type) => {
                         let resolved_type = context
                             .types
-                            .resolve_generic_type(&target_type.value, context.generic_params)
+                            .map_generic_parsed_type(&target_type.value, context.generic_params)
                             .ok_or_else(|| {
                                 anyhow::anyhow!(
                                     "Cast type '{:?}' not found at {}.",
@@ -665,26 +634,19 @@ pub fn analyze_expression(
                             inner_ty = inner;
                             indirections += 1;
                         }
-                        let struct_type = context
-                            .types
-                            .get_pointer_struct(&analyzed_expr.ty)
-                            .ok_or_else(|| {
-                                anyhow::anyhow!(
-                                    "Struct type '{}' not found at {}.",
-                                    analyzed_expr.ty,
-                                    expr.location
-                                )
-                            })?;
-                        let field_type = struct_type.field_types.get(member).ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "Struct type '{}' does not have field '{}' at {}.",
-                                analyzed_expr.ty,
-                                member,
-                                expr.location
-                            )
-                        })?;
-                        let generic_args = match &analyzed_expr.ty {
-                            AnalyzedTypeId::StructType(_, args) => args,
+                        let struct_type =
+                            context
+                                .types
+                                .get_struct_from_type(inner_ty)
+                                .ok_or_else(|| {
+                                    anyhow::anyhow!(
+                                        "Struct type '{}' not found at {}.",
+                                        analyzed_expr.ty,
+                                        expr.location
+                                    )
+                                })?;
+                        let struct_ref = match &analyzed_expr.ty {
+                            AnalyzedTypeId::StructType(struct_ref) => struct_ref,
                             _ => {
                                 return Err(anyhow::anyhow!(
                                     "Resolved type '{}' is not a struct at {}.",
@@ -693,14 +655,19 @@ pub fn analyze_expression(
                                 ))?
                             }
                         };
-                        let actual_field_type = resolve_generic_type(
-                            field_type,
-                            &struct_type.generic_params,
-                            &generic_args,
-                        );
+                        let field_type = struct_type
+                            .get_field_type(member, &struct_ref.generic_args)
+                            .ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "Struct type '{}' does not have field '{}' at {}.",
+                                    analyzed_expr.ty,
+                                    member,
+                                    expr.location
+                                )
+                            })?;
                         if indirections == 0 {
                             (
-                                actual_field_type.clone(),
+                                field_type.clone(),
                                 AnalyzedExpressionKind::FieldAccess {
                                     field_name: member.clone(),
                                     expr: Box::new(analyzed_expr),
@@ -708,14 +675,14 @@ pub fn analyze_expression(
                             )
                         } else {
                             (
-                                actual_field_type.clone(),
+                                field_type.clone(),
                                 AnalyzedExpressionKind::ValueOfAssignable(AssignableExpression {
                                     kind: AssignableExpressionKind::PointerFieldAccess(
                                         Box::new(analyzed_expr),
                                         member.clone(),
                                         1,
                                     ),
-                                    ty: actual_field_type.clone(),
+                                    ty: field_type.clone(),
                                 }),
                             )
                         }
@@ -905,180 +872,68 @@ pub fn analyze_expression(
                         )
                     }
                 },
-                ParsedExpressionKind::FunctionCall { id, args } => {
-                    let function_id = context
+                ParsedExpressionKind::FunctionCall {
+                    id,
+                    args,
+                    generic_args,
+                } => {
+                    let new_len = output.len() - args.len();
+                    let analyzed_args = output.split_off(new_len);
+                    let arg_types = analyzed_args
+                        .iter()
+                        .map(|x| x.ty.clone())
+                        .collect::<Vec<_>>();
+                    let analyzed_generic_args = analyze_generic_args(context, &generic_args)?;
+
+                    let function_ref = context
                         .functions
-                        .map_function_id(id, context.types)
+                        .map_function_id(id, arg_types, analyzed_generic_args)
                         .ok_or_else(|| {
                             anyhow::anyhow!("Function '{}' not found at {}.", id.item_id, location)
                         })?;
-                    let function_header =
-                        context.functions.get_header(&function_id).ok_or_else(|| {
-                            anyhow::anyhow!("Function '{}' not found at {}.", function_id, location)
+                    let function_header = context
+                        .functions
+                        .get_header(&function_ref.id)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "Function '{}' not found at {}.",
+                                function_ref,
+                                location
+                            )
                         })?;
 
-                    if args.len() != function_header.parameter_order.len() {
-                        Err(anyhow::anyhow!(
-                            "Function '{}' expects {} arguments, but got {} at {}.",
-                            function_id,
-                            function_header.parameter_order.len(),
-                            args.len(),
-                            location
-                        ))?;
-                    }
-
-                    let analyzed_generic_args = analyze_generic_args(context, &id.generic_args)?;
-                    context
-                        .generic_instances
-                        .add_function(function_id.clone(), analyzed_generic_args.clone());
-
-                    let generic_count = function_header
-                        .generic_params
-                        .as_ref()
-                        .map(|x| x.order.len())
-                        .unwrap_or(0);
-                    if analyzed_generic_args.len() != generic_count {
-                        Err(anyhow::anyhow!(
-                            "Function '{}' expects {} generic arguments, but got {} at {}.",
-                            function_id,
-                            generic_count,
-                            analyzed_generic_args.len(),
-                            location
-                        ))?;
-                    }
-
-                    let mut analyzed_args = Vec::new();
-                    for (arg, arg_name) in args
+                    for (arg, arg_name) in analyzed_args
                         .iter()
                         .zip(function_header.parameter_order.iter())
                         .rev()
                     {
-                        let analyzed_arg = output.pop().unwrap();
                         let arg_type = function_header.parameter_types.get(arg_name).unwrap();
                         let actual_arg_type = resolve_generic_type(
                             arg_type,
                             &function_header.generic_params,
-                            &analyzed_generic_args,
+                            &function_ref.generic_args,
                         );
-                        if analyzed_arg.ty != actual_arg_type {
+                        if arg.ty != actual_arg_type {
                             Err(anyhow::anyhow!(
                                 "Function call argument has type '{}', but expected '{}' at {}.",
-                                analyzed_arg.ty,
+                                arg.ty,
                                 actual_arg_type,
                                 arg.location
                             ))?;
                         }
-                        analyzed_args.push(analyzed_arg);
                     }
 
-                    analyzed_args.reverse();
                     let return_type = function_header.return_type.clone();
                     let actual_return_type = resolve_generic_type(
                         &return_type,
                         &function_header.generic_params,
-                        &analyzed_generic_args,
+                        &function_ref.generic_args,
                     );
 
                     (
                         actual_return_type,
                         AnalyzedExpressionKind::FunctionCall {
-                            function_name: function_id,
-                            args: analyzed_args,
-                        },
-                    )
-                }
-                ParsedExpressionKind::MemberFunctionCall { id, args, object } => {
-                    let new_len = output.len() - (args.len() + 1);
-                    let analyzed_args = output.split_off(new_len);
-                    let obj_ty = &analyzed_args[0].ty;
-                    let (impl_ty, _) = remove_indirection(obj_ty);
-
-                    let function_id = context
-                        .functions
-                        .map_member_function_id(id, Some(impl_ty))
-                        .ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "Member function '{}' not found for type {} at {}.",
-                                id.item_id,
-                                impl_ty,
-                                location
-                            )
-                        })?;
-
-                    let function_header =
-                        context.functions.get_header(&function_id).ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "Member function '{}' not found at {}.",
-                                id.item_id,
-                                location
-                            )
-                        })?;
-
-                    if analyzed_args.len() != function_header.parameter_order.len() {
-                        Err(anyhow::anyhow!(
-                            "Member function '{}' expects {} arguments, but got {} at {}.",
-                            id.item_id,
-                            function_header.parameter_order.len(),
-                            analyzed_args.len(),
-                            location
-                        ))?;
-                    }
-
-                    let analyzed_generic_args = analyze_generic_args(context, &id.generic_args)?;
-                    context
-                        .generic_instances
-                        .add_function(function_id.clone(), analyzed_generic_args.clone());
-
-                    let generic_count = function_header
-                        .generic_params
-                        .as_ref()
-                        .map(|x| x.order.len())
-                        .unwrap_or(0);
-                    if analyzed_generic_args.len() != generic_count {
-                        Err(anyhow::anyhow!(
-                            "Member function '{}' expects {} generic arguments, but got {} at {}.",
-                            id.item_id,
-                            generic_count,
-                            analyzed_generic_args.len(),
-                            location
-                        ))?;
-                    }
-
-                    let mut arg_exprs = vec![object.as_ref()];
-                    arg_exprs.extend(args.iter());
-
-                    for ((analyzed_arg, arg_name), arg_expr) in analyzed_args
-                        .iter()
-                        .zip(function_header.parameter_order.iter())
-                        .zip(arg_exprs.iter())
-                    {
-                        let arg_type = function_header.parameter_types.get(arg_name).unwrap();
-                        let actual_arg_type = resolve_generic_type(
-                            arg_type,
-                            &function_header.generic_params,
-                            &analyzed_generic_args,
-                        );
-                        println!("{:?}, {:?}", function_header, analyzed_generic_args);
-                        if analyzed_arg.ty != actual_arg_type {
-                            Err(anyhow::anyhow!(
-                                "Member function call argument has type '{}', but expected '{}' at {}.",
-                                analyzed_arg.ty,
-                                actual_arg_type,
-                                arg_expr.location
-                            ))?;
-                        }
-                    }
-                    let return_type = function_header.return_type.clone();
-                    let actual_return_type = resolve_generic_type(
-                        &return_type,
-                        &function_header.generic_params,
-                        &analyzed_generic_args,
-                    );
-
-                    (
-                        actual_return_type,
-                        AnalyzedExpressionKind::FunctionCall {
-                            function_name: function_id,
+                            function_name: function_ref,
                             args: analyzed_args,
                         },
                     )
@@ -1236,32 +1091,25 @@ fn remove_indirection(ty: &AnalyzedTypeId) -> (&AnalyzedTypeId, usize) {
 
 pub fn resolve_generic_type(
     ty: &AnalyzedTypeId,
-    generic_params: &Option<GenericParams>,
+    generic_params: &GenericParams,
     generic_args: &Vec<AnalyzedTypeId>,
 ) -> AnalyzedTypeId {
     match ty {
-        AnalyzedTypeId::GenericType(name) => {
-            if let Some(generic_params) = generic_params {
-                let index = generic_params.order.iter().position(|x| x == name);
-                index
-                    .and_then(|i| generic_args.get(i))
-                    .cloned()
-                    .unwrap_or_else(|| ty.clone())
-            } else {
-                ty.clone()
-            }
-        }
+        AnalyzedTypeId::GenericType(name) => generic_params.resolve(name, generic_args).unwrap(),
         AnalyzedTypeId::Pointer(inner) => AnalyzedTypeId::Pointer(Box::new(resolve_generic_type(
             inner,
             generic_params,
             generic_args,
         ))),
-        AnalyzedTypeId::StructType(id, inner_generic_args) => {
+        AnalyzedTypeId::StructType(struct_ref) => {
             let mut resolved_generic_args = Vec::new();
-            for arg in inner_generic_args.iter() {
+            for arg in struct_ref.generic_args.iter() {
                 resolved_generic_args.push(resolve_generic_type(arg, generic_params, generic_args));
             }
-            AnalyzedTypeId::StructType(id.clone(), resolved_generic_args)
+            AnalyzedTypeId::StructType(StructRef {
+                id: struct_ref.id.clone(),
+                generic_args: resolved_generic_args,
+            })
         }
         _ => ty.clone(),
     }
@@ -1276,7 +1124,7 @@ fn analyze_generic_args(
         .map(|arg| {
             context
                 .types
-                .resolve_generic_type(&arg.value, context.generic_params)
+                .map_generic_parsed_type(&arg.value, context.generic_params)
                 .ok_or_else(|| {
                     anyhow::anyhow!(
                         "Generic argument '{:?}' not found at {}.",

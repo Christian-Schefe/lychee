@@ -1,80 +1,77 @@
 use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
+use crate::compiler::merger::merged_expression::{StructId, StructRef};
 use crate::compiler::merger::MergerResult;
-use crate::compiler::parser::item_id::ItemId;
+use crate::compiler::parser::item_id::{ItemId, ParsedTypeId};
 use crate::compiler::parser::parsed_expression::{GenericParams, ParsedProgram, ParsedTypeKind};
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct CollectedTypeData {
-    pub structs: HashMap<ModuleIdentifier, HashMap<String, ItemId>>,
-    pub struct_imports: HashMap<ModuleIdentifier, HashMap<String, ItemId>>,
+    pub structs: HashMap<ModuleIdentifier, HashMap<String, Vec<StructId>>>,
+    pub struct_imports: HashMap<ModuleIdentifier, HashMap<String, Vec<StructId>>>,
 }
 
 impl CollectedTypeData {
-    pub fn map_parsed_type(&self, parsed_type: &ParsedTypeKind) -> Option<AnalyzedTypeId> {
-        match &parsed_type {
-            ParsedTypeKind::Struct(id, generic_args) => {
-                let module_structs = self.structs.get(&id.item_id.module_id).unwrap();
-                let imported_structs = self.struct_imports.get(&id.item_id.module_id).unwrap();
-                let mapped_generic_args = generic_args
-                    .iter()
-                    .map(|x| self.map_parsed_type(&x.value))
-                    .collect::<Option<Vec<AnalyzedTypeId>>>()?;
-                if let Some(id) = module_structs.get(&id.item_id.item_name) {
-                    return Some(AnalyzedTypeId::StructType(id.clone(), mapped_generic_args));
+    pub fn find_struct_ids(
+        &self,
+        id: &ParsedTypeId,
+        generic_count: usize,
+    ) -> Option<Vec<StructId>> {
+        let module_structs = self.structs.get(&id.item_id.module_id)?;
+        let imported_structs = self.struct_imports.get(&id.item_id.module_id)?;
+
+        let mut matching = Vec::new();
+        if let Some(struct_ids) = module_structs.get(&id.item_id.item_name) {
+            for struct_id in struct_ids {
+                if struct_id.generic_count == generic_count {
+                    matching.push(struct_id.clone());
                 }
-                if id.is_module_local {
-                    if let Some(id) = imported_structs.get(&id.item_id.item_name) {
-                        return Some(AnalyzedTypeId::StructType(id.clone(), mapped_generic_args));
+            }
+        }
+        if id.is_module_local {
+            if let Some(struct_ids) = imported_structs.get(&id.item_id.item_name) {
+                for struct_id in struct_ids {
+                    if struct_id.generic_count == generic_count {
+                        matching.push(struct_id.clone());
                     }
                 }
-                None
             }
-            ParsedTypeKind::Pointer(inner) => Some(AnalyzedTypeId::Pointer(Box::new(
-                self.map_parsed_type(inner).unwrap(),
-            ))),
-            ParsedTypeKind::Unit => Some(AnalyzedTypeId::Unit),
-            ParsedTypeKind::Bool => Some(AnalyzedTypeId::Bool),
-            ParsedTypeKind::Char => Some(AnalyzedTypeId::Char),
-            ParsedTypeKind::Integer(size) => Some(AnalyzedTypeId::Integer(*size)),
         }
+        Some(matching)
     }
 
     pub fn map_generic_parsed_type(
         &self,
-        parsed_type: &ParsedTypeKind,
-        generic_params: &Option<GenericParams>,
+        ty: &ParsedTypeKind,
+        generic_params: &GenericParams,
     ) -> Option<AnalyzedTypeId> {
-        match &parsed_type {
+        match ty {
             ParsedTypeKind::Struct(id, generic_args) => {
-                let module_structs = self.structs.get(&id.item_id.module_id).unwrap();
-                let imported_structs = self.struct_imports.get(&id.item_id.module_id).unwrap();
+                if id.is_module_local {
+                    if let Some(generic_param) = generic_params.get_generic(&id.item_id.item_name) {
+                        return Some(generic_param);
+                    }
+                }
+
+                let struct_ids = self.find_struct_ids(id, generic_args.len())?;
+                if struct_ids.len() != 1 {
+                    return None;
+                }
                 let mapped_generic_args = generic_args
                     .iter()
                     .map(|x| self.map_generic_parsed_type(&x.value, generic_params))
                     .collect::<Option<Vec<AnalyzedTypeId>>>()?;
-                if id.is_module_local && generic_args.len() == 0 {
-                    if let Some(generic_arg) = generic_params
-                        .as_ref()
-                        .and_then(|x| x.set.get(&id.item_id.item_name))
-                    {
-                        return Some(AnalyzedTypeId::GenericType(generic_arg.clone()));
-                    }
-                }
-                if let Some(id) = module_structs.get(&id.item_id.item_name) {
-                    return Some(AnalyzedTypeId::StructType(id.clone(), mapped_generic_args));
-                }
-                if id.is_module_local {
-                    if let Some(id) = imported_structs.get(&id.item_id.item_name) {
-                        return Some(AnalyzedTypeId::StructType(id.clone(), mapped_generic_args));
-                    }
-                }
-                None
+                let struct_ref = StructRef {
+                    id: struct_ids[0].clone(),
+                    generic_args: mapped_generic_args,
+                };
+                Some(AnalyzedTypeId::StructType(struct_ref))
             }
-            ParsedTypeKind::Pointer(inner) => Some(AnalyzedTypeId::Pointer(Box::new(
-                self.map_generic_parsed_type(inner, generic_params).unwrap(),
-            ))),
+            ParsedTypeKind::Pointer(inner) => {
+                let inner = self.map_generic_parsed_type(inner, generic_params)?;
+                Some(AnalyzedTypeId::Pointer(Box::new(inner)))
+            }
             ParsedTypeKind::Unit => Some(AnalyzedTypeId::Unit),
             ParsedTypeKind::Bool => Some(AnalyzedTypeId::Bool),
             ParsedTypeKind::Char => Some(AnalyzedTypeId::Char),
@@ -94,7 +91,7 @@ pub fn collect_type_data(program: &ParsedProgram) -> MergerResult<CollectedTypeD
 
 fn collect_structs(
     program: &ParsedProgram,
-) -> MergerResult<HashMap<ModuleIdentifier, HashMap<String, ItemId>>> {
+) -> MergerResult<HashMap<ModuleIdentifier, HashMap<String, Vec<StructId>>>> {
     let mut structs = HashMap::new();
     for (module_id, module) in &program.module_tree {
         let mut module_types = HashMap::new();
@@ -104,16 +101,14 @@ fn collect_structs(
                 module_id: module_id.clone(),
                 item_name: struct_def.value.struct_name.clone(),
             };
-            if module_types
-                .insert(struct_def.value.struct_name.clone(), id)
-                .is_some()
-            {
-                return Err(anyhow::anyhow!(
-                    "Duplicate struct definition '{}' at {}",
-                    struct_def.value.struct_name,
-                    struct_def.location
-                ));
-            }
+            let struct_id = StructId {
+                id,
+                generic_count: struct_def.value.generics.order.len(),
+            };
+            let entry = module_types
+                .entry(struct_def.value.struct_name.clone())
+                .or_insert(vec![]);
+            entry.push(struct_id);
         }
         structs.insert(module_id.clone(), module_types);
     }
@@ -122,41 +117,22 @@ fn collect_structs(
 
 fn collect_struct_imports(
     program: &ParsedProgram,
-    structs: &HashMap<ModuleIdentifier, HashMap<String, ItemId>>,
-) -> MergerResult<HashMap<ModuleIdentifier, HashMap<String, ItemId>>> {
+    structs: &HashMap<ModuleIdentifier, HashMap<String, Vec<StructId>>>,
+) -> MergerResult<HashMap<ModuleIdentifier, HashMap<String, Vec<StructId>>>> {
     let mut struct_imports = HashMap::new();
     for (module_id, module) in &program.module_tree {
         let mut module_struct_imports = HashMap::new();
         for import in &module.imports {
-            if import.value.impl_type.is_some() {
-                continue;
-            }
             let module_structs = structs.get(&import.value.module_id).unwrap();
             if let Some(obj) = &import.value.imported_object {
-                if let Some(id) = module_structs.get(obj) {
-                    if module_struct_imports
-                        .insert(obj.clone(), id.clone())
-                        .is_some()
-                    {
-                        return Err(anyhow::anyhow!(
-                            "Duplicate struct import '{}' at {}",
-                            obj,
-                            import.location
-                        ));
-                    }
+                let entry = module_struct_imports.entry(obj.clone()).or_insert(vec![]);
+                if let Some(ids) = module_structs.get(obj) {
+                    entry.extend(ids.clone());
                 }
             } else {
-                for (name, id) in module_structs {
-                    if module_struct_imports
-                        .insert(name.clone(), id.clone())
-                        .is_some()
-                    {
-                        return Err(anyhow::anyhow!(
-                            "Duplicate struct import '{}' at {}",
-                            name,
-                            import.location
-                        ));
-                    }
+                for (name, ids) in module_structs {
+                    let entry = module_struct_imports.entry(name.clone()).or_insert(vec![]);
+                    entry.extend(ids.clone());
                 }
             }
         }

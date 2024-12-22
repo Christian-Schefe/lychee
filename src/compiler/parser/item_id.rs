@@ -11,9 +11,7 @@ pub struct ParsedTypeId {
 #[derive(Debug, Clone)]
 pub struct ParsedFunctionId {
     pub item_id: ItemId,
-    pub impl_type: Option<ParsedType>,
     pub is_module_local: bool,
-    pub generic_args: Vec<ParsedType>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

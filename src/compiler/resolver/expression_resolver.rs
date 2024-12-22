@@ -1,24 +1,24 @@
-use crate::compiler::analyzer::analyzed_expression::{
-    AnalyzedConstant, AnalyzedExpression, AnalyzedExpressionKind, AnalyzedLiteral, AnalyzedUnaryOp,
-    AssignableExpression, AssignableExpressionKind,
-};
-use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
+use crate::compiler::analyzer::analyzed_expression::{AnalyzedConstant, AnalyzedUnaryOp};
 use crate::compiler::resolver::program_resolver::ResolverContext;
 use crate::compiler::resolver::resolved_expression::{
     ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedLiteral,
     ResolvedUnaryOp, ValueData,
 };
+use crate::compiler::unwrapper::unwrapped_type::{
+    AssignableUnwrappedExpression, AssignableUnwrappedExpressionKind, UnwrappedExpression,
+    UnwrappedExpressionKind, UnwrappedLiteral, UnwrappedTypeId,
+};
 
 pub fn resolve_expression(
     context: &mut ResolverContext,
-    expression: &AnalyzedExpression,
+    expression: &UnwrappedExpression,
     should_discard: bool,
 ) -> ResolvedExpression {
     let value_data = ValueData::from_type(&expression.ty, context);
     let stack_discard = value_data.discard_stack_size(should_discard);
 
     match &expression.kind {
-        AnalyzedExpressionKind::Block {
+        UnwrappedExpressionKind::Block {
             expressions,
             returns_value,
         } => {
@@ -41,7 +41,7 @@ pub fn resolve_expression(
                 stack_discard,
             }
         }
-        AnalyzedExpressionKind::Return(expr) => {
+        UnwrappedExpressionKind::Return(expr) => {
             if let Some(expr) = expr {
                 let resolved_expr = resolve_expression(context, expr, false);
                 ResolvedExpression {
@@ -57,12 +57,12 @@ pub fn resolve_expression(
                 }
             }
         }
-        AnalyzedExpressionKind::Continue => ResolvedExpression {
+        UnwrappedExpressionKind::Continue => ResolvedExpression {
             kind: ResolvedExpressionKind::Continue,
             stack_discard,
             value_data,
         },
-        AnalyzedExpressionKind::Break(expr) => {
+        UnwrappedExpressionKind::Break(expr) => {
             if let Some(expr) = expr {
                 let resolved_expr = resolve_expression(context, expr, false);
                 ResolvedExpression {
@@ -80,7 +80,7 @@ pub fn resolve_expression(
                 }
             }
         }
-        AnalyzedExpressionKind::If {
+        UnwrappedExpressionKind::If {
             condition,
             then_block,
             else_expr,
@@ -101,7 +101,7 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        AnalyzedExpressionKind::Loop {
+        UnwrappedExpressionKind::Loop {
             init,
             condition,
             step,
@@ -134,7 +134,7 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        AnalyzedExpressionKind::Declaration { var_name, value } => {
+        UnwrappedExpressionKind::Declaration { var_name, value } => {
             let resolved_value = resolve_expression(context, value, false);
             let var_offset =
                 context.add_local_var(var_name.clone(), resolved_value.value_data.size);
@@ -148,7 +148,7 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        AnalyzedExpressionKind::ValueOfAssignable(assignable) => {
+        UnwrappedExpressionKind::ValueOfAssignable(assignable) => {
             let resolved_assignable = resolve_assignable_expression(context, assignable);
 
             ResolvedExpression {
@@ -157,13 +157,13 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        AnalyzedExpressionKind::Literal(lit) => {
+        UnwrappedExpressionKind::Literal(lit) => {
             let kind = match lit {
-                AnalyzedLiteral::Unit => ResolvedLiteral::Unit,
-                AnalyzedLiteral::Bool(b) => ResolvedLiteral::Bool(*b),
-                AnalyzedLiteral::Char(c) => ResolvedLiteral::Char(*c),
-                AnalyzedLiteral::Integer(i) => ResolvedLiteral::Integer(*i),
-                AnalyzedLiteral::Struct(fields) => {
+                UnwrappedLiteral::Unit => ResolvedLiteral::Unit,
+                UnwrappedLiteral::Bool(b) => ResolvedLiteral::Bool(*b),
+                UnwrappedLiteral::Char(c) => ResolvedLiteral::Char(*c),
+                UnwrappedLiteral::Integer(i) => ResolvedLiteral::Integer(*i),
+                UnwrappedLiteral::Struct(fields) => {
                     let resolved_fields = fields
                         .iter()
                         .map(|(_, expr)| resolve_expression(context, expr, false))
@@ -178,7 +178,7 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        AnalyzedExpressionKind::Unary { op, expr } => {
+        UnwrappedExpressionKind::Unary { op, expr } => {
             let resolved_expr = resolve_expression(context, expr, false);
             let mapped_op = match op {
                 AnalyzedUnaryOp::Math(math_op) => ResolvedUnaryOp::Math(math_op.clone()),
@@ -188,10 +188,10 @@ pub fn resolve_expression(
                     let target_size = context.get_type_size(&expression.ty);
                     let smaller_size = original_size.min(target_size);
                     match &expression.ty {
-                        AnalyzedTypeId::Integer(_) => ResolvedUnaryOp::IntCast(smaller_size),
-                        AnalyzedTypeId::Bool => ResolvedUnaryOp::BoolCast,
-                        AnalyzedTypeId::Char => ResolvedUnaryOp::IntCast(smaller_size),
-                        AnalyzedTypeId::Pointer(_) => ResolvedUnaryOp::PointerCast,
+                        UnwrappedTypeId::Integer(_) => ResolvedUnaryOp::IntCast(smaller_size),
+                        UnwrappedTypeId::Bool => ResolvedUnaryOp::BoolCast,
+                        UnwrappedTypeId::Char => ResolvedUnaryOp::IntCast(smaller_size),
+                        UnwrappedTypeId::Pointer(_) => ResolvedUnaryOp::PointerCast,
                         _ => {
                             panic!("Unsupported cast: {:?}", expression.ty)
                         }
@@ -208,7 +208,7 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        AnalyzedExpressionKind::Binary { op, left, right } => {
+        UnwrappedExpressionKind::Binary { op, left, right } => {
             let resolved_left = resolve_expression(context, left, false);
             let resolved_right = resolve_expression(context, right, false);
 
@@ -222,7 +222,7 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        AnalyzedExpressionKind::Assign { op, lhs, rhs } => {
+        UnwrappedExpressionKind::Assign { op, lhs, rhs } => {
             let resolved_lhs = resolve_assignable_expression(context, lhs);
             let resolved_rhs = resolve_expression(context, rhs, false);
 
@@ -236,7 +236,7 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        AnalyzedExpressionKind::Borrow { expr } => {
+        UnwrappedExpressionKind::Borrow { expr } => {
             let resolved_expr = resolve_assignable_expression(context, expr);
             ResolvedExpression {
                 kind: ResolvedExpressionKind::Borrow {
@@ -246,7 +246,7 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        AnalyzedExpressionKind::FunctionCall {
+        UnwrappedExpressionKind::FunctionCall {
             function_name,
             args,
         } => {
@@ -274,7 +274,7 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        AnalyzedExpressionKind::FieldAccess { expr, field_name } => {
+        UnwrappedExpressionKind::FieldAccess { expr, field_name } => {
             let resolved_expr = resolve_expression(context, expr, false);
             let field_offset = context.get_field_offset(&expr.ty, field_name);
             let struct_size = resolved_expr.value_data.size;
@@ -289,7 +289,7 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        AnalyzedExpressionKind::Increment(expr, is_prefix) => {
+        UnwrappedExpressionKind::Increment(expr, is_prefix) => {
             let resolved_expr = resolve_assignable_expression(context, expr);
             ResolvedExpression {
                 kind: ResolvedExpressionKind::Increment(resolved_expr, *is_prefix),
@@ -297,7 +297,7 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        AnalyzedExpressionKind::Decrement(expr, is_prefix) => {
+        UnwrappedExpressionKind::Decrement(expr, is_prefix) => {
             let resolved_expr = resolve_assignable_expression(context, expr);
             ResolvedExpression {
                 kind: ResolvedExpressionKind::Decrement(resolved_expr, *is_prefix),
@@ -305,7 +305,7 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        AnalyzedExpressionKind::ConstantPointer(constant) => match constant {
+        UnwrappedExpressionKind::ConstantPointer(constant) => match constant {
             AnalyzedConstant::String(bytes) => {
                 let index = context.constants.len();
                 context.constants.push(bytes.clone());
@@ -321,23 +321,23 @@ pub fn resolve_expression(
 
 fn resolve_assignable_expression(
     context: &mut ResolverContext,
-    expr: &AssignableExpression,
+    expr: &AssignableUnwrappedExpression,
 ) -> ResolvedAssignableExpression {
     match &expr.kind {
-        AssignableExpressionKind::LocalVariable(name) => {
+        AssignableUnwrappedExpressionKind::LocalVariable(name) => {
             let var_offset = *context.local_vars.get(name).unwrap();
             ResolvedAssignableExpression::LocalVariable(var_offset)
         }
-        AssignableExpressionKind::Dereference(inner) => {
+        AssignableUnwrappedExpressionKind::Dereference(inner) => {
             let resolved_inner = resolve_expression(context, inner, false);
             ResolvedAssignableExpression::Dereference(Box::new(resolved_inner))
         }
-        AssignableExpressionKind::FieldAccess(inner, field_name) => {
+        AssignableUnwrappedExpressionKind::FieldAccess(inner, field_name) => {
             let resolved_inner = resolve_assignable_expression(context, inner);
             let field_offset = context.get_field_offset(&inner.ty, field_name);
             ResolvedAssignableExpression::FieldAccess(Box::new(resolved_inner), field_offset)
         }
-        AssignableExpressionKind::ArrayIndex(arr_expr, index_expr) => {
+        AssignableUnwrappedExpressionKind::ArrayIndex(arr_expr, index_expr) => {
             let resolved_arr_expr = resolve_expression(context, arr_expr, false);
             let resolved_index_expr = resolve_expression(context, index_expr, false);
             let element_size = context.get_type_size(&expr.ty);
@@ -347,7 +347,7 @@ fn resolve_assignable_expression(
                 element_size,
             )
         }
-        AssignableExpressionKind::PointerFieldAccess(inner, field_name, indirections) => {
+        AssignableUnwrappedExpressionKind::PointerFieldAccess(inner, field_name, indirections) => {
             let resolved_inner = resolve_expression(context, inner, false);
             let field_offset = context.get_field_offset(&inner.ty, field_name);
             ResolvedAssignableExpression::PointerFieldAccess(

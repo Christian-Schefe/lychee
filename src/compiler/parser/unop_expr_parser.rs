@@ -4,11 +4,8 @@ use crate::compiler::parser::parsed_expression::{
     BinaryOp, ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryMathOp, UnaryOp,
 };
 use crate::compiler::parser::parser_error::ParseResult;
-use crate::compiler::parser::primary_expr_parser::{
-    parse_generic_args, parse_primary_expression, parse_seperated_expressions,
-};
+use crate::compiler::parser::primary_expr_parser::{parse_function_call, parse_primary_expression};
 use crate::compiler::parser::program_parser::{parse_expression, parse_identifier, pop_expected};
-use crate::compiler::parser::type_parser::parse_function_id;
 
 fn parse_prefix_unary<F>(
     tokens: &mut TokenStack,
@@ -82,6 +79,7 @@ pub fn parse_unop_expression(tokens: &mut TokenStack) -> ParseResult<ParsedExpre
 fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
     let mut expr = parse_primary_expression(tokens)?;
     let location = expr.location.clone();
+    let current_module = &location.file.as_ref().unwrap().id;
     loop {
         let token = tokens.peek().clone();
         match token.value {
@@ -111,79 +109,41 @@ fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression>
                     Token::Identifier(name) => {
                         let member_name = name.clone();
                         tokens.pop();
-                        let function_identifier = parse_function_id(
-                            tokens,
-                            member_name.clone(),
-                            false,
-                            &location.file.as_ref().unwrap().id,
-                        )?;
-                        if tokens.peek().value == Token::Static(StaticToken::OpenParen) {
-                            let (_, args, _) = parse_seperated_expressions(
-                                tokens,
-                                Token::Static(StaticToken::OpenParen),
-                                Token::Static(StaticToken::CloseParen),
-                                Token::Static(StaticToken::Comma),
-                                false,
-                                "function call arguments",
-                            )?;
-                            expr = ParsedExpression::new(
-                                ParsedExpressionKind::MemberFunctionCall {
-                                    object: Box::new(expr),
-                                    id: function_identifier,
-                                    args,
-                                },
-                                location.clone(),
-                            );
-                        } else {
-                            if !function_identifier.is_module_local
-                                || function_identifier.generic_args.len() > 0
-                            {
-                                return Err(anyhow::anyhow!(
-                                    "Invalid member access expression at {}: function id: {}",
-                                    location,
-                                    function_identifier.item_id
-                                ))?;
+                        match tokens.peek().value {
+                            Token::Static(StaticToken::OpenParen) => {}
+                            Token::Static(StaticToken::DoubleColon) => {}
+                            _ => {
+                                expr = ParsedExpression::new(
+                                    ParsedExpressionKind::Unary {
+                                        expr: Box::new(expr),
+                                        op: UnaryOp::Member(member_name),
+                                    },
+                                    location.clone(),
+                                );
+                                continue;
                             }
-                            expr = ParsedExpression::new(
-                                ParsedExpressionKind::Unary {
-                                    expr: Box::new(expr),
-                                    op: UnaryOp::Member(member_name),
-                                },
-                                location.clone(),
-                            );
                         }
+
+                        expr = parse_function_call(
+                            tokens,
+                            member_name,
+                            false,
+                            current_module,
+                            location.clone(),
+                            Some(expr),
+                        )?;
                     }
                     Token::Static(StaticToken::DoubleColon) => {
                         tokens.pop();
                         let member_name = parse_identifier(tokens)?.value;
-                        let function_identifier = parse_function_id(
+                        expr = parse_function_call(
                             tokens,
-                            member_name.clone(),
+                            member_name,
                             true,
-                            &location.file.as_ref().unwrap().id,
-                        )?;
-                        let (_, args, _) = parse_seperated_expressions(
-                            tokens,
-                            Token::Static(StaticToken::OpenParen),
-                            Token::Static(StaticToken::CloseParen),
-                            Token::Static(StaticToken::Comma),
-                            false,
-                            "function call arguments",
-                        )?;
-                        if function_identifier.impl_type.is_some() {
-                            return Err(anyhow::anyhow!(
-                                "Cannot call member function on type at {}",
-                                location
-                            ))?;
-                        }
-                        expr = ParsedExpression::new(
-                            ParsedExpressionKind::MemberFunctionCall {
-                                object: Box::new(expr),
-                                id: function_identifier,
-                                args,
-                            },
+                            current_module,
                             location.clone(),
-                        );
+                            Some(expr),
+                        )?;
                     }
                     _ => {
                         return Err(anyhow::anyhow!(

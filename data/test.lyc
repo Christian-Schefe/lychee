@@ -1,59 +1,57 @@
 int main() {
-    let int b = 35;
-    let int c = *generic_test::<&int>(&b);
-    let int d = generic_test2::<int, int>(5, b + 5);
-
-    let Option<int> a = new Option<int> {
-        value: 5,
+    let var x = new Option<int> {
+        value: 10
     };
-
-    let var res = new Result<int, int> {
-        value: a,
-        error: -10,
+    let Option<int> y = x;
+    let TwoGenerics<int, int> z = new TwoGenerics<int, int> {
+        value: 10,
+        value2: 20
     };
-
-    a.value = 10;
-    let var ans = a.value + c + d + res.value.value + res.error;
-    a.unwrapa::<int>() + ans
-}
-
-T generic_test<T>(T a) {
-    return a;
-}
-
-Option2<int,T> pass<T>(Option<T> a) {
-    return new Option2<int,T> {
-        value: 4,
-        value2: a.value,
+    let NestedGeneric<int> w = new NestedGeneric<int> {
+        value: x
     };
-}
-
-T2 generic_test2<T1, T2>(T1 b, T2 a) {
-    return a;
-}
-
-struct Result<T, E> {
-    Option<T> value;
-    E error;
+    let int a = generic_function::<int>(10);
+    let Option<int> b = generic_function2::<int>(x);
+    let Option<Option<int>> b2 = generic_function2::<Option<int>>(new Option<Option<int>> {
+        value: x
+    });
+    let TwoGenerics<char, Option<char>> c = partial_generic_function::<char>('c');
+    x.value.add1().generic_function::<int>().add1()
 }
 
 struct Option<T> {
     T value;
 }
 
-struct Option2<Z,K> {
-    Z value;
-    K value2;
+struct TwoGenerics<T, T2> {
+    T value;
+    T2 value2;
 }
 
-impl <T> Option<T> {
-    T unwrapa(Option<T> self) {
-        return self.value;
+struct NestedGeneric<T> {
+    Option<T> value;
+}
+
+T generic_function<T>(T x) {
+    x
+}
+
+Option<T> generic_function2<T>(Option<T> x) {
+    x
+}
+
+T nested_generic_function<T>(T x) {
+    generic_function::<int>(5);
+    generic_function::<T>(x)
+}
+
+TwoGenerics<T, Option<T>> partial_generic_function<T>(T x) {
+    new TwoGenerics<T, Option<T>> {
+        value2: new Option<T> {value: x},
+        value: x
     }
 }
 
-impl Option<int> {
-    int unwrapb(Option<int> self) {
-        return self.value;
-    }
+int add1(int x) {
+    x + 1
 }

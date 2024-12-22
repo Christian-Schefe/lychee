@@ -50,10 +50,6 @@ pub fn analyze_assignable_expression(
             "Function call expression cannot be assigned to at {}.",
             expression.location
         )),
-        ParsedExpressionKind::MemberFunctionCall { .. } => Err(anyhow::anyhow!(
-            "Member function call expression cannot be assigned to at {}.",
-            expression.location
-        )),
         ParsedExpressionKind::Literal(_) => Err(anyhow::anyhow!(
             "Literal expression cannot be assigned to at {}.",
             expression.location
@@ -155,26 +151,26 @@ fn try_as_assignable_field_access(
     let maybe_assignable_expr = analyze_assignable_expression(context, inner);
     if let Ok(analyzed_expr) = maybe_assignable_expr {
         match &analyzed_expr.ty {
-            AnalyzedTypeId::StructType(str_name, generic_args) => {
-                let struct_type = context.types.get_struct(&analyzed_expr.ty).ok_or_else(|| {
-                    anyhow::anyhow!("Struct type '{}' not found at {}.", str_name, location)
+            AnalyzedTypeId::StructType(struct_ref) => {
+                let struct_type = context.types.get_struct(struct_ref).ok_or_else(|| {
+                    anyhow::anyhow!("Struct type '{}' not found at {}.", struct_ref, location)
                 })?;
-                let field_type = struct_type.field_types.get(&member).ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "Struct type '{}' does not have field '{}' at {}.",
-                        analyzed_expr.ty,
-                        member,
-                        location
-                    )
-                })?;
-                let actual_field_type =
-                    resolve_generic_type(field_type, &struct_type.generic_params, generic_args);
+                let field_type = struct_type
+                    .get_field_type(&member, &struct_ref.generic_args)
+                    .ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "Struct type '{}' does not have field '{}' at {}.",
+                            analyzed_expr.ty,
+                            member,
+                            location
+                        )
+                    })?;
                 return Ok(AssignableExpression {
                     kind: AssignableExpressionKind::FieldAccess(
                         Box::new(analyzed_expr),
                         member.clone(),
                     ),
-                    ty: actual_field_type,
+                    ty: field_type,
                 });
             }
             AnalyzedTypeId::Pointer(_) => {}
@@ -208,27 +204,27 @@ fn try_as_assignable_field_access(
         ))?;
     }
 
-    if let AnalyzedTypeId::StructType(str_name, generic_args) = inner_ty {
-        let struct_type = context.types.get_struct(inner_ty).ok_or_else(|| {
-            anyhow::anyhow!("Struct type '{}' not found at {}.", str_name, location)
+    if let AnalyzedTypeId::StructType(struct_ref) = inner_ty {
+        let struct_type = context.types.get_struct(struct_ref).ok_or_else(|| {
+            anyhow::anyhow!("Struct type '{}' not found at {}.", struct_ref, location)
         })?;
-        let field_type = struct_type.field_types.get(&member).ok_or_else(|| {
-            anyhow::anyhow!(
-                "Struct type '{}' does not have field '{}' at {}.",
-                inner_ty,
-                member,
-                location
-            )
-        })?;
-        let actual_field_type =
-            resolve_generic_type(field_type, &struct_type.generic_params, generic_args);
+        let field_type = struct_type
+            .get_field_type(&member, &struct_ref.generic_args)
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Struct type '{}' does not have field '{}' at {}.",
+                    inner_ty,
+                    member,
+                    location
+                )
+            })?;
         Ok(AssignableExpression {
             kind: AssignableExpressionKind::PointerFieldAccess(
                 Box::new(analyzed_expr),
                 member.clone(),
                 indirections,
             ),
-            ty: actual_field_type,
+            ty: field_type,
         })
     } else {
         Err(anyhow::anyhow!(

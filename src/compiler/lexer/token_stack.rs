@@ -30,6 +30,15 @@ impl TokenStack {
         }
     }
 
+    pub fn replace(&mut self, token: SrcToken) {
+        self.stack[self.offset] = token;
+    }
+
+    pub fn insert(&mut self, token: SrcToken) {
+        self.stack.insert(self.offset, token);
+        self.size += 1;
+    }
+
     pub fn location(&self) -> &Location {
         &self.peek().location
     }

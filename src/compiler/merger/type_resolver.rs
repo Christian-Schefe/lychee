@@ -1,5 +1,5 @@
 use crate::compiler::lexer::location::Src;
-use crate::compiler::merger::merged_expression::ResolvedStruct;
+use crate::compiler::merger::merged_expression::{ResolvedStruct, StructId};
 use crate::compiler::merger::resolved_types::ResolvedTypes;
 use crate::compiler::merger::type_collector::{collect_type_data, CollectedTypeData};
 use crate::compiler::merger::MergerResult;
@@ -12,6 +12,8 @@ use std::collections::HashMap;
 
 pub fn build_resolved_types(program: &ParsedProgram) -> MergerResult<ResolvedTypes> {
     let collected_type_data = collect_type_data(program)?;
+    println!("{:?}", collected_type_data);
+    
     let struct_defs = extract_module_struct_types(&program.module_tree)?;
 
     let mut resolved_structs = HashMap::new();
@@ -27,7 +29,6 @@ pub fn build_resolved_types(program: &ParsedProgram) -> MergerResult<ResolvedTyp
     Ok(ResolvedTypes {
         structs: resolved_structs,
         collected_type_data,
-        generic_struct_instances: HashMap::new(),
     })
 }
 
@@ -45,7 +46,7 @@ fn resolve_struct_definition(
             .map_generic_parsed_type(&field_type.value, &struct_def.value.generics)
             .ok_or_else(|| {
                 anyhow::anyhow!(
-                    "Type {:?} not found at {}",
+                    "Type {} not found at {}",
                     field_type.value,
                     field_type.location
                 )
@@ -64,9 +65,12 @@ fn resolve_struct_definition(
     }
 
     Ok(ResolvedStruct {
-        id: ItemId {
-            module_id: module_path.clone(),
-            item_name: struct_def.value.struct_name.clone(),
+        id: StructId {
+            id: ItemId {
+                module_id: module_path.clone(),
+                item_name: struct_def.value.struct_name.clone(),
+            },
+            generic_count: struct_def.value.generics.order.len(),
         },
         field_types,
         field_order,

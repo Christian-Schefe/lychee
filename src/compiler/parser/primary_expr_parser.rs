@@ -2,6 +2,7 @@ use crate::compiler::lexer::lexer_error::LocationError;
 use crate::compiler::lexer::location::Location;
 use crate::compiler::lexer::token::{Keyword, Literal, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
+use crate::compiler::lexer::SrcToken;
 use crate::compiler::parser::parsed_expression::{
     GenericParams, ParsedExpression, ParsedExpressionKind, ParsedLiteral, ParsedType,
     ParsedTypeKind,
@@ -9,6 +10,7 @@ use crate::compiler::parser::parsed_expression::{
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::program_parser::{parse_expression, parse_identifier, pop_expected};
 use crate::compiler::parser::type_parser::{parse_function_id, parse_type};
+use crate::compiler::parser::ModuleIdentifier;
 use anyhow::Context;
 use std::collections::HashSet;
 
@@ -21,8 +23,6 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             match tokens.peek().value {
                 Token::Static(StaticToken::OpenParen) => {}
                 Token::Static(StaticToken::DoubleColon) => {}
-                Token::Static(StaticToken::OpenBracket) => {}
-                Token::Static(StaticToken::At) => {}
                 _ => {
                     return Ok(ParsedExpression::new(
                         ParsedExpressionKind::Variable(name),
@@ -31,45 +31,26 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
                 }
             }
 
-            let module_id = parse_function_id(tokens, name, false, current_module)
-                .with_context(|| format!("Failed to parse module path at {}.", token.location))?;
-
-            let (_, args, _) = parse_seperated_expressions(
+            parse_function_call(
                 tokens,
-                Token::Static(StaticToken::OpenParen),
-                Token::Static(StaticToken::CloseParen),
-                Token::Static(StaticToken::Comma),
+                name,
                 false,
-                "function call arguments",
-            )?;
-            Ok(ParsedExpression::new(
-                ParsedExpressionKind::FunctionCall {
-                    id: module_id,
-                    args,
-                },
-                token.location,
-            ))
+                current_module,
+                token.location.clone(),
+                None,
+            )
         }
         Token::Static(StaticToken::DoubleColon) => {
             tokens.pop();
             let first_id = parse_identifier(tokens)?;
-            let module_id = parse_function_id(tokens, first_id.value, true, current_module)
-                .with_context(|| format!("Failed to parse module path at {}.", token.location))?;
-            let (_, args, _) = parse_seperated_expressions(
+            parse_function_call(
                 tokens,
-                Token::Static(StaticToken::OpenParen),
-                Token::Static(StaticToken::CloseParen),
-                Token::Static(StaticToken::Comma),
-                false,
-                "function call arguments",
-            )?;
-            Ok(ParsedExpression::new(
-                ParsedExpressionKind::FunctionCall {
-                    id: module_id,
-                    args,
-                },
-                token.location,
-            ))
+                first_id.value,
+                true,
+                current_module,
+                token.location.clone(),
+                None,
+            )
         }
         Token::Literal(lit) => {
             tokens.pop();
@@ -438,9 +419,21 @@ pub fn parse_generic_args(tokens: &mut TokenStack) -> ParseResult<Vec<ParsedType
                     tokens.pop();
                 }
                 Token::Static(StaticToken::GreaterThan) => {}
-                _ => Err(LocationError::new(
-                    "Expected comma or greater than after generic.".to_string(),
-                    tokens.location().clone(),
+                Token::Static(StaticToken::ShiftRight) => {
+                    //split the >> token into two >
+                    tokens.replace(SrcToken {
+                        value: Token::Static(StaticToken::GreaterThan),
+                        location: tokens.location().clone(),
+                    });
+                    tokens.insert(SrcToken {
+                        value: Token::Static(StaticToken::GreaterThan),
+                        location: tokens.location().clone(),
+                    });
+                }
+                _ => Err(anyhow::anyhow!(
+                    "Expected , or > after generic type, found {} at {}",
+                    tokens.peek().value,
+                    tokens.location()
                 ))?,
             }
         }
@@ -451,7 +444,7 @@ pub fn parse_generic_args(tokens: &mut TokenStack) -> ParseResult<Vec<ParsedType
     }
 }
 
-pub fn parse_generic_params(tokens: &mut TokenStack) -> ParseResult<Option<GenericParams>> {
+pub fn parse_generic_params(tokens: &mut TokenStack) -> ParseResult<GenericParams> {
     if let Token::Static(StaticToken::LessThan) = tokens.peek().value {
         tokens.pop();
         let mut generics = Vec::new();
@@ -470,8 +463,40 @@ pub fn parse_generic_params(tokens: &mut TokenStack) -> ParseResult<Option<Gener
             }
         }
         pop_expected(tokens, Token::Static(StaticToken::GreaterThan))?;
-        Ok(Some(GenericParams::new(generics)?))
+        Ok(GenericParams::new(generics)?)
     } else {
-        Ok(None)
+        Ok(GenericParams::empty())
     }
+}
+
+pub fn parse_function_call(
+    tokens: &mut TokenStack,
+    name: String,
+    is_absolute: bool,
+    current_module: &ModuleIdentifier,
+    location: Location,
+    member_call: Option<ParsedExpression>,
+) -> ParseResult<ParsedExpression> {
+    let (module_id, generic_args) = parse_function_id(tokens, name, is_absolute, current_module)
+        .with_context(|| format!("Failed to parse module path at {}.", location))?;
+
+    let (_, mut args, _) = parse_seperated_expressions(
+        tokens,
+        Token::Static(StaticToken::OpenParen),
+        Token::Static(StaticToken::CloseParen),
+        Token::Static(StaticToken::Comma),
+        false,
+        "function call arguments",
+    )?;
+    if let Some(member_obj) = member_call {
+        args.insert(0, member_obj);
+    }
+    Ok(ParsedExpression::new(
+        ParsedExpressionKind::FunctionCall {
+            id: module_id,
+            args,
+            generic_args,
+        },
+        location,
+    ))
 }

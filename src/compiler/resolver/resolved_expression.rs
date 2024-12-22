@@ -1,7 +1,7 @@
 use crate::compiler::analyzer::analyzed_expression::{AnalyzedBinaryOp, BinaryAssignOp};
-use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
 use crate::compiler::parser::parsed_expression::UnaryMathOp;
 use crate::compiler::resolver::program_resolver::ResolverContext;
+use crate::compiler::unwrapper::unwrapped_type::UnwrappedTypeId;
 
 #[derive(Debug, Clone)]
 pub struct ResolvedProgram {
@@ -23,26 +23,24 @@ pub enum ValueLocation {
 }
 
 impl ValueData {
-    pub fn from_type(ty: &AnalyzedTypeId, context: &ResolverContext) -> ValueData {
-        let actual_ty = context.resolve_generic_type(ty);
-        let size = context.get_type_size(&actual_ty);
-        match actual_ty {
-            AnalyzedTypeId::Unit => ValueData {
+    pub fn from_type(ty: &UnwrappedTypeId, context: &ResolverContext) -> ValueData {
+        let size = context.get_type_size(&ty);
+        match ty {
+            UnwrappedTypeId::Unit => ValueData {
                 location: ValueLocation::None,
                 size,
             },
-            AnalyzedTypeId::StructType(_, _) => ValueData {
+            UnwrappedTypeId::StructType(_) => ValueData {
                 location: ValueLocation::Stack,
                 size,
             },
-            AnalyzedTypeId::Bool
-            | AnalyzedTypeId::Char
-            | AnalyzedTypeId::Integer(_)
-            | AnalyzedTypeId::Pointer(_) => ValueData {
+            UnwrappedTypeId::Bool
+            | UnwrappedTypeId::Char
+            | UnwrappedTypeId::Integer(_)
+            | UnwrappedTypeId::Pointer(_) => ValueData {
                 location: ValueLocation::Register,
                 size,
             },
-            AnalyzedTypeId::GenericType(_) => unreachable!("Generic types should be resolved"),
         }
     }
     pub fn discard_stack_size(&self, should_discard: bool) -> usize {

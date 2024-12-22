@@ -1,19 +1,19 @@
 use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
-use crate::compiler::analyzer::program_analyzer::GenericInstances;
 use crate::compiler::lexer::location::Location;
-use crate::compiler::merger::merged_expression::FunctionId;
+use crate::compiler::merger::merged_expression::{FunctionId, FunctionRef};
 use crate::compiler::merger::resolved_functions::ResolvedFunctions;
 use crate::compiler::merger::resolved_types::ResolvedTypes;
 use crate::compiler::parser::parsed_expression::{
-    BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, GenericParams, UnaryMathOp,
+    BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, UnaryMathOp,
 };
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct AnalyzedProgram {
     pub resolved_types: ResolvedTypes,
     pub resolved_functions: ResolvedFunctions,
-    pub functions: Vec<AnalyzedFunction>,
-    pub generic_instances: GenericInstances,
+    pub functions: HashMap<FunctionId, AnalyzedFunction>,
+    pub main_function: FunctionRef,
 }
 
 #[derive(Debug, Clone)]
@@ -21,7 +21,6 @@ pub struct AnalyzedFunction {
     pub name: FunctionId,
     pub body: AnalyzedExpression,
     pub return_type: AnalyzedTypeId,
-    pub generic_params: Option<GenericParams>,
 }
 
 #[derive(Debug, Clone)]
@@ -77,7 +76,7 @@ pub enum AnalyzedExpressionKind {
         expr: AssignableExpression,
     },
     FunctionCall {
-        function_name: FunctionId,
+        function_name: FunctionRef,
         args: Vec<AnalyzedExpression>,
     },
     FieldAccess {

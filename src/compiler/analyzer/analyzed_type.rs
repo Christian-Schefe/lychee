@@ -1,4 +1,4 @@
-use crate::compiler::parser::item_id::ItemId;
+use crate::compiler::merger::merged_expression::StructRef;
 use std::fmt::Display;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
@@ -8,7 +8,7 @@ pub enum AnalyzedTypeId {
     Char,
     Integer(usize),
     Pointer(Box<AnalyzedTypeId>),
-    StructType(ItemId, Vec<AnalyzedTypeId>),
+    StructType(StructRef),
     GenericType(String),
 }
 
@@ -26,17 +26,8 @@ impl Display for AnalyzedTypeId {
                 _ => unreachable!("Invalid integer size: {}", size),
             },
             AnalyzedTypeId::Pointer(inner) => write!(f, "&{}", inner),
-            AnalyzedTypeId::StructType(module_id, generic_params) => {
-                write!(
-                    f,
-                    "{}<{}>",
-                    module_id,
-                    generic_params
-                        .iter()
-                        .map(|x| format!("{x}"))
-                        .collect::<Vec<String>>()
-                        .join(",")
-                )
+            AnalyzedTypeId::StructType(struct_id) => {
+                write!(f, "{}", struct_id)
             }
             AnalyzedTypeId::GenericType(name) => write!(f, "{}", name),
         }
