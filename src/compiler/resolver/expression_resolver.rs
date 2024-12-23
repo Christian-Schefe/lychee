@@ -316,6 +316,14 @@ pub fn resolve_expression(
                 }
             }
         },
+        UnwrappedExpressionKind::Sizeof(ty) => {
+            let size = context.get_type_size(ty);
+            ResolvedExpression {
+                kind: ResolvedExpressionKind::Literal(ResolvedLiteral::Integer(size as i64)),
+                stack_discard,
+                value_data,
+            }
+        }
     }
 }
 

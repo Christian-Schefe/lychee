@@ -111,6 +111,7 @@ pub enum ParsedExpressionKind {
         args: Vec<ParsedExpression>,
         generic_args: Vec<ParsedType>,
     },
+    Sizeof(ParsedType),
 }
 
 pub type ParsedType = Src<ParsedTypeKind>;

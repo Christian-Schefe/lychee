@@ -36,7 +36,7 @@ unit print(Array<int> this) {
 
 Array<T> createArray<T>(int size) {
     let Array<T> arr = new Array<T> {
-        data: malloc(size * 4) as &T,
+        data: malloc(size * sizeof(T)) as &T,
         size: size
     };
     arr

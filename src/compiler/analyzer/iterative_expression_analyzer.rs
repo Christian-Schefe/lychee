@@ -157,6 +157,7 @@ pub fn analyze_expression(
                         stack.push((arg, false, in_loop));
                     }
                 }
+                ParsedExpressionKind::Sizeof(_) => {}
             }
         } else {
             let (ty, analyzed) = match &stack_expr.value {
@@ -938,6 +939,22 @@ pub fn analyze_expression(
                         },
                     )
                 }
+                ParsedExpressionKind::Sizeof(ty) => {
+                    let resolved_type = context
+                        .types
+                        .map_generic_parsed_type(&ty.value, context.generic_params)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "Sizeof type '{}' not found at {}.",
+                                ty.value,
+                                ty.location
+                            )
+                        })?;
+                    (
+                        AnalyzedTypeId::Integer(4),
+                        AnalyzedExpressionKind::Sizeof(resolved_type),
+                    )
+                }
             };
             output.push(AnalyzedExpression {
                 kind: analyzed,
@@ -1056,6 +1073,7 @@ fn assert_break_return_type(
         AnalyzedExpressionKind::Decrement(expr, _) => {
             assert_break_return_type_assignable(break_type, expr)
         }
+        AnalyzedExpressionKind::Sizeof(_) => Ok(break_type.cloned()),
     }
 }
 

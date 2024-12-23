@@ -137,6 +137,10 @@ pub fn analyze_assignable_expression(
             "Unary expression cannot be assigned to at {}.",
             expression.location
         )),
+        ParsedExpressionKind::Sizeof(_) => Err(anyhow::anyhow!(
+            "Sizeof expression cannot be assigned to at {}.",
+            expression.location
+        )),
     }
 }
 

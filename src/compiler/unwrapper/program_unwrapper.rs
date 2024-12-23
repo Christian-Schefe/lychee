@@ -496,6 +496,11 @@ fn unwrap_expression(
             );
             UnwrappedExpressionKind::Decrement(unwrapped_inner, *post)
         }
+        AnalyzedExpressionKind::Sizeof(ty) => {
+            let unwrapped_ty =
+                unwrap_type(context, program, ty, func_generic_params, func_generic_args);
+            UnwrappedExpressionKind::Sizeof(unwrapped_ty)
+        }
     };
 
     UnwrappedExpression {

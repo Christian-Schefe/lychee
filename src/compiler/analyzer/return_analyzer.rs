@@ -70,6 +70,7 @@ pub fn always_calls_return(expression: &AnalyzedExpression) -> bool {
         AnalyzedExpressionKind::Increment(inner, _) => always_calls_return_assignable(inner),
         AnalyzedExpressionKind::Decrement(inner, _) => always_calls_return_assignable(inner),
         AnalyzedExpressionKind::ConstantPointer(_) => false,
+        AnalyzedExpressionKind::Sizeof(_) => false,
     }
 }
 

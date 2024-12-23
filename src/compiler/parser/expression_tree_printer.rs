@@ -109,6 +109,9 @@ fn print_function(printer: &mut Printer, function: &ParsedFunction) {
 
 fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
     match &expr.value {
+        ParsedExpressionKind::Sizeof(ty) => {
+            printer.add_line(format!("Sizeof({:?})", ty));
+        }
         ParsedExpressionKind::Variable(name) => {
             printer.add_line(format!("Var({})", name));
         }

@@ -118,6 +118,7 @@ pub enum UnwrappedExpressionKind {
     },
     Increment(AssignableUnwrappedExpression, bool),
     Decrement(AssignableUnwrappedExpression, bool),
+    Sizeof(UnwrappedTypeId),
 }
 
 #[derive(Debug, Clone)]

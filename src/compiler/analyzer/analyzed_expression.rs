@@ -84,6 +84,7 @@ pub enum AnalyzedExpressionKind {
     },
     Increment(AssignableExpression, bool),
     Decrement(AssignableExpression, bool),
+    Sizeof(AnalyzedTypeId),
 }
 
 #[derive(Debug, Clone)]

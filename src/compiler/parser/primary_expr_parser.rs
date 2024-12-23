@@ -4,7 +4,7 @@ use crate::compiler::lexer::token::{Keyword, Literal, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::lexer::SrcToken;
 use crate::compiler::parser::parsed_expression::{
-    ParsedGenericParams, ParsedExpression, ParsedExpressionKind, ParsedLiteral, ParsedType,
+    ParsedExpression, ParsedExpressionKind, ParsedGenericParams, ParsedLiteral, ParsedType,
     ParsedTypeKind,
 };
 use crate::compiler::parser::parser_error::ParseResult;
@@ -280,6 +280,18 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
                     var_name,
                     value: Box::new(value),
                 },
+                token.location,
+            ))
+        }
+        Token::Keyword(Keyword::Sizeof) => {
+            tokens.pop();
+            pop_expected(tokens, Token::Static(StaticToken::OpenParen))?;
+            let ty_location = tokens.location().clone();
+            let ty = parse_type(tokens)
+                .with_context(|| format!("Failed to parse type at {}.", ty_location))?;
+            pop_expected(tokens, Token::Static(StaticToken::CloseParen))?;
+            Ok(ParsedExpression::new(
+                ParsedExpressionKind::Sizeof(ty),
                 token.location,
             ))
         }

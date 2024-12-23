@@ -181,6 +181,9 @@ fn print_expression(printer: &mut Printer, expr: &AnalyzedExpression) {
             print_assignable_expression(printer, inner);
             printer.dedent();
         }
+        AnalyzedExpressionKind::Sizeof(ty) => {
+            printer.add_line(format!("Sizeof({:?})", ty));
+        }
     }
 }
 
