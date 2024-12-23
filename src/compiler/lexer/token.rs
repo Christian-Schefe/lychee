@@ -51,7 +51,6 @@ pub enum StaticToken {
     LogicalAndAssign,
     LogicalOrAssign,
     DoubleColon,
-    At,
 }
 
 impl StaticToken {
@@ -104,11 +103,10 @@ impl StaticToken {
             StaticToken::LogicalAndAssign => "&&=".to_string(),
             StaticToken::LogicalOrAssign => "||=".to_string(),
             StaticToken::DoubleColon => "::".to_string(),
-            StaticToken::At => "@".to_string(),
         }
     }
 
-    pub const VALUES: [StaticToken; 48] = [
+    pub const VALUES: [StaticToken; 47] = [
         StaticToken::Semicolon,
         StaticToken::OpenParen,
         StaticToken::CloseParen,
@@ -156,7 +154,6 @@ impl StaticToken {
         StaticToken::LogicalAndAssign,
         StaticToken::LogicalOrAssign,
         StaticToken::DoubleColon,
-        StaticToken::At,
     ];
 
     pub const MAX_LENGTH: usize = 3;
@@ -197,7 +194,7 @@ pub enum Keyword {
     Var,
     Module,
     Import,
-    Impl,
+    Alias,
 }
 
 impl Keyword {
@@ -220,7 +217,7 @@ impl Keyword {
             "var" => Some(Keyword::Var),
             "module" => Some(Keyword::Module),
             "import" => Some(Keyword::Import),
-            "impl" => Some(Keyword::Impl),
+            "alias" => Some(Keyword::Alias),
             _ => None,
         }
     }

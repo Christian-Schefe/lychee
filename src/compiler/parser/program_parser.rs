@@ -7,6 +7,7 @@ use crate::compiler::lexer::SrcToken;
 use crate::compiler::parser::binop_expr_parser::parse_binop_expression;
 use crate::compiler::parser::parsed_expression::{
     ParsedExpression, ParsedFunction, ParsedImport, ParsedModule, ParsedStructDefinition,
+    ParsedTypeAlias,
 };
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::primary_expr_parser::{parse_block_expression, parse_generic_params};
@@ -91,6 +92,7 @@ pub fn parse_module(
     let mut struct_definitions = Vec::new();
     let mut submodule_declarations = Vec::new();
     let mut imports = Vec::new();
+    let mut type_aliases = Vec::new();
 
     while tokens.peek().value != Token::EOF {
         let token = tokens.peek().clone();
@@ -114,6 +116,12 @@ pub fn parse_module(
                     location: token.location.clone(),
                 });
             }
+            Token::Keyword(Keyword::Alias) => {
+                let alias = parse_alias(&mut tokens).with_context(|| {
+                    format!("Failed to parse type alias at {}.", token.location)
+                })?;
+                type_aliases.push(alias);
+            }
             _ => {
                 let func = parse_function(&mut tokens)
                     .with_context(|| format!("Failed to parse function at {}.", token.location))?;
@@ -136,6 +144,7 @@ pub fn parse_module(
         module_path: module_path.id.clone(),
         functions,
         struct_definitions,
+        type_aliases,
         imports,
     };
 
@@ -265,4 +274,20 @@ pub fn parse_function(tokens: &mut TokenStack) -> ParseResult<Src<ParsedFunction
 
 pub fn parse_expression(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
     parse_binop_expression(tokens)
+}
+
+fn parse_alias(tokens: &mut TokenStack) -> ParseResult<Src<ParsedTypeAlias>> {
+    let location = pop_expected(tokens, Token::Keyword(Keyword::Alias))?.location;
+    let alias = parse_identifier(tokens)?.value;
+    pop_expected(tokens, Token::Static(StaticToken::Assign))?;
+    let aliased_type = parse_type(tokens)
+        .with_context(|| format!("Failed to parse aliased type at {}.", location))?;
+    pop_expected(tokens, Token::Static(StaticToken::Semicolon))?;
+    Ok(Src::new(
+        ParsedTypeAlias {
+            alias,
+            aliased_type,
+        },
+        location,
+    ))
 }

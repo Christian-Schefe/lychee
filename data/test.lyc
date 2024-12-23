@@ -1,74 +1,17 @@
 module generic_test;
 module std;
 
-import generic_test::do_nothing;
-import generic_test::MyStruct;
+import generic_test::{createStruct, test, MyStructIntInt};
 import std::arrays::*;
 
 int main() {
-    let var arr = createArray::<int>(10);
+    let Test arr = createArray::<int>(10);
     arr.fill::<int>(10);
+    arr.set::<int>(8, -166);
+    arr.print();
+    let MyStructIntInt my_struct = createStruct::<int, int>(10, 20, 30);
+    std::io::file_test();
     test() + arr.get::<int>(9)
 }
 
-int test() {
-    let var x = new Option<int> {
-        value: 10
-    };
-    do_nothing::<Option<int>>(x);
-    let var my_struct = generic_test::createStruct::<int, int>(10, 20, 30);
-    let &MyStruct<int, int> my_struct2 = &my_struct;
-
-    let Option<int> y = x;
-    let TwoGenerics<int, int> z = new TwoGenerics<int, int> {
-        value: 10,
-        value2: 20
-    };
-    let NestedGeneric<int> w = new NestedGeneric<int> {
-        value: x
-    };
-    let int a = generic_function::<int>(10);
-    let Option<int> b = generic_function2::<int>(x);
-    let Option<Option<int>> b2 = generic_function2::<Option<int>>(new Option<Option<int>> {
-        value: x
-    });
-    let TwoGenerics<char, Option<char>> c = partial_generic_function::<char>('c');
-    x.value.add1().generic_function::<int>().add1() + a
-}
-
-struct Option<T> {
-    T value;
-}
-
-struct TwoGenerics<T, T2> {
-    T value;
-    T2 value2;
-}
-
-struct NestedGeneric<T> {
-    Option<T> value;
-}
-
-T generic_function<T>(T x) {
-    x
-}
-
-Option<T> generic_function2<T>(Option<T> x) {
-    x
-}
-
-T nested_generic_function<T>(T x) {
-    generic_function::<int>(5);
-    generic_function::<T>(x)
-}
-
-TwoGenerics<T, Option<T>> partial_generic_function<T>(T x) {
-    new TwoGenerics<T, Option<T>> {
-        value2: new Option<T> {value: x},
-        value: x
-    }
-}
-
-int add1(int x) {
-    x + 1
-}
+alias Test = Array<int>;

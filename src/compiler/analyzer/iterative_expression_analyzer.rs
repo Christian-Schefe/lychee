@@ -641,16 +641,16 @@ pub fn analyze_expression(
                                 .ok_or_else(|| {
                                     anyhow::anyhow!(
                                         "Struct type '{}' not found at {}.",
-                                        analyzed_expr.ty,
+                                        inner_ty,
                                         expr.location
                                     )
                                 })?;
-                        let struct_ref = match &analyzed_expr.ty {
+                        let struct_ref = match &inner_ty {
                             AnalyzedTypeId::StructType(struct_ref) => struct_ref,
                             _ => {
                                 return Err(anyhow::anyhow!(
                                     "Resolved type '{}' is not a struct at {}.",
-                                    analyzed_expr.ty,
+                                    inner_ty,
                                     location
                                 ))?
                             }

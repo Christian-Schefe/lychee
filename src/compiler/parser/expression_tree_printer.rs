@@ -54,18 +54,29 @@ pub fn print_program(program: &ParsedProgram) {
 pub fn print_module(printer: &mut Printer, expr: &ParsedModule) {
     printer.add_line(format!("Module({})", expr.module_path.get_identifier()));
     for import in &expr.imports {
-        printer.add_line(format!(
-            "Import({} from {})",
-            import
-                .value
-                .imported_object
-                .clone()
-                .unwrap_or("*".to_string()),
-            import.value.module_id.get_identifier()
-        ));
+        if let Some(objects) = &import.value.imported_objects {
+            for object in objects {
+                printer.add_line(format!(
+                    "Import({}, {})",
+                    object,
+                    import.value.module_id.get_identifier()
+                ));
+            }
+        } else {
+            printer.add_line(format!(
+                "Import(*) from {}",
+                import.value.module_id.get_identifier()
+            ));
+        }
     }
     for struct_def in &expr.struct_definitions {
         print_struct_definition(printer, &struct_def.value);
+    }
+    for alias in &expr.type_aliases {
+        printer.add_line(format!(
+            "TypeAlias({}, {:?})",
+            alias.value.alias, alias.value.aliased_type.value
+        ));
     }
     for function in &expr.functions {
         print_function(printer, &function.value);

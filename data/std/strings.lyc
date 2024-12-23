@@ -4,21 +4,21 @@ struct String {
     int size;
 }
 
-impl String {
-    String create(int size) {
-        let var str = new String {
-            data: malloc(size + 1) as &char,
-            size: size
-        };
-        str.data[size] = '\0';
-        str
-    }
-    unit print(String this) {
-        write(this.data, this.size);
-    }
-    unit free(String this) {
-        free(this.data as &unit);
-    }
+String create_string(int size) {
+    let var str = new String {
+        data: malloc(size + 1) as &char,
+        size: size
+    };
+    str.data[size] = '\0';
+    str
+}
+
+unit print(String this) {
+    write(this.data, this.size);
+}
+
+unit free_string(String this) {
+    free(this.data as &unit);
 }
 
 String from_literal(&char literal) {
@@ -26,7 +26,7 @@ String from_literal(&char literal) {
     while (literal[size] != '\0') {
         size++;
     };
-    let String str = create@String(size);
+    let String str = create_string(size);
     let int i = 0;
     while (i < size) {
         set(&str, i, literal[i]);
@@ -36,7 +36,7 @@ String from_literal(&char literal) {
 }
 
 String read_line() {
-    let var str = create@String(100);
+    let var str = create_string(100);
     let int i = 0;
     while (i < str.size) {
         let char c = read_char();
@@ -51,7 +51,7 @@ String read_line() {
 }
 
 String concat(&String str1, &String str2) {
-    let String str = create@String(str1.size + str2.size);
+    let String str = create_string(str1.size + str2.size);
     let int i = 0;
     while (i < str1.size) {
         set(&str, i, get(str1, i));
@@ -106,28 +106,26 @@ unit print_literal(&char literal) {
     write(literal, i);
 }
 
-impl int {
-    unit print(int this) {
-        let int num = this;
-        let int i = 0;
-        let &char buffer = malloc(20) as &char;
-        if num < 0 {
-            write_char('-');
-            num = -num;
-        };
-        while (num > 0) {
-            buffer[i] = (num % 10 + '0' as int) as char;
-            num = num / 10;
-            i++;
-        };
-        if i == 0 {
-            write_char('0');
-        };
+unit print_int(int this) {
+    let int num = this;
+    let int i = 0;
+    let &char buffer = malloc(20) as &char;
+    if num < 0 {
+        write_char('-');
+        num = -num;
+    };
+    while (num > 0) {
+        buffer[i] = (num % 10 + '0' as int) as char;
+        num = num / 10;
+        i++;
+    };
+    if i == 0 {
+        write_char('0');
+    };
+    i--;
+    while (i >= 0) {
+        write_char(buffer[i]);
         i--;
-        while (i >= 0) {
-            write_char(buffer[i]);
-            i--;
-        };
-        free(buffer as &unit);
-    }
+    };
+    free(buffer as &unit);
 }

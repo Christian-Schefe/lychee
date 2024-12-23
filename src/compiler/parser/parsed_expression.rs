@@ -1,4 +1,3 @@
-use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
 use crate::compiler::lexer::location::Src;
 use crate::compiler::parser::item_id::{ParsedFunctionId, ParsedTypeId};
 use crate::compiler::parser::parser_error::ParseResult;
@@ -16,12 +15,19 @@ pub struct ParsedModule {
     pub module_path: ModuleIdentifier,
     pub functions: Vec<Src<ParsedFunction>>,
     pub struct_definitions: Vec<Src<ParsedStructDefinition>>,
+    pub type_aliases: Vec<Src<ParsedTypeAlias>>,
     pub imports: Vec<Src<ParsedImport>>,
 }
 
 #[derive(Debug, Clone)]
+pub struct ParsedTypeAlias {
+    pub alias: String,
+    pub aliased_type: ParsedType,
+}
+
+#[derive(Debug, Clone)]
 pub struct ParsedImport {
-    pub imported_object: Option<String>,
+    pub imported_objects: Option<Vec<String>>,
     pub module_id: ModuleIdentifier,
 }
 

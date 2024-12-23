@@ -3,12 +3,12 @@ use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::item_id::{ItemId, ParsedFunctionId};
 use crate::compiler::parser::parsed_expression::ParsedProgram;
 use crate::compiler::parser::ModuleIdentifier;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone)]
 pub struct CollectedFunctionData {
-    pub functions: HashMap<ModuleIdentifier, HashMap<String, Vec<FunctionId>>>,
-    pub function_imports: HashMap<ModuleIdentifier, HashMap<String, Vec<FunctionId>>>,
+    pub functions: HashMap<ModuleIdentifier, HashMap<String, HashSet<FunctionId>>>,
+    pub function_imports: HashMap<ModuleIdentifier, HashMap<String, HashSet<FunctionId>>>,
     pub builtin_functions: HashMap<String, FunctionId>,
 }
 
@@ -77,7 +77,7 @@ pub fn collect_function_data(program: &ParsedProgram) -> MergerResult<CollectedF
 
 fn collect_functions(
     program: &ParsedProgram,
-) -> MergerResult<HashMap<ModuleIdentifier, HashMap<String, Vec<FunctionId>>>> {
+) -> MergerResult<HashMap<ModuleIdentifier, HashMap<String, HashSet<FunctionId>>>> {
     let mut functions = HashMap::new();
     for (module_id, module) in &program.module_tree {
         let mut module_functions = HashMap::new();
@@ -93,8 +93,14 @@ fn collect_functions(
             };
             let entry = module_functions
                 .entry(function_def.value.function_name.clone())
-                .or_insert(vec![]);
-            entry.push(id);
+                .or_insert(HashSet::new());
+            if !entry.insert(id.clone()) {
+                Err(anyhow::anyhow!(
+                    "Function {} defined multiple times at {}",
+                    id.id.item_name,
+                    function_def.location
+                ))?;
+            }
         }
         functions.insert(module_id.clone(), module_functions);
     }
@@ -103,24 +109,44 @@ fn collect_functions(
 
 fn collect_function_imports(
     program: &ParsedProgram,
-    functions: &HashMap<ModuleIdentifier, HashMap<String, Vec<FunctionId>>>,
-) -> MergerResult<HashMap<ModuleIdentifier, HashMap<String, Vec<FunctionId>>>> {
+    functions: &HashMap<ModuleIdentifier, HashMap<String, HashSet<FunctionId>>>,
+) -> MergerResult<HashMap<ModuleIdentifier, HashMap<String, HashSet<FunctionId>>>> {
     let mut function_imports = HashMap::new();
     for (module_id, module) in &program.module_tree {
         let mut module_function_imports = HashMap::new();
         for import in &module.imports {
             let module_functions = functions.get(&import.value.module_id).unwrap();
-            if let Some(obj) = &import.value.imported_object {
-                let entry = module_function_imports.entry(obj.clone()).or_insert(vec![]);
-                if let Some(ids) = module_functions.get(obj) {
-                    entry.extend(ids.clone());
+            if let Some(objects) = &import.value.imported_objects {
+                for obj in objects {
+                    let entry = module_function_imports
+                        .entry(obj.clone())
+                        .or_insert(HashSet::new());
+                    if let Some(ids) = module_functions.get(obj) {
+                        for id in ids {
+                            if !entry.insert(id.clone()) {
+                                Err(anyhow::anyhow!(
+                                    "Function {} imported multiple times at {}",
+                                    id.id.item_name,
+                                    import.location
+                                ))?;
+                            }
+                        }
+                    }
                 }
             } else {
-                for (name, id) in module_functions {
+                for (name, ids) in module_functions {
                     let entry = module_function_imports
                         .entry(name.clone())
-                        .or_insert(vec![]);
-                    entry.extend(id.clone());
+                        .or_insert(HashSet::new());
+                    for id in ids {
+                        if !entry.insert(id.clone()) {
+                            Err(anyhow::anyhow!(
+                                "Function {} imported multiple times at {}",
+                                id.id.item_name,
+                                import.location
+                            ))?;
+                        }
+                    }
                 }
             }
         }

@@ -1,52 +1,48 @@
-import ::std::strings::String;
-import ::std::strings::*@String;
-import ::std::strings::*@int;
+import ::std::strings::{String, create_string, print, print_int, free_string};
 
 unit file_test() {
-    let var in_file = open@File("data/input.txt");
-    let var out_file = open@File("data/output.txt");
+    let var in_file = open_file("data/input.txt");
+    let var out_file = open_file("data/output.txt");
     write_char('\n');
     let var str = in_file.read_chars(100);
     str.print();
-    out_file.write(&str);
+    out_file.write_file(&str);
     in_file.close();
     out_file.close();
-    in_file.print();
-    out_file.print();
-    str.free();
+    in_file.print_file();
+    out_file.print_file();
+    str.free_string();
 }
 
 struct File {
     int file;
 }
 
-impl File {
-    File open(&char path) {
-        let int file = fopen(path);
-        new File { file: file }
-    }
+File open_file(&char path) {
+    let int file = fopen(path);
+    new File { file: file }
+}
 
-    unit close(File this) {
-        fclose(this.file);
-    }
+unit close(File this) {
+    fclose(this.file);
+}
 
-    unit read(File this, &String string) {
-        fread(string.data, string.size, this.file);
-    }
+unit read(File this, &String string) {
+    fread(string.data, string.size, this.file);
+}
 
-    String read_chars(File this, int amount) {
-        let var str = create@String(amount);
-        fread(str.data, str.size, this.file);
-        str
-    }
+String read_chars(File this, int amount) {
+    let var str = create_string(amount);
+    fread(str.data, str.size, this.file);
+    str
+}
 
-    unit write(File this, &String string) {
-        fwrite(string.data, string.size, this.file);
-    }
+unit write_file(File this, &String string) {
+    fwrite(string.data, string.size, this.file);
+}
 
-    unit print(File this) {
-        write_char('[');
-        this.file.print();
-        write_char(']');
-    }
+unit print_file(File this) {
+    write_char('[');
+    this.file.print_int();
+    write_char(']');
 }

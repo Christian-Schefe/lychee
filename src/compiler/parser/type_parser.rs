@@ -2,9 +2,7 @@ use crate::compiler::lexer::lexer_error::LocationError;
 use crate::compiler::lexer::token::{StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::item_id::{ItemId, ParsedFunctionId, ParsedTypeId};
-use crate::compiler::parser::parsed_expression::{
-    ParsedGenericParams, ParsedImport, ParsedType, ParsedTypeKind,
-};
+use crate::compiler::parser::parsed_expression::{ParsedImport, ParsedType, ParsedTypeKind};
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::primary_expr_parser::parse_generic_args;
 use crate::compiler::parser::program_parser::parse_identifier;
@@ -117,22 +115,51 @@ pub fn parse_import_id(
 ) -> ParseResult<ParsedImport> {
     let mut path = Vec::new();
     let mut cur_name = Some(name);
+    let mut imported_object_vec = None;
+
     while tokens.peek().value == Token::Static(StaticToken::DoubleColon) {
         tokens.pop();
         path.push(cur_name.unwrap().clone());
         if tokens.peek().value == Token::Static(StaticToken::Asterisk) {
             tokens.pop();
             cur_name = None;
+            imported_object_vec = None;
+            break;
+        }
+        if tokens.peek().value == Token::Static(StaticToken::OpenBrace) {
+            tokens.pop();
+            cur_name = None;
+            let mut imported_objects = Vec::new();
+            while tokens.peek().value != Token::Static(StaticToken::CloseBrace) {
+                let next_token = parse_identifier(tokens)?;
+                imported_objects.push(next_token.value);
+                match tokens.peek().value {
+                    Token::Static(StaticToken::Comma) => {
+                        tokens.pop();
+                    }
+                    Token::Static(StaticToken::CloseBrace) => {}
+                    _ => Err(LocationError::new(
+                        format!("Expected ',' or '}}', found '{}'", tokens.peek().value),
+                        tokens.location().clone(),
+                    ))?,
+                }
+            }
+            tokens.pop();
+            imported_object_vec = Some(imported_objects);
             break;
         }
         let next_token = parse_identifier(tokens)?;
-        cur_name = Some(next_token.value);
+        cur_name = Some(next_token.value.clone());
+        if tokens.peek().value != Token::Static(StaticToken::DoubleColon) {
+            imported_object_vec = Some(vec![next_token.value]);
+            break;
+        }
     }
 
     let module_id = current_module.resolve(&path, is_absolute);
 
     Ok(ParsedImport {
-        imported_object: cur_name,
+        imported_objects: imported_object_vec,
         module_id,
     })
 }

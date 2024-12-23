@@ -18,7 +18,7 @@ unit fill<T>(Array<T> this, T value) {
         i++;
     }
 }
-/*
+
 unit print(Array<int> this) {
     let int i = 0;
     write_char('[');
@@ -33,7 +33,7 @@ unit print(Array<int> this) {
     write_char(']');
     write_char('\n');
 }
-*/
+
 Array<T> createArray<T>(int size) {
     let Array<T> arr = new Array<T> {
         data: malloc(size * 4) as &T,
@@ -45,7 +45,7 @@ Array<T> createArray<T>(int size) {
 unit free<T>(Array<T> this) {
     free(this.data as &unit);
 }
-/*
+
 unit write_num(int num) {
     if num < 0 {
         write_char('-');
@@ -68,4 +68,4 @@ unit write_num(int num) {
         num %= divisor;
         divisor /= 10;
     };
-}*/
+}
