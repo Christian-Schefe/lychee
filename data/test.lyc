@@ -3,8 +3,15 @@ module std;
 
 import generic_test::do_nothing;
 import generic_test::MyStruct;
+import std::arrays::*;
 
 int main() {
+    let var arr = createArray::<int>(10);
+    arr.fill::<int>(10);
+    test() + arr.get::<int>(9)
+}
+
+int test() {
     let var x = new Option<int> {
         value: 10
     };

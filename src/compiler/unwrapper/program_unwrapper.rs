@@ -8,11 +8,12 @@ use crate::compiler::unwrapper::unwrapped_type::{
     AssignableUnwrappedExpression, AssignableUnwrappedExpressionKind, UnwrappedExpression,
     UnwrappedExpressionKind, UnwrappedFunction, UnwrappedLiteral, UnwrappedStruct, UnwrappedTypeId,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct UnwrapperContext {
     pub functions: HashMap<String, UnwrappedFunction>,
     pub structs: HashMap<String, UnwrappedStruct>,
+    pub builtin_functions: HashSet<String>,
 }
 
 pub fn unwrap_function(
@@ -21,11 +22,16 @@ pub fn unwrap_function(
     function_ref: &FunctionRef,
 ) {
     let function_key = function_ref.to_string();
+    if context.builtin_functions.contains(&function_key) {
+        return;
+    }
     if context.functions.contains_key(&function_key) {
         return;
     }
 
-    let function = program.functions.get(&function_ref.id).unwrap();
+    let function = program.functions.get(&function_ref.id).unwrap_or_else(|| {
+        panic!("Function not found: {}", function_ref.id);
+    });
     let header = program
         .resolved_functions
         .get_header(&function_ref.id)

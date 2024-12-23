@@ -1,8 +1,7 @@
 use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericIdKind, GenericParams};
 use crate::compiler::codegen::CodegenContext;
-use crate::compiler::merger::merged_expression::{FunctionId, ResolvedFunctionHeader};
+use crate::compiler::merger::merged_expression::{FunctionId, FunctionRef, ResolvedFunctionHeader};
 use crate::compiler::parser::item_id::ItemId;
-use crate::compiler::parser::parsed_expression::ParsedGenericParams;
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
@@ -28,14 +27,18 @@ impl BuiltinFunction {
         }
     }
 
-    fn function_id(&self) -> FunctionId {
-        FunctionId {
-            id: ItemId {
-                module_id: ModuleIdentifier { path: vec![] },
-                item_name: self.name.clone(),
+    fn function_ref(&self) -> FunctionRef {
+        FunctionRef {
+            id: FunctionId {
+                id: ItemId {
+                    module_id: ModuleIdentifier { path: vec![] },
+                    item_name: self.name.clone(),
+                },
+                param_count: self.parameters.len(),
+                generic_count: 0,
             },
-            param_count: self.parameters.len(),
-            generic_count: 0,
+            arg_types: self.parameters.iter().map(|(_, ty)| ty.clone()).collect(),
+            generic_args: Vec::new(),
         }
     }
 
@@ -273,11 +276,22 @@ impl BuiltinFunction {
         ]
     }
 
-    pub fn add_builtin_function_ids(function_ids: &mut HashMap<String, FunctionId>) {
+    pub fn get_builtin_function_ids() -> HashMap<String, FunctionId> {
+        let mut function_ids = HashMap::new();
         for function in BuiltinFunction::all_functions() {
-            let id = function.function_id();
-            function_ids.insert(function.name.clone(), id);
+            let function_ref = function.function_ref();
+            function_ids.insert(function.name.clone(), function_ref.id);
         }
+        function_ids
+    }
+
+    pub fn get_builtin_function_refs() -> Vec<FunctionRef> {
+        let mut function_refs = Vec::new();
+        for function in BuiltinFunction::all_functions() {
+            let id = function.function_ref();
+            function_refs.push(id);
+        }
+        function_refs
     }
 
     pub fn add_builtin_function_headers(
@@ -291,7 +305,7 @@ impl BuiltinFunction {
                 parameter_types.insert(name.clone(), ty.clone());
             }
 
-            let id = function.function_id();
+            let id = function.function_ref().id;
             function_headers.insert(
                 id.clone(),
                 ResolvedFunctionHeader {
@@ -307,7 +321,7 @@ impl BuiltinFunction {
 
     pub fn generate_builtin_function_code(context: &mut CodegenContext) {
         for function in BuiltinFunction::all_functions() {
-            let id = function.function_id();
+            let id = function.function_ref();
             let identifier = id.to_string();
             let label = context.new_label(&identifier);
             context.function_labels.insert(identifier, label.clone());

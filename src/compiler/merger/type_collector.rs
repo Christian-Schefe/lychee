@@ -2,9 +2,7 @@ use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericParams};
 use crate::compiler::merger::merged_expression::{StructId, StructRef};
 use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::item_id::{ItemId, ParsedTypeId};
-use crate::compiler::parser::parsed_expression::{
-    ParsedProgram, ParsedTypeKind,
-};
+use crate::compiler::parser::parsed_expression::{ParsedProgram, ParsedTypeKind};
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
@@ -127,7 +125,13 @@ fn collect_struct_imports(
     for (module_id, module) in &program.module_tree {
         let mut module_struct_imports = HashMap::new();
         for import in &module.imports {
-            let module_structs = structs.get(&import.value.module_id).unwrap();
+            let module_structs = structs.get(&import.value.module_id).unwrap_or_else(|| {
+                panic!(
+                    "Module {} not found at {}",
+                    import.value.module_id.get_identifier(),
+                    import.location
+                )
+            });
             if let Some(obj) = &import.value.imported_object {
                 let entry = module_struct_imports.entry(obj.clone()).or_insert(vec![]);
                 if let Some(ids) = module_structs.get(obj) {

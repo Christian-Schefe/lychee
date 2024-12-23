@@ -65,8 +65,7 @@ impl CollectedFunctionData {
 }
 
 pub fn collect_function_data(program: &ParsedProgram) -> MergerResult<CollectedFunctionData> {
-    let mut builtin_functions = HashMap::new();
-    crate::compiler::builtin::BuiltinFunction::add_builtin_function_ids(&mut builtin_functions);
+    let builtin_functions = crate::compiler::builtin::BuiltinFunction::get_builtin_function_ids();
     let functions = collect_functions(program)?;
     let function_imports = collect_function_imports(program, &functions)?;
     Ok(CollectedFunctionData {
