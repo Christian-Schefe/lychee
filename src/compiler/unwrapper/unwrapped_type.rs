@@ -22,7 +22,6 @@ pub struct UnwrappedFunction {
 
 #[derive(Debug, Clone)]
 pub struct UnwrappedStruct {
-    pub id: String,
     pub field_types: HashMap<String, UnwrappedTypeId>,
     pub field_order: Vec<String>,
 }

@@ -158,7 +158,6 @@ fn unwrap_struct(
         })
         .collect();
     let unwrapped_struct = UnwrappedStruct {
-        id: struct_key.clone(),
         field_types,
         field_order: struct_def.field_order.clone(),
     };

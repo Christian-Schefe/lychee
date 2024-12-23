@@ -1,4 +1,3 @@
-use crate::compiler::parser::parsed_expression::ParsedType;
 use crate::compiler::parser::ModuleIdentifier;
 use std::fmt::Display;
 

@@ -44,14 +44,6 @@ impl Location {
         }
     }
 
-    pub fn default() -> Self {
-        Location {
-            line: 1,
-            column: 1,
-            file: None,
-        }
-    }
-
     pub fn advance_line(&mut self) {
         self.line += 1;
         self.column = 1;

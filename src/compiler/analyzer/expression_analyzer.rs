@@ -2,9 +2,7 @@ use crate::compiler::analyzer::analyzed_expression::{
     AssignableExpression, AssignableExpressionKind,
 };
 use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
-use crate::compiler::analyzer::iterative_expression_analyzer::{
-    analyze_expression, resolve_generic_type,
-};
+use crate::compiler::analyzer::iterative_expression_analyzer::analyze_expression;
 use crate::compiler::analyzer::program_analyzer::AnalyzerContext;
 use crate::compiler::analyzer::AnalyzerResult;
 use crate::compiler::lexer::location::Location;

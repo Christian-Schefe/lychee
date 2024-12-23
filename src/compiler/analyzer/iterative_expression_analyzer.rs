@@ -1079,16 +1079,6 @@ fn assert_break_return_type_assignable(
     }
 }
 
-fn remove_indirection(ty: &AnalyzedTypeId) -> (&AnalyzedTypeId, usize) {
-    fn remove_inner(ty: &AnalyzedTypeId, indirections: usize) -> (&AnalyzedTypeId, usize) {
-        match ty {
-            AnalyzedTypeId::Pointer(inner) => remove_inner(inner, indirections + 1),
-            _ => (ty, indirections),
-        }
-    }
-    remove_inner(ty, 0)
-}
-
 pub fn resolve_generic_type(
     ty: &AnalyzedTypeId,
     generic_params: &GenericParams,

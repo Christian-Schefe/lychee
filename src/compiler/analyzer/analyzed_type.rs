@@ -101,13 +101,6 @@ impl GenericParams {
         Some(generic_args[index].clone())
     }
 
-    pub fn get_generic(&self, generic_name: &GenericId) -> Option<GenericId> {
-        if self.set.contains(&generic_name.name) {
-            Some(generic_name.clone())
-        } else {
-            None
-        }
-    }
     pub fn get_generic_from_name(&self, generic_name: &String) -> Option<GenericId> {
         if self.set.contains(generic_name) {
             Some(GenericId {

@@ -122,13 +122,11 @@ pub fn parse_import_id(
         path.push(cur_name.unwrap().clone());
         if tokens.peek().value == Token::Static(StaticToken::Asterisk) {
             tokens.pop();
-            cur_name = None;
             imported_object_vec = None;
             break;
         }
         if tokens.peek().value == Token::Static(StaticToken::OpenBrace) {
             tokens.pop();
-            cur_name = None;
             let mut imported_objects = Vec::new();
             while tokens.peek().value != Token::Static(StaticToken::CloseBrace) {
                 let next_token = parse_identifier(tokens)?;

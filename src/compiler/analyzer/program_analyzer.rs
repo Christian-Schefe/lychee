@@ -118,7 +118,6 @@ pub fn analyze_function(
     }
 
     Ok(AnalyzedFunction {
-        name: id.clone(),
         body: analyzed_body,
         return_type,
     })

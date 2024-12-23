@@ -40,7 +40,6 @@ pub struct ParsedStructDefinition {
 
 #[derive(Debug, Clone)]
 pub struct ParsedGenericParams {
-    pub set: HashSet<String>,
     pub order: Vec<String>,
 }
 
@@ -52,13 +51,10 @@ impl ParsedGenericParams {
                 return Err(anyhow::anyhow!("Duplicate generic parameter: {}", generic))?;
             }
         }
-        Ok(Self { set, order })
+        Ok(Self { order })
     }
     pub fn empty() -> Self {
-        Self {
-            set: HashSet::new(),
-            order: Vec::new(),
-        }
+        Self { order: Vec::new() }
     }
 }
 

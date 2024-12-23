@@ -1,4 +1,4 @@
-use crate::compiler::analyzer::analyzed_type::{GenericId, GenericIdKind, GenericParams};
+use crate::compiler::analyzer::analyzed_type::{GenericIdKind, GenericParams};
 use crate::compiler::lexer::location::Src;
 use crate::compiler::merger::function_collector::collect_function_data;
 use crate::compiler::merger::merged_expression::{FunctionId, ResolvedFunctionHeader};

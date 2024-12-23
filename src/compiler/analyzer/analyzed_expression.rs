@@ -18,7 +18,6 @@ pub struct AnalyzedProgram {
 
 #[derive(Debug, Clone)]
 pub struct AnalyzedFunction {
-    pub name: FunctionId,
     pub body: AnalyzedExpression,
     pub return_type: AnalyzedTypeId,
 }
