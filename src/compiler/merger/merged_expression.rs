@@ -3,13 +3,11 @@ use crate::compiler::analyzer::iterative_expression_analyzer::resolve_generic_ty
 use crate::compiler::merger::resolved_functions::ResolvedFunctions;
 use crate::compiler::merger::resolved_types::ResolvedTypes;
 use crate::compiler::parser::item_id::ItemId;
-use crate::compiler::parser::parsed_expression::ParsedExpression;
 use std::collections::HashMap;
 use std::fmt::Display;
 
 #[derive(Debug, Clone)]
 pub struct MergedProgram {
-    pub function_bodies: Vec<(FunctionId, ParsedExpression)>,
     pub resolved_functions: ResolvedFunctions,
     pub resolved_types: ResolvedTypes,
 }
@@ -18,6 +16,12 @@ pub struct MergedProgram {
 pub struct StructId {
     pub id: ItemId,
     pub generic_count: usize,
+}
+
+impl StructId {
+    pub fn get_key(&self) -> String {
+        format!("{};{}", self.id, self.generic_count)
+    }
 }
 
 impl Display for StructId {
@@ -66,6 +70,20 @@ pub struct StructRef {
     pub generic_args: Vec<AnalyzedTypeId>,
 }
 
+impl StructRef {
+    pub fn get_key(&self) -> String {
+        format!(
+            "{};<{}>",
+            self.id.get_key(),
+            self.generic_args
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        )
+    }
+}
+
 impl Display for StructRef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.id)?;
@@ -86,6 +104,7 @@ impl Display for StructRef {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FunctionId {
     pub id: ItemId,
+    pub body_index: usize,
     pub param_count: usize,
     pub generic_count: usize,
 }
@@ -114,6 +133,15 @@ impl Display for FunctionId {
     }
 }
 
+impl FunctionId {
+    pub fn get_key(&self) -> String {
+        format!(
+            "{};{};{};{}",
+            self.id, self.generic_count, self.param_count, self.body_index
+        )
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ResolvedFunctionHeader {
     pub id: FunctionId,
@@ -126,8 +154,8 @@ pub struct ResolvedFunctionHeader {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FunctionRef {
     pub id: FunctionId,
-    pub arg_types: Vec<AnalyzedTypeId>,
     pub generic_args: Vec<AnalyzedTypeId>,
+    pub arg_types: Vec<AnalyzedTypeId>,
 }
 
 impl Display for FunctionRef {
@@ -143,13 +171,25 @@ impl Display for FunctionRef {
             }
             write!(f, ">")?;
         }
-        write!(f, "(")?;
-        for (i, arg) in self.arg_types.iter().enumerate() {
-            if i != 0 {
-                write!(f, ",")?;
-            }
-            write!(f, "{}", arg)?;
-        }
-        write!(f, ")")
+        Ok(())
+    }
+}
+
+impl FunctionRef {
+    pub fn get_key(&self) -> String {
+        format!(
+            "{};{};{}",
+            self.id.get_key(),
+            self.generic_args
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+                .join(","),
+            self.arg_types
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        )
     }
 }

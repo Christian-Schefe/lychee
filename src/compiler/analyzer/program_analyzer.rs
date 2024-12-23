@@ -26,9 +26,16 @@ pub struct LocalVariable {
 }
 
 pub fn analyze_program(program: &MergedProgram) -> AnalyzerResult<AnalyzedProgram> {
-    let mut analyzed_function_vec = HashMap::with_capacity(program.function_bodies.len());
+    let mut analyzed_function_vec =
+        HashMap::with_capacity(program.resolved_functions.function_bodies.len());
 
-    for (id, body) in &program.function_bodies {
+    let main_item_id = ItemId {
+        item_name: "main".to_string(),
+        module_id: ModuleIdentifier { path: Vec::new() },
+    };
+    let mut main_func_id = None;
+
+    for (id, body) in &program.resolved_functions.function_bodies {
         let analyzed_function = analyze_function(
             id,
             &program.resolved_types,
@@ -36,17 +43,13 @@ pub fn analyze_program(program: &MergedProgram) -> AnalyzerResult<AnalyzedProgra
             body,
         )?;
         analyzed_function_vec.insert(id.clone(), analyzed_function);
+        if id.id == main_item_id && id.generic_count == 0 && id.param_count == 0 {
+            main_func_id = Some(id.clone());
+        }
     }
 
     let main_func_ref = FunctionRef {
-        id: FunctionId {
-            id: ItemId {
-                item_name: "main".to_string(),
-                module_id: ModuleIdentifier { path: Vec::new() },
-            },
-            param_count: 0,
-            generic_count: 0,
-        },
+        id: main_func_id.ok_or_else(|| anyhow::anyhow!("Main function not found"))?,
         generic_args: Vec::new(),
         arg_types: Vec::new(),
     };

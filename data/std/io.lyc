@@ -1,4 +1,4 @@
-import ::std::strings::{String, create_string, print, print_int, free_string};
+import ::std::strings::{String, create_string, print, free};
 
 unit file_test() {
     let var in_file = open_file("data/input.txt");
@@ -11,7 +11,7 @@ unit file_test() {
     out_file.close();
     in_file.print_file();
     out_file.print_file();
-    str.free_string();
+    str.free();
 }
 
 struct File {
@@ -43,6 +43,6 @@ unit write_file(File this, &String string) {
 
 unit print_file(File this) {
     write_char('[');
-    this.file.print_int();
+    this.file.print();
     write_char(']');
 }

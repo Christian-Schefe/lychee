@@ -5,51 +5,42 @@ use crate::compiler::merger::merged_expression::{FunctionId, ResolvedFunctionHea
 use crate::compiler::merger::resolved_functions::ResolvedFunctions;
 use crate::compiler::merger::resolved_types::ResolvedTypes;
 use crate::compiler::merger::MergerResult;
-use crate::compiler::parser::item_id::ItemId;
-use crate::compiler::parser::parsed_expression::{ParsedFunction, ParsedModule, ParsedProgram};
-use crate::compiler::parser::ModuleIdentifier;
+use crate::compiler::parser::parsed_expression::{
+    ParsedFunction, ParsedProgram,
+};
 use std::collections::HashMap;
 
 pub fn build_resolved_functions(
     program: &ParsedProgram,
     resolved_types: &ResolvedTypes,
 ) -> MergerResult<ResolvedFunctions> {
-    let collected_function_data = collect_function_data(program)?;
+    let (collected_function_data, function_bodies) = collect_function_data(program)?;
     let mut functions = HashMap::new();
     crate::compiler::builtin::BuiltinFunction::add_builtin_function_headers(&mut functions);
 
-    extract_module_functions(resolved_types, &mut functions, &program.module_tree)?;
+    extract_module_functions(resolved_types, &mut functions, &function_bodies)?;
+
+    let mapped_bodies = function_bodies
+        .into_iter()
+        .map(|(id, body)| (id, body.value.body))
+        .collect();
 
     Ok(ResolvedFunctions {
         function_headers: functions,
         collected_function_data,
+        function_bodies: mapped_bodies,
     })
 }
 
 fn extract_module_functions(
     resolved_types: &ResolvedTypes,
     functions: &mut HashMap<FunctionId, ResolvedFunctionHeader>,
-    module_tree: &HashMap<ModuleIdentifier, ParsedModule>,
+    function_bodies: &Vec<(FunctionId, Src<ParsedFunction>)>,
 ) -> MergerResult<()> {
-    for module in module_tree.values() {
-        for func_def in &module.functions {
-            let item_id = ItemId {
-                item_name: func_def.value.function_name.clone(),
-                module_id: module.module_path.clone(),
-            };
-            let func_id = FunctionId {
-                id: item_id,
-                param_count: func_def.value.params.len(),
-                generic_count: func_def.value.generic_params.order.len(),
-            };
-            let header = extract_function(func_def, resolved_types, func_id.clone())?;
-
-            if functions.insert(func_id.clone(), header).is_some() {
-                return Err(anyhow::anyhow!(
-                    "Duplicate function definition: {}",
-                    func_id
-                ));
-            }
+    for (id, func_def) in function_bodies {
+        let header = extract_function(func_def, resolved_types, id.clone())?;
+        if functions.insert(id.clone(), header).is_some() {
+            return Err(anyhow::anyhow!("Duplicate function definition: {}", id));
         }
     }
     Ok(())

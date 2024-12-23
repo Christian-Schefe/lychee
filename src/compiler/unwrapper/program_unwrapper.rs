@@ -21,7 +21,7 @@ pub fn unwrap_function(
     program: &AnalyzedProgram,
     function_ref: &FunctionRef,
 ) {
-    let function_key = function_ref.to_string();
+    let function_key = function_ref.get_key();
     if context.builtin_functions.contains(&function_key) {
         return;
     }
@@ -99,7 +99,7 @@ fn unwrap_type(
             func_generic_args,
         ))),
         AnalyzedTypeId::StructType(struct_ref) => {
-            let struct_id = struct_ref.to_string();
+            let struct_id = struct_ref.get_key();
             unwrap_struct(
                 context,
                 program,
@@ -133,7 +133,7 @@ fn unwrap_struct(
     function_generic_args: &Vec<AnalyzedTypeId>,
     struct_generic_args: &Vec<AnalyzedTypeId>,
 ) {
-    let struct_key = struct_ref.to_string();
+    let struct_key = struct_ref.get_key();
     if context.structs.contains_key(&struct_key) {
         return;
     }
@@ -459,7 +459,7 @@ fn unwrap_expression(
                 })
                 .collect();
             UnwrappedExpressionKind::FunctionCall {
-                function_name: function_name.to_string(),
+                function_name: function_name.get_key(),
                 args: unwrapped_args,
             }
         }

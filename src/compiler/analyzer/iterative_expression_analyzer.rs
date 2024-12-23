@@ -903,7 +903,7 @@ pub fn analyze_expression(
                             )
                         })?;
 
-                    for (arg, arg_name) in analyzed_args
+                    /*for (arg, arg_name) in analyzed_args
                         .iter()
                         .zip(function_header.parameter_order.iter())
                         .rev()
@@ -922,7 +922,7 @@ pub fn analyze_expression(
                                 arg.location
                             ))?;
                         }
-                    }
+                    }*/
 
                     let return_type = function_header.return_type.clone();
                     let actual_return_type = resolve_generic_type(
@@ -1137,7 +1137,7 @@ fn analyze_generic_args(
                 .map_generic_parsed_type(&arg.value, context.generic_params)
                 .ok_or_else(|| {
                     anyhow::anyhow!(
-                        "Generic argument '{:?}' not found at {}.",
+                        "Generic argument '{}' not found at {}.",
                         arg.value,
                         arg.location
                     )

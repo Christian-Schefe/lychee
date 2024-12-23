@@ -17,7 +17,7 @@ unit print(String this) {
     write(this.data, this.size);
 }
 
-unit free_string(String this) {
+unit free(String this) {
     free(this.data as &unit);
 }
 
@@ -82,7 +82,6 @@ unit set(&String str, int index, char value) {
     str.data[index] = value;
 }
 
-
 int parse_int(&String str) {
     let int i = 0;
     let int num = 0;
@@ -98,7 +97,7 @@ int parse_int(&String str) {
     num * sign
 }
 
-unit print_literal(&char literal) {
+unit print(&char literal) {
     let int i = 0;
     while (literal[i] != '\0') {
         i++;
@@ -106,26 +105,26 @@ unit print_literal(&char literal) {
     write(literal, i);
 }
 
-unit print_int(int this) {
-    let int num = this;
-    let int i = 0;
-    let &char buffer = malloc(20) as &char;
+unit print(int num) {
     if num < 0 {
         write_char('-');
         num = -num;
     };
-    while (num > 0) {
-        buffer[i] = (num % 10 + '0' as int) as char;
-        num = num / 10;
-        i++;
+    if num <= 9 {
+        write_char((num % 10 + '0' as int) as char);
+        return;
     };
-    if i == 0 {
-        write_char('0');
+
+    let var divisor = 1;
+
+    while num / divisor >= 10 {
+        divisor *= 10;
     };
-    i--;
-    while (i >= 0) {
-        write_char(buffer[i]);
-        i--;
+
+    while divisor > 0 {
+        let var digit = num / divisor;
+        write_char((digit + '0' as int) as char);
+        num %= divisor;
+        divisor /= 10;
     };
-    free(buffer as &unit);
 }

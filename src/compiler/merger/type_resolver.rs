@@ -13,7 +13,6 @@ use std::collections::HashMap;
 
 pub fn build_resolved_types(program: &ParsedProgram) -> MergerResult<ResolvedTypes> {
     let collected_type_data = collect_type_data(program)?;
-    println!("{:?}", collected_type_data);
 
     let struct_defs = extract_module_struct_types(&program.module_tree)?;
 

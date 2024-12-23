@@ -7,10 +7,11 @@ import std::arrays::*;
 int main() {
     let Test arr = createArray::<int>(100);
     arr.fill::<int>(10);
-    arr.set::<int>(8, generic_sizeof_test::<MyStruct<char, long>>());
+    arr.set::<int>(8, generic_sizeof_test::<MyStruct<char, long>, int>());
     arr.print();
     let MyStructIntInt my_struct = createStruct::<int, int>(10, 20, 30);
     std::io::file_test();
+    generic_sizeof_test::<int>();
     test() + arr.get::<int>(9)
 }
 
@@ -18,4 +19,8 @@ alias Test = Array<int>;
 
 int generic_sizeof_test<T>() {
     sizeof(T)
+}
+
+int generic_sizeof_test<T, K>() {
+    sizeof(T) * sizeof(K)
 }

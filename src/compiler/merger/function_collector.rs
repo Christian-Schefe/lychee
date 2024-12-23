@@ -1,7 +1,8 @@
+use crate::compiler::lexer::location::Src;
 use crate::compiler::merger::merged_expression::FunctionId;
 use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::item_id::{ItemId, ParsedFunctionId};
-use crate::compiler::parser::parsed_expression::ParsedProgram;
+use crate::compiler::parser::parsed_expression::{ParsedFunction, ParsedProgram};
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::{HashMap, HashSet};
 
@@ -64,25 +65,36 @@ impl CollectedFunctionData {
     }
 }
 
-pub fn collect_function_data(program: &ParsedProgram) -> MergerResult<CollectedFunctionData> {
+pub fn collect_function_data(
+    program: &ParsedProgram,
+) -> MergerResult<(
+    CollectedFunctionData,
+    Vec<(FunctionId, Src<ParsedFunction>)>,
+)> {
     let builtin_functions = crate::compiler::builtin::BuiltinFunction::get_builtin_function_ids();
-    let functions = collect_functions(program)?;
+    let mut function_bodies = Vec::new();
+    let functions = collect_functions(program, &mut function_bodies)?;
     let function_imports = collect_function_imports(program, &functions)?;
-    Ok(CollectedFunctionData {
-        functions,
-        function_imports,
-        builtin_functions,
-    })
+    Ok((
+        CollectedFunctionData {
+            functions,
+            function_imports,
+            builtin_functions,
+        },
+        function_bodies,
+    ))
 }
 
 fn collect_functions(
     program: &ParsedProgram,
+    function_bodies: &mut Vec<(FunctionId, Src<ParsedFunction>)>,
 ) -> MergerResult<HashMap<ModuleIdentifier, HashMap<String, HashSet<FunctionId>>>> {
     let mut functions = HashMap::new();
     for (module_id, module) in &program.module_tree {
         let mut module_functions = HashMap::new();
         for function_def in &module.functions {
             validate_function_name(&function_def.value.function_name)?;
+            let body_index = function_bodies.len();
             let id = FunctionId {
                 id: ItemId {
                     module_id: module_id.clone(),
@@ -90,6 +102,7 @@ fn collect_functions(
                 },
                 generic_count: function_def.value.generic_params.order.len(),
                 param_count: function_def.value.params.len(),
+                body_index,
             };
             let entry = module_functions
                 .entry(function_def.value.function_name.clone())
@@ -101,6 +114,7 @@ fn collect_functions(
                     function_def.location
                 ))?;
             }
+            function_bodies.push((id.clone(), function_def.clone()));
         }
         functions.insert(module_id.clone(), module_functions);
     }

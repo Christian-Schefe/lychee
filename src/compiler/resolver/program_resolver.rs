@@ -104,7 +104,7 @@ fn resolve_function(
     };
 
     ResolvedFunction {
-        name: function.name.to_string(),
+        name: function.name.clone(),
         value_location: return_location,
         body: resolved_body,
         local_var_stack_size: context.maximum_local_var_stack_size,

@@ -13,7 +13,7 @@ pub fn unwrap_program(program: &AnalyzedProgram) -> UnwrappedProgram {
         structs: HashMap::new(),
         builtin_functions: builtin_functions
             .into_iter()
-            .map(|x| x.to_string())
+            .map(|x| x.get_key())
             .collect::<HashSet<String>>(),
     };
 
@@ -22,6 +22,6 @@ pub fn unwrap_program(program: &AnalyzedProgram) -> UnwrappedProgram {
     UnwrappedProgram {
         structs: context.structs,
         functions: context.functions,
-        main_function_name: program.main_function.to_string(),
+        main_function_name: program.main_function.get_key(),
     }
 }

@@ -1,3 +1,5 @@
+import ::std::strings::print;
+
 struct Array<T> {
     &T data;
     int size;
@@ -27,7 +29,7 @@ unit print(Array<int> this) {
             write_char(',');
             write_char(' ');
         };
-        write_num(this.data[i]);
+        this.data[i].print();
         i++;
     };
     write_char(']');
@@ -44,28 +46,4 @@ Array<T> createArray<T>(int size) {
 
 unit free<T>(Array<T> this) {
     free(this.data as &unit);
-}
-
-unit write_num(int num) {
-    if num < 0 {
-        write_char('-');
-        num = -num;
-    };
-    if num <= 9 {
-        write_char((num % 10 + '0' as int) as char);
-        return;
-    };
-
-    let var divisor = 1;
-
-    while num / divisor >= 10 {
-        divisor *= 10;
-    };
-
-    while divisor > 0 {
-        let var digit = num / divisor;
-        write_char((digit + '0' as int) as char);
-        num %= divisor;
-        divisor /= 10;
-    };
 }

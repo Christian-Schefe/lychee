@@ -36,6 +36,7 @@ impl BuiltinFunction {
                 },
                 param_count: self.parameters.len(),
                 generic_count: 0,
+                body_index: usize::MAX,
             },
             arg_types: self.parameters.iter().map(|(_, ty)| ty.clone()).collect(),
             generic_args: Vec::new(),
@@ -322,7 +323,7 @@ impl BuiltinFunction {
     pub fn generate_builtin_function_code(context: &mut CodegenContext) {
         for function in BuiltinFunction::all_functions() {
             let id = function.function_ref();
-            let identifier = id.to_string();
+            let identifier = id.get_key();
             let label = context.new_label(&identifier);
             context.function_labels.insert(identifier, label.clone());
             context.label(&label);
