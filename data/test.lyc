@@ -11,7 +11,9 @@ int main() {
     arr.print();
     let MyStructIntInt my_struct = createStruct::<int, int>(10, 20, 30);
     std::io::file_test();
+    write((), ());
     test() + arr.get::<int>(9)
 }
 
 alias Test = Array<int>;
+

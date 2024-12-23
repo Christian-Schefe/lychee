@@ -885,12 +885,12 @@ pub fn analyze_expression(
                         .collect::<Vec<_>>();
                     let analyzed_generic_args = analyze_generic_args(context, &generic_args)?;
 
-                    let function_ref = context
-                        .functions
-                        .map_function_id(id, arg_types, analyzed_generic_args)
-                        .ok_or_else(|| {
-                            anyhow::anyhow!("Function '{}' not found at {}.", id.item_id, location)
-                        })?;
+                    let function_ref = context.functions.map_function_id(
+                        id,
+                        arg_types,
+                        analyzed_generic_args,
+                        &location,
+                    )?;
                     let function_header = context
                         .functions
                         .get_header(&function_ref.id)
