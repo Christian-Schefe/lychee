@@ -18,7 +18,7 @@ pub fn print_program(program: &AnalyzedProgram) {
 fn print_function_header(printer: &mut Printer, header: &ResolvedFunctionHeader) {
     printer.add_line(format!(
         "Function<{:?}>({})",
-        header.generic_params.order, header.id
+        header.generic_params, header.id
     ));
     printer.indent();
     for (param_name, param_type) in &header.parameter_types {
