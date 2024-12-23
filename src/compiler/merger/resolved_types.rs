@@ -1,7 +1,7 @@
-use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
+use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericParams};
 use crate::compiler::merger::merged_expression::{ResolvedStruct, StructId, StructRef};
 use crate::compiler::merger::type_collector::CollectedTypeData;
-use crate::compiler::parser::parsed_expression::{GenericParams, ParsedTypeKind};
+use crate::compiler::parser::parsed_expression::ParsedTypeKind;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]

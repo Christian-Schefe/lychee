@@ -19,9 +19,29 @@ pub fn lex(input_path: &ModulePath) -> LexResult<Vec<SrcToken>> {
 
     while offset < input.len() {
         if input[offset] == '/' && offset + 1 < input.len() && input[offset + 1] == '/' {
+            offset += 2;
             while offset < input.len() && input[offset] != '\n' {
                 offset += 1;
             }
+            continue;
+        }
+        if input[offset] == '/' && offset + 1 < input.len() && input[offset + 1] == '*' {
+            offset += 2;
+            while offset + 1 < input.len() && !(input[offset] == '*' && input[offset + 1] == '/') {
+                if input[offset] == '\n' {
+                    location.advance_line();
+                } else {
+                    location.advance_column(1);
+                }
+                offset += 1;
+            }
+            if offset + 1 >= input.len() {
+                return Err(LocationError::new(
+                    "Unterminated block comment.".to_string(),
+                    location.clone(),
+                ))?;
+            }
+            offset += 2;
             continue;
         }
         let (token, new_offset) = match input[offset] {

@@ -7,6 +7,7 @@ use crate::compiler::unwrapper::unwrapped_type::UnwrappedTypeId;
 pub struct ResolvedProgram {
     pub functions: Vec<ResolvedFunction>,
     pub constants: Vec<Vec<u8>>,
+    pub main_function_name: String,
 }
 
 #[derive(Debug, Clone)]

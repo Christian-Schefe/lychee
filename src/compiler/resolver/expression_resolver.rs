@@ -266,7 +266,7 @@ pub fn resolve_expression(
 
             ResolvedExpression {
                 kind: ResolvedExpressionKind::FunctionCall {
-                    function_name: function_name.to_string(),
+                    function_name: function_name.clone(),
                     args: resolved_args,
                     return_stack_space,
                 },
@@ -325,7 +325,9 @@ fn resolve_assignable_expression(
 ) -> ResolvedAssignableExpression {
     match &expr.kind {
         AssignableUnwrappedExpressionKind::LocalVariable(name) => {
-            let var_offset = *context.local_vars.get(name).unwrap();
+            let var_offset = *context.local_vars.get(name).unwrap_or_else(|| {
+                panic!("Local variable not found: {}", name);
+            });
             ResolvedAssignableExpression::LocalVariable(var_offset)
         }
         AssignableUnwrappedExpressionKind::Dereference(inner) => {

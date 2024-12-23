@@ -1,48 +1,51 @@
-struct IntArray {
-    &int data;
+struct Array<T> {
+    &T data;
     int size;
 }
 
-impl IntArray {
-    int get(IntArray this, int index) {
-        return this.data[index];
-    }
-    unit set(IntArray this, int index, int value) {
-        this.data[index] = value;
-    }
-    unit fill(IntArray this, int value) {
-        let int i = 0;
-        while (i < this.size) {
-            this.data[i] = value;
-            i++;
-        }
-    }
-    unit print(IntArray this) {
-        let int i = 0;
-        write_char('[');
-        while (i < this.size) {
-            if i > 0 {
-                write_char(',');
-                write_char(' ');
-            };
-            write_num(this.data[i]);
-            i++;
-        };
-        write_char(']');
-        write_char('\n');
-    }
-    IntArray create(int size) {
-        let IntArray arr = new IntArray {
-            data: malloc(size * 4) as &int,
-            size: size
-        };
-        arr
-    }
-    unit free(IntArray this) {
-        free(this.data as &unit);
-    }
+T get<T>(Array<T> this, int index) {
+    return this.data[index];
 }
 
+unit set<T>(Array<T> this, int index, T value) {
+    this.data[index] = value;
+}
+
+unit fill<T>(Array<T> this, T value) {
+    let int i = 0;
+    while (i < this.size) {
+        this.data[i] = value;
+        i++;
+    }
+}
+/*
+unit print(Array<int> this) {
+    let int i = 0;
+    write_char('[');
+    while (i < this.size) {
+        if i > 0 {
+            write_char(',');
+            write_char(' ');
+        };
+        write_num(this.data[i]);
+        i++;
+    };
+    write_char(']');
+    write_char('\n');
+}
+*/
+Array<T> createArray<T>(int size) {
+    let Array<T> arr = new Array<T> {
+        data: malloc(size * 4) as &T,
+        size: size
+    };
+    arr
+}
+
+unit free<T>(Array<T> this) {
+    free(this.data as &unit);
+}
+/*
 unit write_num(int num) {
     if num < 0 {
         write_char('-');
@@ -65,4 +68,4 @@ unit write_num(int num) {
         num %= divisor;
         divisor /= 10;
     };
-}
+}*/

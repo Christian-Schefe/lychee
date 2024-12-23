@@ -1,8 +1,10 @@
-use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
+use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericParams};
 use crate::compiler::merger::merged_expression::{StructId, StructRef};
 use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::item_id::{ItemId, ParsedTypeId};
-use crate::compiler::parser::parsed_expression::{GenericParams, ParsedProgram, ParsedTypeKind};
+use crate::compiler::parser::parsed_expression::{
+    ParsedProgram, ParsedTypeKind,
+};
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
@@ -49,8 +51,10 @@ impl CollectedTypeData {
         match ty {
             ParsedTypeKind::Struct(id, generic_args) => {
                 if id.is_module_local {
-                    if let Some(generic_param) = generic_params.get_generic(&id.item_id.item_name) {
-                        return Some(generic_param);
+                    if let Some(generic_param) =
+                        generic_params.get_generic_from_name(&id.item_id.item_name)
+                    {
+                        return Some(AnalyzedTypeId::GenericType(generic_param.clone()));
                     }
                 }
 

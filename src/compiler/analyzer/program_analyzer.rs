@@ -1,5 +1,5 @@
 use crate::compiler::analyzer::analyzed_expression::{AnalyzedFunction, AnalyzedProgram};
-use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
+use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericParams};
 use crate::compiler::analyzer::iterative_expression_analyzer::analyze_expression;
 use crate::compiler::analyzer::return_analyzer::always_calls_return;
 use crate::compiler::analyzer::AnalyzerResult;
@@ -7,7 +7,7 @@ use crate::compiler::merger::merged_expression::{FunctionId, FunctionRef, Merged
 use crate::compiler::merger::resolved_functions::ResolvedFunctions;
 use crate::compiler::merger::resolved_types::ResolvedTypes;
 use crate::compiler::parser::item_id::ItemId;
-use crate::compiler::parser::parsed_expression::{GenericParams, ParsedExpression};
+use crate::compiler::parser::parsed_expression::ParsedExpression;
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 

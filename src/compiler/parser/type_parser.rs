@@ -3,7 +3,7 @@ use crate::compiler::lexer::token::{StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::item_id::{ItemId, ParsedFunctionId, ParsedTypeId};
 use crate::compiler::parser::parsed_expression::{
-    GenericParams, ParsedImport, ParsedType, ParsedTypeKind,
+    ParsedGenericParams, ParsedImport, ParsedType, ParsedTypeKind,
 };
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::primary_expr_parser::parse_generic_args;

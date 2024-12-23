@@ -16,7 +16,7 @@ pub fn generate_program_code(context: &mut CodegenContext, program: &ResolvedPro
         context.constant_labels.push(label);
     });
 
-    generate_program_prelude(context);
+    generate_program_prelude(context, &program.main_function_name);
 
     BuiltinFunction::generate_builtin_function_code(context);
 
@@ -33,8 +33,8 @@ pub fn generate_program_code(context: &mut CodegenContext, program: &ResolvedPro
     }
 }
 
-fn generate_program_prelude(context: &mut CodegenContext) {
-    context.call("::main");
+fn generate_program_prelude(context: &mut CodegenContext, main_function_name: &String) {
+    context.call(main_function_name);
     context.exit();
 }
 

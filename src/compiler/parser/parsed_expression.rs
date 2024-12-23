@@ -29,16 +29,16 @@ pub struct ParsedImport {
 pub struct ParsedStructDefinition {
     pub struct_name: String,
     pub fields: Vec<(String, ParsedType)>,
-    pub generics: GenericParams,
+    pub generics: ParsedGenericParams,
 }
 
 #[derive(Debug, Clone)]
-pub struct GenericParams {
+pub struct ParsedGenericParams {
     pub set: HashSet<String>,
     pub order: Vec<String>,
 }
 
-impl GenericParams {
+impl ParsedGenericParams {
     pub fn new(order: Vec<String>) -> ParseResult<Self> {
         let mut set = HashSet::new();
         for generic in &order {
@@ -54,28 +54,13 @@ impl GenericParams {
             order: Vec::new(),
         }
     }
-    pub fn resolve(
-        &self,
-        generic_name: &String,
-        generic_args: &Vec<AnalyzedTypeId>,
-    ) -> Option<AnalyzedTypeId> {
-        let index = self.order.iter().position(|x| x == generic_name)?;
-        Some(generic_args[index].clone())
-    }
-
-    pub fn get_generic(&self, generic_name: &String) -> Option<AnalyzedTypeId> {
-        if !self.set.contains(generic_name) {
-            return None;
-        }
-        Some(AnalyzedTypeId::GenericType(generic_name.clone()))
-    }
 }
 
 #[derive(Debug, Clone)]
 pub struct ParsedFunction {
     pub function_name: String,
     pub return_type: ParsedType,
-    pub generic_params: GenericParams,
+    pub generic_params: ParsedGenericParams,
     pub params: Vec<(ParsedType, String)>,
     pub body: ParsedExpression,
 }

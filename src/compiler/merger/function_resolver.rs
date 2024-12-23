@@ -1,3 +1,4 @@
+use crate::compiler::analyzer::analyzed_type::{GenericId, GenericIdKind, GenericParams};
 use crate::compiler::lexer::location::Src;
 use crate::compiler::merger::function_collector::collect_function_data;
 use crate::compiler::merger::merged_expression::{FunctionId, ResolvedFunctionHeader};
@@ -15,7 +16,7 @@ pub fn build_resolved_functions(
 ) -> MergerResult<ResolvedFunctions> {
     let collected_function_data = collect_function_data(program)?;
     let mut functions = HashMap::new();
-    //builtin::BuiltinFunction::add_builtin_function_headers(&mut functions);
+    crate::compiler::builtin::BuiltinFunction::add_builtin_function_headers(&mut functions);
 
     extract_module_functions(resolved_types, &mut functions, &program.module_tree)?;
 
@@ -63,11 +64,13 @@ fn extract_function(
     let mut parameter_types = HashMap::with_capacity(func_def.value.params.len());
 
     let generic_params = func_def.value.generic_params.clone();
+    let resolved_generic_params =
+        GenericParams::from(GenericIdKind::Function(func_id.clone()), &generic_params);
 
     for (arg_type, arg_name) in &func_def.value.params {
         parameter_order.push(arg_name.clone());
         let resolved_arg_type = resolved_types
-            .map_generic_parsed_type(&arg_type.value, &generic_params)
+            .map_generic_parsed_type(&arg_type.value, &resolved_generic_params)
             .ok_or_else(|| {
                 anyhow::anyhow!("Type {} not found at {}", arg_type.value, func_def.location)
             })?;
@@ -83,7 +86,7 @@ fn extract_function(
     }
 
     let resolved_return_type = resolved_types
-        .map_generic_parsed_type(&func_def.value.return_type.value, &generic_params)
+        .map_generic_parsed_type(&func_def.value.return_type.value, &resolved_generic_params)
         .ok_or_else(|| {
             anyhow::anyhow!(
                 "Return type {} not found at {}",
@@ -97,7 +100,7 @@ fn extract_function(
         return_type: resolved_return_type,
         parameter_order,
         parameter_types,
-        generic_params,
+        generic_params: resolved_generic_params,
     };
 
     Ok(header)

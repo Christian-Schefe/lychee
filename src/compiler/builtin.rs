@@ -1,7 +1,8 @@
-use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
+use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericIdKind, GenericParams};
 use crate::compiler::codegen::CodegenContext;
 use crate::compiler::merger::merged_expression::{FunctionId, ResolvedFunctionHeader};
 use crate::compiler::parser::item_id::ItemId;
+use crate::compiler::parser::parsed_expression::ParsedGenericParams;
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
@@ -294,11 +295,11 @@ impl BuiltinFunction {
             function_headers.insert(
                 id.clone(),
                 ResolvedFunctionHeader {
-                    id,
+                    id: id.clone(),
                     return_type: function.return_type,
                     parameter_types,
                     parameter_order,
-                    generic_params: None,
+                    generic_params: GenericParams::empty(GenericIdKind::Function(id)),
                 },
             );
         }

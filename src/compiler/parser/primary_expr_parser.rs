@@ -4,7 +4,7 @@ use crate::compiler::lexer::token::{Keyword, Literal, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::lexer::SrcToken;
 use crate::compiler::parser::parsed_expression::{
-    GenericParams, ParsedExpression, ParsedExpressionKind, ParsedLiteral, ParsedType,
+    ParsedGenericParams, ParsedExpression, ParsedExpressionKind, ParsedLiteral, ParsedType,
     ParsedTypeKind,
 };
 use crate::compiler::parser::parser_error::ParseResult;
@@ -444,7 +444,7 @@ pub fn parse_generic_args(tokens: &mut TokenStack) -> ParseResult<Vec<ParsedType
     }
 }
 
-pub fn parse_generic_params(tokens: &mut TokenStack) -> ParseResult<GenericParams> {
+pub fn parse_generic_params(tokens: &mut TokenStack) -> ParseResult<ParsedGenericParams> {
     if let Token::Static(StaticToken::LessThan) = tokens.peek().value {
         tokens.pop();
         let mut generics = Vec::new();
@@ -463,9 +463,9 @@ pub fn parse_generic_params(tokens: &mut TokenStack) -> ParseResult<GenericParam
             }
         }
         pop_expected(tokens, Token::Static(StaticToken::GreaterThan))?;
-        Ok(GenericParams::new(generics)?)
+        Ok(ParsedGenericParams::new(generics)?)
     } else {
-        Ok(GenericParams::empty())
+        Ok(ParsedGenericParams::empty())
     }
 }
 

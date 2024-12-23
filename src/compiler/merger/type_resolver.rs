@@ -1,3 +1,4 @@
+use crate::compiler::analyzer::analyzed_type::{GenericIdKind, GenericParams};
 use crate::compiler::lexer::location::Src;
 use crate::compiler::merger::merged_expression::{ResolvedStruct, StructId};
 use crate::compiler::merger::resolved_types::ResolvedTypes;
@@ -13,7 +14,7 @@ use std::collections::HashMap;
 pub fn build_resolved_types(program: &ParsedProgram) -> MergerResult<ResolvedTypes> {
     let collected_type_data = collect_type_data(program)?;
     println!("{:?}", collected_type_data);
-    
+
     let struct_defs = extract_module_struct_types(&program.module_tree)?;
 
     let mut resolved_structs = HashMap::new();
@@ -37,13 +38,26 @@ fn resolve_struct_definition(
     module_path: &ModuleIdentifier,
     collected_type_data: &CollectedTypeData,
 ) -> MergerResult<ResolvedStruct> {
+    let struct_id = StructId {
+        id: ItemId {
+            module_id: module_path.clone(),
+            item_name: struct_def.value.struct_name.clone(),
+        },
+        generic_count: struct_def.value.generics.order.len(),
+    };
+
     let mut field_types = HashMap::new();
     let mut field_order = Vec::new();
+
+    let resolved_generic_params = GenericParams::from(
+        GenericIdKind::Struct(struct_id.clone()),
+        &struct_def.value.generics,
+    );
 
     for (field_name, field_type) in &struct_def.value.fields {
         field_order.push(field_name.clone());
         let resolved_field_type = collected_type_data
-            .map_generic_parsed_type(&field_type.value, &struct_def.value.generics)
+            .map_generic_parsed_type(&field_type.value, &resolved_generic_params)
             .ok_or_else(|| {
                 anyhow::anyhow!(
                     "Type {} not found at {}",
@@ -65,16 +79,10 @@ fn resolve_struct_definition(
     }
 
     Ok(ResolvedStruct {
-        id: StructId {
-            id: ItemId {
-                module_id: module_path.clone(),
-                item_name: struct_def.value.struct_name.clone(),
-            },
-            generic_count: struct_def.value.generics.order.len(),
-        },
+        id: struct_id,
         field_types,
         field_order,
-        generic_params: struct_def.value.generics.clone(),
+        generic_params: resolved_generic_params,
     })
 }
 

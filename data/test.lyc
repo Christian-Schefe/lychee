@@ -1,7 +1,17 @@
+module generic_test;
+module std;
+
+import generic_test::do_nothing;
+import generic_test::MyStruct;
+
 int main() {
     let var x = new Option<int> {
         value: 10
     };
+    do_nothing::<Option<int>>(x);
+    let var my_struct = generic_test::createStruct::<int, int>(10, 20, 30);
+    let &MyStruct<int, int> my_struct2 = &my_struct;
+
     let Option<int> y = x;
     let TwoGenerics<int, int> z = new TwoGenerics<int, int> {
         value: 10,
@@ -16,7 +26,7 @@ int main() {
         value: x
     });
     let TwoGenerics<char, Option<char>> c = partial_generic_function::<char>('c');
-    x.value.add1().generic_function::<int>().add1()
+    x.value.add1().generic_function::<int>().add1() + a
 }
 
 struct Option<T> {

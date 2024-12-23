@@ -1,0 +1,25 @@
+import ::Option;
+
+T do_nothing<T>(T x) {
+    x
+}
+
+MyStruct<T1, T2> createStruct<T1, T2>(T1 val, T2 val2, int val3) {
+    let var my_struct = new MyStruct<T1, T2> {
+        value: val,
+        value2: new Option<T2> {
+            value: val2
+        },
+        value3: val3,
+        value4: &val
+    };
+    my_struct.value4 = &my_struct.value;
+    my_struct
+}
+
+struct MyStruct<T1, T2> {
+    T1 value;
+    Option<T2> value2;
+    int value3;
+    &T1 value4;
+}

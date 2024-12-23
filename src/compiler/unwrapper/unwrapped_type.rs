@@ -1,15 +1,14 @@
 use crate::compiler::analyzer::analyzed_expression::{
-    AnalyzedBinaryOp, AnalyzedConstant, AnalyzedExpression, AnalyzedUnaryOp, BinaryAssignOp,
+    AnalyzedBinaryOp, AnalyzedConstant, AnalyzedUnaryOp, BinaryAssignOp,
 };
-use crate::compiler::lexer::location::Location;
-use crate::compiler::merger::merged_expression::FunctionRef;
 use std::collections::HashMap;
 use std::fmt::Display;
 
 #[derive(Debug, Clone)]
 pub struct UnwrappedProgram {
     pub structs: HashMap<String, UnwrappedStruct>,
-    pub functions: Vec<UnwrappedFunction>,
+    pub functions: HashMap<String, UnwrappedFunction>,
+    pub main_function_name: String,
 }
 
 #[derive(Debug, Clone)]
@@ -63,7 +62,6 @@ impl Display for UnwrappedTypeId {
 pub struct UnwrappedExpression {
     pub kind: UnwrappedExpressionKind,
     pub ty: UnwrappedTypeId,
-    pub location: Location,
 }
 
 #[derive(Debug, Clone)]
@@ -112,7 +110,7 @@ pub enum UnwrappedExpressionKind {
         expr: AssignableUnwrappedExpression,
     },
     FunctionCall {
-        function_name: FunctionRef,
+        function_name: String,
         args: Vec<UnwrappedExpression>,
     },
     FieldAccess {

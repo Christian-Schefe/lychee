@@ -62,12 +62,14 @@ pub fn resolve_program(program: &UnwrappedProgram) -> ResolvedProgram {
         resolved_structs,
     };
 
-    for function in &program.functions {
+    for (_, function) in &program.functions {
         resolved_functions.push(resolve_function(&mut context, function));
     }
+
     ResolvedProgram {
         functions: resolved_functions,
         constants: context.constants,
+        main_function_name: program.main_function_name.clone(),
     }
 }
 

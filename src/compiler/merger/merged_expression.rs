@@ -1,9 +1,9 @@
-use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
+use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericParams};
 use crate::compiler::analyzer::iterative_expression_analyzer::resolve_generic_type;
 use crate::compiler::merger::resolved_functions::ResolvedFunctions;
 use crate::compiler::merger::resolved_types::ResolvedTypes;
 use crate::compiler::parser::item_id::ItemId;
-use crate::compiler::parser::parsed_expression::{GenericParams, ParsedExpression};
+use crate::compiler::parser::parsed_expression::ParsedExpression;
 use std::collections::HashMap;
 use std::fmt::Display;
 
@@ -27,7 +27,7 @@ impl Display for StructId {
             write!(f, "<")?;
             for i in 0..self.generic_count {
                 if i != 0 {
-                    write!(f, ", ")?;
+                    write!(f, ",")?;
                 }
                 write!(f, "_")?;
             }
@@ -73,7 +73,7 @@ impl Display for StructRef {
             write!(f, "<")?;
             for (i, arg) in self.generic_args.iter().enumerate() {
                 if i != 0 {
-                    write!(f, ", ")?;
+                    write!(f, ",")?;
                 }
                 write!(f, "{}", arg)?;
             }
@@ -97,7 +97,7 @@ impl Display for FunctionId {
             write!(f, "<")?;
             for i in 0..self.generic_count {
                 if i != 0 {
-                    write!(f, ", ")?;
+                    write!(f, ",")?;
                 }
                 write!(f, "_")?;
             }
@@ -106,7 +106,7 @@ impl Display for FunctionId {
         write!(f, "(")?;
         for i in 0..self.param_count {
             if i != 0 {
-                write!(f, ", ")?;
+                write!(f, ",")?;
             }
             write!(f, "_")?;
         }
@@ -137,7 +137,7 @@ impl Display for FunctionRef {
             write!(f, "<")?;
             for (i, arg) in self.generic_args.iter().enumerate() {
                 if i != 0 {
-                    write!(f, ", ")?;
+                    write!(f, ",")?;
                 }
                 write!(f, "{}", arg)?;
             }
@@ -146,7 +146,7 @@ impl Display for FunctionRef {
         write!(f, "(")?;
         for (i, arg) in self.arg_types.iter().enumerate() {
             if i != 0 {
-                write!(f, ", ")?;
+                write!(f, ",")?;
             }
             write!(f, "{}", arg)?;
         }

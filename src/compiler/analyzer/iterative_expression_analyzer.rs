@@ -3,14 +3,14 @@ use crate::compiler::analyzer::analyzed_expression::{
     AnalyzedLiteral, AnalyzedUnaryOp, AssignableExpression, AssignableExpressionKind,
     BinaryAssignOp,
 };
-use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
+use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericParams};
 use crate::compiler::analyzer::expression_analyzer::{analyze_assignable_expression, can_cast_to};
 use crate::compiler::analyzer::program_analyzer::{AnalyzerContext, LocalVariable};
 use crate::compiler::analyzer::AnalyzerResult;
 use crate::compiler::merger::merged_expression::StructRef;
 use crate::compiler::parser::parsed_expression::{
-    BinaryComparisonOp, BinaryOp, GenericParams, ParsedExpression, ParsedExpressionKind,
-    ParsedLiteral, ParsedType, UnaryOp,
+    BinaryComparisonOp, BinaryOp, ParsedExpression, ParsedExpressionKind, ParsedLiteral,
+    ParsedType, UnaryOp,
 };
 use anyhow::Context;
 use std::collections::HashMap;
@@ -348,7 +348,7 @@ pub fn analyze_expression(
                             .map_generic_parsed_type(&declared_type.value, context.generic_params)
                             .ok_or_else(|| {
                                 anyhow::anyhow!(
-                                    "Declaration type '{:?}' not found at {}.",
+                                    "Declaration type '{}' not found at {}.",
                                     declared_type.value,
                                     declared_type.location
                                 )
@@ -1095,7 +1095,9 @@ pub fn resolve_generic_type(
     generic_args: &Vec<AnalyzedTypeId>,
 ) -> AnalyzedTypeId {
     match ty {
-        AnalyzedTypeId::GenericType(name) => generic_params.resolve(name, generic_args).unwrap(),
+        AnalyzedTypeId::GenericType(generic_id) => {
+            generic_params.resolve(generic_id, generic_args).unwrap()
+        }
         AnalyzedTypeId::Pointer(inner) => AnalyzedTypeId::Pointer(Box::new(resolve_generic_type(
             inner,
             generic_params,
