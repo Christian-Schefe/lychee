@@ -4,7 +4,7 @@ use crate::compiler::analyzer::AnalyzerResult;
 use crate::compiler::lexer::location::Location;
 use crate::compiler::merger::function_collector::CollectedFunctionData;
 use crate::compiler::merger::merged_expression::{FunctionId, FunctionRef, ResolvedFunctionHeader};
-use crate::compiler::parser::item_id::ParsedFunctionId;
+use crate::compiler::parser::item_id::ParsedScopeId;
 use crate::compiler::parser::parsed_expression::ParsedExpression;
 use std::collections::HashMap;
 
@@ -18,7 +18,7 @@ pub struct ResolvedFunctions {
 impl ResolvedFunctions {
     pub fn map_function_id(
         &self,
-        function_id: &ParsedFunctionId,
+        function_id: &ParsedScopeId,
         arg_types: Vec<AnalyzedTypeId>,
         generic_args: Vec<AnalyzedTypeId>,
         location: &Location,

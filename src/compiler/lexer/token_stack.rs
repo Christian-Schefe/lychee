@@ -20,13 +20,21 @@ impl TokenStack {
         self.stack.get(self.offset).unwrap()
     }
 
-    pub fn pop(&mut self) -> &SrcToken {
+    pub fn shift(&mut self) -> &SrcToken {
         if self.offset < self.size {
             let token = &self.stack[self.offset];
             self.offset += 1;
             token
         } else {
-            panic!("Tried to pop from empty token stack");
+            panic!("Tried to shift beyond token stack");
+        }
+    }
+
+    pub fn reverse_shift(&mut self) {
+        if self.offset > 0 {
+            self.offset -= 1;
+        } else {
+            panic!("Tried to reverse shift beyond token stack");
         }
     }
 

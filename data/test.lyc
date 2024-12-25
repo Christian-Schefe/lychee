@@ -17,7 +17,14 @@ int main() {
     let MyStructIntInt my_struct = createStruct::<int, int>(10, 20, 30);
     std::io::file_test();
     generic_sizeof_test::<int>();
+
     test() + arr.get::<int>(9)
+}
+
+enum TestEnum {
+    A,
+    B,
+    C
 }
 
 alias Test = Array<int>;

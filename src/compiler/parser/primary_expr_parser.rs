@@ -3,14 +3,16 @@ use crate::compiler::lexer::location::Location;
 use crate::compiler::lexer::token::{Keyword, Literal, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::lexer::SrcToken;
+use crate::compiler::parser::item_id::ParsedScopeId;
 use crate::compiler::parser::parsed_expression::{
     ParsedExpression, ParsedExpressionKind, ParsedGenericParams, ParsedLiteral, ParsedType,
     ParsedTypeKind,
 };
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::program_parser::{parse_expression, parse_identifier, pop_expected};
-use crate::compiler::parser::type_parser::{parse_function_id, parse_type};
-use crate::compiler::parser::ModuleIdentifier;
+use crate::compiler::parser::type_parser::{
+    parse_generic_scoped_id_extension, parse_scoped_id, parse_type,
+};
 use anyhow::Context;
 use std::collections::HashSet;
 
@@ -18,42 +20,29 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
     let token = tokens.peek().clone();
     let current_module = &token.location.file.as_ref().unwrap().id;
     match token.value {
-        Token::Identifier(name) => {
-            tokens.pop();
+        Token::Identifier(_) | Token::Static(StaticToken::DoubleColon) => {
+            let id = parse_scoped_id(tokens, current_module)
+                .with_context(|| format!("Failed to parse identifier at {}.", token.location))?;
+
             match tokens.peek().value {
                 Token::Static(StaticToken::OpenParen) => {}
                 Token::Static(StaticToken::DoubleColon) => {}
                 _ => {
                     return Ok(ParsedExpression::new(
-                        ParsedExpressionKind::Variable(name),
+                        ParsedExpressionKind::Variable(id),
                         token.location,
                     ))
                 }
             }
 
-            parse_function_call(
-                tokens,
-                name,
-                false,
-                current_module,
-                token.location.clone(),
-                None,
-            )
-        }
-        Token::Static(StaticToken::DoubleColon) => {
-            tokens.pop();
-            let first_id = parse_identifier(tokens)?;
-            parse_function_call(
-                tokens,
-                first_id.value,
-                true,
-                current_module,
-                token.location.clone(),
-                None,
-            )
+            let generic_args = parse_generic_scoped_id_extension(tokens).with_context(|| {
+                format!("Failed to parse generic arguments at {}.", token.location)
+            })?;
+
+            parse_function_call(tokens, id, generic_args, token.location.clone(), None)
         }
         Token::Literal(lit) => {
-            tokens.pop();
+            tokens.shift();
             match lit {
                 Literal::Integer(i) => Ok(ParsedExpression::new(
                     ParsedExpressionKind::Literal(ParsedLiteral::Integer(i)),
@@ -74,9 +63,9 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             }
         }
         Token::Static(StaticToken::OpenParen) => {
-            tokens.pop();
+            tokens.shift();
             if let Token::Static(StaticToken::CloseParen) = tokens.peek().value {
-                tokens.pop();
+                tokens.shift();
                 return Ok(ParsedExpression::new(
                     ParsedExpressionKind::Literal(ParsedLiteral::Unit),
                     token.location,
@@ -96,7 +85,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
         Token::Static(StaticToken::OpenBrace) => parse_block_expression(tokens)
             .with_context(|| format!("Failed to parse block expression at {}.", token.location)),
         Token::Keyword(Keyword::Return) => {
-            tokens.pop();
+            tokens.shift();
             let expr = parse_expression(tokens).map(|x| Box::new(x)).ok();
             Ok(ParsedExpression::new(
                 ParsedExpressionKind::Return(expr),
@@ -104,14 +93,14 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             ))
         }
         Token::Keyword(Keyword::Continue) => {
-            tokens.pop();
+            tokens.shift();
             Ok(ParsedExpression::new(
                 ParsedExpressionKind::Continue,
                 token.location,
             ))
         }
         Token::Keyword(Keyword::Break) => {
-            tokens.pop();
+            tokens.shift();
             let expr = parse_expression(tokens).map(|x| Box::new(x)).ok();
             Ok(ParsedExpression::new(
                 ParsedExpressionKind::Break(expr),
@@ -119,7 +108,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             ))
         }
         Token::Keyword(Keyword::If) => {
-            tokens.pop();
+            tokens.shift();
             let condition_location = tokens.location().clone();
             let condition = Box::new(parse_expression(tokens).with_context(|| {
                 format!("Failed to parse if condition at {}.", condition_location)
@@ -140,7 +129,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             ))
         }
         Token::Keyword(Keyword::While) => {
-            tokens.pop();
+            tokens.shift();
             let condition_location = tokens.location().clone();
             let condition = Box::new(parse_expression(tokens).with_context(|| {
                 format!("Failed to parse while condition at {}.", condition_location)
@@ -162,7 +151,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             ))
         }
         Token::Keyword(Keyword::For) => {
-            tokens.pop();
+            tokens.shift();
             pop_expected(tokens, Token::Static(StaticToken::OpenParen))?;
             let init_location = tokens.location().clone();
             let init = Box::new(
@@ -198,7 +187,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             ))
         }
         Token::Keyword(Keyword::Loop) => {
-            tokens.pop();
+            tokens.shift();
             let loop_body_location = tokens.location().clone();
             let loop_body = Box::new(parse_block_expression(tokens).with_context(|| {
                 format!("Failed to parse loop body at {}.", loop_body_location)
@@ -215,7 +204,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             ))
         }
         Token::Keyword(Keyword::New) => {
-            tokens.pop();
+            tokens.shift();
             let type_location = tokens.location().clone();
             let ty = parse_type(tokens)
                 .with_context(|| format!("Failed to parse type at {}.", type_location))?;
@@ -232,10 +221,10 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             }
         }
         Token::Keyword(Keyword::Let) => {
-            tokens.pop();
+            tokens.shift();
             let var_type = match tokens.peek().value {
                 Token::Keyword(Keyword::Var) => {
-                    tokens.pop();
+                    tokens.shift();
                     None
                 }
                 _ => Some(parse_type(tokens).with_context(|| {
@@ -258,7 +247,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             ))
         }
         Token::Keyword(Keyword::Sizeof) => {
-            tokens.pop();
+            tokens.shift();
             pop_expected(tokens, Token::Static(StaticToken::OpenParen))?;
             let ty_location = tokens.location().clone();
             let ty = parse_type(tokens)
@@ -317,7 +306,7 @@ pub fn parse_seperated_expressions(
         if tokens.peek().value == close_token {
             break;
         } else if tokens.peek().value == separator_token {
-            tokens.pop();
+            tokens.shift();
             if tokens.peek().value == close_token {
                 has_trailed = true;
                 break;
@@ -365,7 +354,7 @@ fn parse_struct_literal(
         }
         match tokens.peek().value {
             Token::Static(StaticToken::Comma) => {
-                tokens.pop();
+                tokens.shift();
             }
             Token::Static(StaticToken::CloseBrace) => {}
             _ => Err(LocationError::new(
@@ -386,7 +375,7 @@ fn parse_struct_literal(
 
 fn parse_optional_else_block(tokens: &mut TokenStack) -> ParseResult<Option<ParsedExpression>> {
     if let Token::Keyword(Keyword::Else) = tokens.peek().value {
-        tokens.pop();
+        tokens.shift();
         let else_location = tokens.location().clone();
         let else_block = parse_expression(tokens)
             .with_context(|| format!("Failed to parse else block at {}.", else_location))?;
@@ -398,14 +387,14 @@ fn parse_optional_else_block(tokens: &mut TokenStack) -> ParseResult<Option<Pars
 
 pub fn parse_generic_args(tokens: &mut TokenStack) -> ParseResult<Vec<ParsedType>> {
     if let Token::Static(StaticToken::LessThan) = tokens.peek().value {
-        tokens.pop();
+        tokens.shift();
         let mut generics = Vec::new();
         while tokens.peek().value != Token::Static(StaticToken::GreaterThan) {
             let generic = parse_type(tokens)?;
             generics.push(generic);
             match tokens.peek().value {
                 Token::Static(StaticToken::Comma) => {
-                    tokens.pop();
+                    tokens.shift();
                 }
                 Token::Static(StaticToken::GreaterThan) => {}
                 Token::Static(StaticToken::ShiftRight) => {
@@ -435,14 +424,14 @@ pub fn parse_generic_args(tokens: &mut TokenStack) -> ParseResult<Vec<ParsedType
 
 pub fn parse_generic_params(tokens: &mut TokenStack) -> ParseResult<ParsedGenericParams> {
     if let Token::Static(StaticToken::LessThan) = tokens.peek().value {
-        tokens.pop();
+        tokens.shift();
         let mut generics = Vec::new();
         while tokens.peek().value != Token::Static(StaticToken::GreaterThan) {
             let generic = parse_identifier(tokens)?.value;
             generics.push(generic);
             match tokens.peek().value {
                 Token::Static(StaticToken::Comma) => {
-                    tokens.pop();
+                    tokens.shift();
                 }
                 Token::Static(StaticToken::GreaterThan) => {}
                 _ => Err(LocationError::new(
@@ -460,15 +449,11 @@ pub fn parse_generic_params(tokens: &mut TokenStack) -> ParseResult<ParsedGeneri
 
 pub fn parse_function_call(
     tokens: &mut TokenStack,
-    name: String,
-    is_absolute: bool,
-    current_module: &ModuleIdentifier,
+    function_id: ParsedScopeId,
+    generic_args: Vec<ParsedType>,
     location: Location,
     member_call: Option<ParsedExpression>,
 ) -> ParseResult<ParsedExpression> {
-    let (module_id, generic_args) = parse_function_id(tokens, name, is_absolute, current_module)
-        .with_context(|| format!("Failed to parse module path at {}.", location))?;
-
     let (_, mut args, _) = parse_seperated_expressions(
         tokens,
         Token::Static(StaticToken::OpenParen),
@@ -482,7 +467,7 @@ pub fn parse_function_call(
     }
     Ok(ParsedExpression::new(
         ParsedExpressionKind::FunctionCall {
-            id: module_id,
+            id: function_id,
             args,
             generic_args,
         },

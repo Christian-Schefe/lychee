@@ -2,15 +2,15 @@ use crate::compiler::parser::ModuleIdentifier;
 use std::fmt::Display;
 
 #[derive(Debug, Clone)]
-pub struct ParsedTypeId {
+pub struct ParsedScopeId {
     pub item_id: ItemId,
     pub is_module_local: bool,
 }
 
-#[derive(Debug, Clone)]
-pub struct ParsedFunctionId {
-    pub item_id: ItemId,
-    pub is_module_local: bool,
+impl Display for ParsedScopeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.item_id)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

@@ -1,6 +1,6 @@
 use crate::compiler::lexer::location::Src;
 use crate::compiler::parser::binary_op::BinaryOp;
-use crate::compiler::parser::item_id::{ParsedFunctionId, ParsedTypeId};
+use crate::compiler::parser::item_id::ParsedScopeId;
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::{HashMap, HashSet};
@@ -37,6 +37,11 @@ pub struct ParsedStructDefinition {
     pub struct_name: String,
     pub fields: Vec<(String, ParsedType)>,
     pub generics: ParsedGenericParams,
+}
+
+pub struct ParsedEnumDefinition {
+    pub enum_name: String,
+    pub variants: Vec<(String, Option<ParsedLiteral>)>,
 }
 
 #[derive(Debug, Clone)]
@@ -96,7 +101,7 @@ pub enum ParsedExpressionKind {
         var_name: String,
         value: Box<ParsedExpression>,
     },
-    Variable(String),
+    Variable(ParsedScopeId),
     Literal(ParsedLiteral),
     Unary {
         op: UnaryOp,
@@ -108,7 +113,7 @@ pub enum ParsedExpressionKind {
         right: Box<ParsedExpression>,
     },
     FunctionCall {
-        id: ParsedFunctionId,
+        id: ParsedScopeId,
         args: Vec<ParsedExpression>,
         generic_args: Vec<ParsedType>,
     },
@@ -145,7 +150,7 @@ impl Display for ParsedTypeKind {
 
 #[derive(Debug, Clone)]
 pub enum ParsedTypeKind {
-    Struct(ParsedTypeId, Vec<ParsedType>),
+    Struct(ParsedScopeId, Vec<ParsedType>),
     Pointer(Box<ParsedTypeKind>),
     Unit,
     Bool,

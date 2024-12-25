@@ -195,6 +195,7 @@ pub enum Keyword {
     Module,
     Import,
     Alias,
+    Enum,
 }
 
 impl Keyword {
@@ -218,6 +219,7 @@ impl Keyword {
             "module" => Some(Keyword::Module),
             "import" => Some(Keyword::Import),
             "alias" => Some(Keyword::Alias),
+            "enum" => Some(Keyword::Enum),
             _ => None,
         }
     }

@@ -33,7 +33,7 @@ where
     let mut expr = parse_lower(tokens)?;
     let location = expr.location.clone();
     if let Some(op) = find_op(tokens, op_tokens) {
-        tokens.pop();
+        tokens.shift();
         let right = parse_right_associative(tokens, op_tokens, parse_lower)?;
         expr = ParsedExpression::new(
             ParsedExpressionKind::Binary {
@@ -110,7 +110,7 @@ pub fn parse_left_associative(tokens: &mut TokenStack) -> ParseResult<ParsedExpr
     let mut elements = vec![BinopElement::Expr(expr)];
 
     while let Some(op) = find_op(tokens, &LEFT_ASSOCIATIVE_BINARY_OPERATORS) {
-        tokens.pop();
+        tokens.shift();
         let right = parse_cast_or_lower(tokens)?;
         elements.push(BinopElement::Op(op));
         elements.push(BinopElement::Expr(right));
@@ -133,7 +133,7 @@ pub fn parse_cast_or_lower(tokens: &mut TokenStack) -> ParseResult<ParsedExpress
         let token = tokens.peek().clone();
         match token.value {
             Token::Keyword(Keyword::As) => {
-                tokens.pop();
+                tokens.shift();
                 let cast_type = parse_type(tokens)?;
                 expr = ParsedExpression::new(
                     ParsedExpressionKind::Unary {

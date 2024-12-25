@@ -1,7 +1,7 @@
 use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericParams};
 use crate::compiler::merger::merged_expression::{StructId, StructRef};
 use crate::compiler::merger::MergerResult;
-use crate::compiler::parser::item_id::{ItemId, ParsedTypeId};
+use crate::compiler::parser::item_id::{ItemId, ParsedScopeId};
 use crate::compiler::parser::parsed_expression::{ParsedProgram, ParsedType, ParsedTypeKind};
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::{HashMap, HashSet};
@@ -17,7 +17,7 @@ pub struct CollectedTypeData {
 impl CollectedTypeData {
     pub fn find_struct_ids(
         &self,
-        id: &ParsedTypeId,
+        id: &ParsedScopeId,
         generic_count: usize,
     ) -> Option<Vec<StructId>> {
         let module_structs = self.structs.get(&id.item_id.module_id)?;

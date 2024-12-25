@@ -6,8 +6,8 @@ use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::lexer::SrcToken;
 use crate::compiler::parser::binop_expr_parser::parse_binop_expression;
 use crate::compiler::parser::parsed_expression::{
-    ParsedExpression, ParsedFunction, ParsedImport, ParsedModule, ParsedStructDefinition,
-    ParsedTypeAlias,
+    ParsedEnumDefinition, ParsedExpression, ParsedExpressionKind, ParsedFunction, ParsedImport,
+    ParsedModule, ParsedStructDefinition, ParsedTypeAlias,
 };
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::primary_expr_parser::{parse_block_expression, parse_generic_params};
@@ -18,7 +18,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 pub fn pop_expected(tokens: &mut TokenStack, expected: Token) -> ParseResult<SrcToken> {
-    let token = tokens.pop().clone();
+    let token = tokens.shift().clone();
     if token.value != expected {
         Err(LocationError::new(
             format!(
@@ -41,7 +41,7 @@ where
     F: Fn(&Token) -> Option<T>,
     F2: Fn(Token) -> String,
 {
-    let token = tokens.pop().clone();
+    let token = tokens.shift().clone();
     if let Some(result) = expected(&token.value) {
         Ok(Src {
             value: result,
@@ -93,6 +93,7 @@ pub fn parse_module(
     let mut submodule_declarations = Vec::new();
     let mut imports = Vec::new();
     let mut type_aliases = Vec::new();
+    let mut enum_definitions = Vec::new();
 
     while tokens.peek().value != Token::EOF {
         let token = tokens.peek().clone();
@@ -121,6 +122,12 @@ pub fn parse_module(
                     format!("Failed to parse type alias at {}.", token.location)
                 })?;
                 type_aliases.push(alias);
+            }
+            Token::Keyword(Keyword::Enum) => {
+                let enum_def = parse_enum_definition(&mut tokens).with_context(|| {
+                    format!("Failed to parse enum definition at {}.", token.location)
+                })?;
+                enum_definitions.push(enum_def);
             }
             _ => {
                 let func = parse_function(&mut tokens)
@@ -154,7 +161,7 @@ pub fn parse_module(
 
 pub fn parse_import(tokens: &mut TokenStack) -> ParseResult<ParsedImport> {
     pop_expected(tokens, Token::Keyword(Keyword::Import))?;
-    let token = tokens.pop().clone();
+    let token = tokens.shift().clone();
     let current_module = &token.location.file.as_ref().unwrap().id;
     let parsed_import = match &token.value {
         Token::Identifier(module_name) => {
@@ -178,6 +185,65 @@ pub fn parse_module_declaration(tokens: &mut TokenStack) -> ParseResult<String> 
     let module_name = parse_identifier(tokens)?.value;
     pop_expected(tokens, Token::Static(StaticToken::Semicolon))?;
     Ok(module_name)
+}
+
+pub fn parse_enum_definition(tokens: &mut TokenStack) -> ParseResult<Src<ParsedEnumDefinition>> {
+    let location = pop_expected(tokens, Token::Keyword(Keyword::Enum))?.location;
+    let enum_name = parse_identifier(tokens)?.value;
+    pop_expected(tokens, Token::Static(StaticToken::OpenBrace))?;
+
+    let mut variants = Vec::new();
+    let mut used_variant_names = HashSet::new();
+    while tokens.peek().value != Token::Static(StaticToken::CloseBrace) {
+        let location = tokens.peek().location.clone();
+        let variant_name = parse_identifier(tokens)?.value;
+        if !used_variant_names.insert(variant_name.clone()) {
+            Err(anyhow::anyhow!(
+                "Duplicate variant name '{}' at {}",
+                variant_name,
+                location
+            ))?;
+        }
+        if tokens.peek().value == Token::Static(StaticToken::Assign) {
+            tokens.shift();
+            let value = parse_expression(tokens)
+                .with_context(|| format!("Failed to parse variant value at {}.", location))?;
+            if let ParsedExpressionKind::Literal(lit) = &value.value {
+                variants.push((variant_name, Some(lit.clone())));
+            } else {
+                Err(anyhow::anyhow!(
+                    "Expected literal value for variant at {location}."
+                ))?;
+            }
+        } else {
+            variants.push((variant_name, None));
+        }
+
+        match tokens.peek().value {
+            Token::Static(StaticToken::Comma) => {
+                tokens.shift();
+            }
+            Token::Static(StaticToken::CloseBrace) => {}
+            _ => Err(LocationError::new(
+                format!("Expected ',' or ')', found '{}'", tokens.peek().value),
+                tokens.location().clone(),
+            ))?,
+        }
+    }
+    pop_expected(tokens, Token::Static(StaticToken::CloseBrace))?;
+    if variants.is_empty() {
+        Err(anyhow::anyhow!(
+            "Enums must have at least one variant at {location}."
+        ))?
+    } else {
+        Ok(Src::new(
+            ParsedEnumDefinition {
+                enum_name,
+                variants,
+            },
+            location,
+        ))
+    }
 }
 
 pub fn parse_struct_definition(
@@ -245,7 +311,7 @@ pub fn parse_function(tokens: &mut TokenStack) -> ParseResult<Src<ParsedFunction
         args.push((arg_type, arg_name));
         match tokens.peek().value {
             Token::Static(StaticToken::Comma) => {
-                tokens.pop();
+                tokens.shift();
             }
             Token::Static(StaticToken::CloseParen) => {}
             _ => Err(LocationError::new(

@@ -1,7 +1,7 @@
 use crate::compiler::lexer::location::Src;
 use crate::compiler::merger::merged_expression::FunctionId;
 use crate::compiler::merger::MergerResult;
-use crate::compiler::parser::item_id::{ItemId, ParsedFunctionId};
+use crate::compiler::parser::item_id::{ItemId, ParsedScopeId};
 use crate::compiler::parser::parsed_expression::{ParsedFunction, ParsedProgram};
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::{HashMap, HashSet};
@@ -16,7 +16,7 @@ pub struct CollectedFunctionData {
 impl CollectedFunctionData {
     pub fn find_function_id(
         &self,
-        parsed_function_id: &ParsedFunctionId,
+        parsed_function_id: &ParsedScopeId,
         arg_count: usize,
         generic_count: usize,
     ) -> Option<Vec<FunctionId>> {
