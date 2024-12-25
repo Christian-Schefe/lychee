@@ -110,6 +110,7 @@ fn unwrap_type(
             );
             UnwrappedTypeId::StructType(struct_id)
         }
+        AnalyzedTypeId::EnumType(_) => UnwrappedTypeId::Integer(4),
         AnalyzedTypeId::GenericType(name) => {
             if let Some(generic) = func_generic_params.resolve(&name, &func_generic_args) {
                 return unwrap_type(

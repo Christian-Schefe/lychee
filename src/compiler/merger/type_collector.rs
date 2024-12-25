@@ -12,6 +12,8 @@ pub struct CollectedTypeData {
     pub struct_imports: HashMap<ModuleIdentifier, HashMap<String, HashSet<StructId>>>,
     pub type_aliases: HashMap<ModuleIdentifier, HashMap<String, ParsedType>>,
     pub imported_type_aliases: HashMap<ModuleIdentifier, HashMap<String, ParsedType>>,
+    pub enums: HashMap<ModuleIdentifier, HashMap<String, ItemId>>,
+    pub enum_imports: HashMap<ModuleIdentifier, HashMap<String, ItemId>>,
 }
 
 impl CollectedTypeData {
@@ -43,6 +45,22 @@ impl CollectedTypeData {
         Some(matching)
     }
 
+    pub fn find_enum_ids(&self, id: &ParsedScopeId) -> Option<Vec<ItemId>> {
+        let module_enums = self.enums.get(&id.item_id.module_id)?;
+        let imported_enums = self.enum_imports.get(&id.item_id.module_id)?;
+
+        let mut matching = Vec::new();
+        if let Some(enum_id) = module_enums.get(&id.item_id.item_name) {
+            matching.push(enum_id.clone());
+        }
+        if id.is_module_local {
+            if let Some(enum_id) = imported_enums.get(&id.item_id.item_name) {
+                matching.push(enum_id.clone());
+            }
+        }
+        Some(matching)
+    }
+
     pub fn map_generic_parsed_type(
         &self,
         ty: &ParsedTypeKind,
@@ -68,6 +86,17 @@ impl CollectedTypeData {
                 }
 
                 let struct_ids = self.find_struct_ids(id, generic_args.len())?;
+
+                if generic_args.len() == 0 {
+                    let mut enum_ids = self.find_enum_ids(id)?;
+                    if enum_ids.len() > 0 {
+                        if enum_ids.len() != 1 || struct_ids.len() != 0 {
+                            return None;
+                        }
+                        return Some(AnalyzedTypeId::EnumType(enum_ids.pop().unwrap()));
+                    }
+                }
+
                 if struct_ids.len() != 1 {
                     return None;
                 }
@@ -98,11 +127,15 @@ pub fn collect_type_data(program: &ParsedProgram) -> MergerResult<CollectedTypeD
     let struct_imports = collect_struct_imports(program, &structs)?;
     let type_aliases = collect_type_aliases(program)?;
     let imported_type_aliases = collect_type_alias_imports(program, &type_aliases)?;
+    let enums = collect_enums(program)?;
+    let enum_imports = collect_enum_imports(program, &enums)?;
     Ok(CollectedTypeData {
         structs,
         struct_imports,
         type_aliases,
         imported_type_aliases,
+        enums,
+        enum_imports,
     })
 }
 
@@ -114,12 +147,11 @@ fn collect_structs(
         let mut module_types = HashMap::new();
         for struct_def in &module.struct_definitions {
             validate_struct_name(&struct_def.value.struct_name)?;
-            let id = ItemId {
-                module_id: module_id.clone(),
-                item_name: struct_def.value.struct_name.clone(),
-            };
             let struct_id = StructId {
-                id,
+                id: ItemId {
+                    module_id: module_id.clone(),
+                    item_name: struct_def.value.struct_name.clone(),
+                },
                 generic_count: struct_def.value.generics.order.len(),
             };
             let entry = module_types
@@ -145,11 +177,47 @@ fn collect_type_aliases(
     for (module_id, module) in &program.module_tree {
         let mut module_aliases = HashMap::new();
         for alias in &module.type_aliases {
-            module_aliases.insert(alias.value.alias.clone(), alias.value.aliased_type.clone());
+            if module_aliases
+                .insert(alias.value.alias.clone(), alias.value.aliased_type.clone())
+                .is_some()
+            {
+                return Err(anyhow::anyhow!(
+                    "Duplicate type alias: {} at {}",
+                    alias.value.alias,
+                    alias.location
+                ));
+            }
         }
         type_aliases.insert(module_id.clone(), module_aliases);
     }
     Ok(type_aliases)
+}
+
+fn collect_enums(
+    program: &ParsedProgram,
+) -> MergerResult<HashMap<ModuleIdentifier, HashMap<String, ItemId>>> {
+    let mut enums = HashMap::new();
+    for (module_id, module) in &program.module_tree {
+        let mut module_enums = HashMap::new();
+        for enum_def in &module.enums {
+            let id = ItemId {
+                module_id: module_id.clone(),
+                item_name: enum_def.value.enum_name.clone(),
+            };
+            if module_enums
+                .insert(enum_def.value.enum_name.clone(), id)
+                .is_some()
+            {
+                return Err(anyhow::anyhow!(
+                    "Duplicate enum definition: {} at {}",
+                    enum_def.value.enum_name,
+                    enum_def.location
+                ));
+            }
+        }
+        enums.insert(module_id.clone(), module_enums);
+    }
+    Ok(enums)
 }
 
 fn collect_struct_imports(
@@ -248,6 +316,50 @@ fn collect_type_alias_imports(
         type_alias_imports.insert(module_id.clone(), module_type_alias_imports);
     }
     Ok(type_alias_imports)
+}
+
+fn collect_enum_imports(
+    program: &ParsedProgram,
+    enums: &HashMap<ModuleIdentifier, HashMap<String, ItemId>>,
+) -> MergerResult<HashMap<ModuleIdentifier, HashMap<String, ItemId>>> {
+    let mut enum_imports = HashMap::new();
+    for (module_id, module) in &program.module_tree {
+        let mut module_enum_imports = HashMap::new();
+        for import in &module.imports {
+            let module_enums = enums.get(&import.value.module_id).unwrap();
+            if let Some(objects) = &import.value.imported_objects {
+                for obj in objects {
+                    if let Some(enum_id) = module_enums.get(obj) {
+                        if module_enum_imports
+                            .insert(obj.clone(), enum_id.clone())
+                            .is_some()
+                        {
+                            return Err(anyhow::anyhow!(
+                                "Enum {} imported multiple times at {}",
+                                obj,
+                                import.location
+                            ));
+                        }
+                    }
+                }
+            } else {
+                for (name, enum_id) in module_enums {
+                    if module_enum_imports
+                        .insert(name.clone(), enum_id.clone())
+                        .is_some()
+                    {
+                        return Err(anyhow::anyhow!(
+                            "Enum {} imported multiple times at {}",
+                            name,
+                            import.location
+                        ));
+                    }
+                }
+            }
+        }
+        enum_imports.insert(module_id.clone(), module_enum_imports);
+    }
+    Ok(enum_imports)
 }
 
 fn validate_struct_name(struct_name: &str) -> MergerResult<()> {

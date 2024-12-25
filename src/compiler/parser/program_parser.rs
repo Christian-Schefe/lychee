@@ -153,6 +153,7 @@ pub fn parse_module(
         struct_definitions,
         type_aliases,
         imports,
+        enums: enum_definitions,
     };
 
     module_tree.insert(module_path.id, module);

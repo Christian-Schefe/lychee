@@ -1,4 +1,5 @@
 use crate::compiler::merger::merged_expression::{FunctionId, StructId, StructRef};
+use crate::compiler::parser::item_id::ItemId;
 use crate::compiler::parser::parsed_expression::ParsedGenericParams;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
@@ -12,6 +13,7 @@ pub enum AnalyzedTypeId {
     Integer(usize),
     Pointer(Box<AnalyzedTypeId>),
     StructType(StructRef),
+    EnumType(ItemId),
     GenericType(GenericId),
 }
 
@@ -31,6 +33,9 @@ impl Display for AnalyzedTypeId {
             AnalyzedTypeId::Pointer(inner) => write!(f, "&{}", inner),
             AnalyzedTypeId::StructType(struct_id) => {
                 write!(f, "{}", struct_id)
+            }
+            AnalyzedTypeId::EnumType(id) => {
+                write!(f, "{}", id)
             }
             AnalyzedTypeId::GenericType(id) => {
                 write!(f, "{}", id)

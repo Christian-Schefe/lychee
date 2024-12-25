@@ -24,3 +24,9 @@ impl Display for ItemId {
         write!(f, "{}::{}", self.module_id.get_identifier(), self.item_name)
     }
 }
+
+impl ItemId {
+    pub fn get_key(&self) -> String {
+        format!("{}::{}", self.module_id.get_identifier(), self.item_name)
+    }
+}

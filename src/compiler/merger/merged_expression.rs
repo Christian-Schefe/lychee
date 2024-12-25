@@ -20,7 +20,7 @@ pub struct StructId {
 
 impl StructId {
     pub fn get_key(&self) -> String {
-        format!("{};{}", self.id, self.generic_count)
+        format!("{};<{}>", self.id, self.generic_count)
     }
 }
 
@@ -61,6 +61,18 @@ impl ResolvedStruct {
             &self.generic_params,
             generic_args,
         ))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ResolvedEnum {
+    pub id: ItemId,
+    pub variants: HashMap<String, i64>,
+}
+
+impl ResolvedEnum {
+    pub fn get_variant_value(&self, variant_name: &str) -> Option<i64> {
+        self.variants.get(variant_name).copied()
     }
 }
 
@@ -136,8 +148,8 @@ impl Display for FunctionId {
 impl FunctionId {
     pub fn get_key(&self) -> String {
         format!(
-            "{};{};{};{}",
-            self.id, self.generic_count, self.param_count, self.body_index
+            "{};{};<{}>;({})",
+            self.id, self.body_index, self.generic_count, self.param_count
         )
     }
 }
@@ -178,7 +190,7 @@ impl Display for FunctionRef {
 impl FunctionRef {
     pub fn get_key(&self) -> String {
         format!(
-            "{};{};{}",
+            "{};<{}>;({})",
             self.id.get_key(),
             self.generic_args
                 .iter()

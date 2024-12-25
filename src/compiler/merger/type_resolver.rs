@@ -1,12 +1,12 @@
 use crate::compiler::analyzer::analyzed_type::{GenericIdKind, GenericParams};
 use crate::compiler::lexer::location::Src;
-use crate::compiler::merger::merged_expression::{ResolvedStruct, StructId};
+use crate::compiler::merger::merged_expression::{ResolvedEnum, ResolvedStruct, StructId};
 use crate::compiler::merger::resolved_types::ResolvedTypes;
 use crate::compiler::merger::type_collector::{collect_type_data, CollectedTypeData};
 use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::item_id::ItemId;
 use crate::compiler::parser::parsed_expression::{
-    ParsedModule, ParsedProgram, ParsedStructDefinition,
+    ParsedEnumDefinition, ParsedLiteral, ParsedModule, ParsedProgram, ParsedStructDefinition,
 };
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
@@ -14,20 +14,26 @@ use std::collections::HashMap;
 pub fn build_resolved_types(program: &ParsedProgram) -> MergerResult<ResolvedTypes> {
     let collected_type_data = collect_type_data(program)?;
 
-    let struct_defs = extract_module_struct_types(&program.module_tree)?;
+    let module_defs = extract_module_struct_types(&program.module_tree)?;
 
     let mut resolved_structs = HashMap::new();
+    let mut resolved_enums = HashMap::new();
 
-    for (module_id, module_struct_defs) in &struct_defs {
+    for (module_id, (module_struct_defs, module_enum_defs)) in &module_defs {
         for (_, struct_def) in module_struct_defs {
             let resolved_struct =
                 resolve_struct_definition(struct_def, module_id, &collected_type_data)?;
             resolved_structs.insert(resolved_struct.id.clone(), resolved_struct);
         }
+        for (_, enum_def) in module_enum_defs {
+            let resolved_enum = resolve_enum_definition(enum_def, module_id)?;
+            resolved_enums.insert(resolved_enum.id.clone(), resolved_enum);
+        }
     }
 
     Ok(ResolvedTypes {
         structs: resolved_structs,
+        enums: resolved_enums,
         collected_type_data,
     })
 }
@@ -85,10 +91,59 @@ fn resolve_struct_definition(
     })
 }
 
+fn resolve_enum_definition(
+    enum_def: &Src<ParsedEnumDefinition>,
+    module_path: &ModuleIdentifier,
+) -> MergerResult<ResolvedEnum> {
+    let enum_id = ItemId {
+        module_id: module_path.clone(),
+        item_name: enum_def.value.enum_name.clone(),
+    };
+
+    let mut variants = HashMap::new();
+
+    for (variant_name, variant_value) in &enum_def.value.variants {
+        let value = match variant_value {
+            Some(ParsedLiteral::Integer(i)) => *i,
+            Some(_) => {
+                return Err(anyhow::anyhow!(
+                    "Non-Integer literals are not supported as enum variants at {}",
+                    enum_def.location
+                ));
+            }
+            None => {
+                let last_value = variants.values().max().unwrap_or(&-1);
+                last_value + 1
+            }
+        };
+        if let Some(_) = variants.insert(variant_name.clone(), value) {
+            return Err(anyhow::anyhow!(
+                "Duplicate variant name '{}' in enum '{}' at {}",
+                variant_name,
+                enum_def.value.enum_name,
+                enum_def.location
+            ));
+        }
+    }
+
+    Ok(ResolvedEnum {
+        id: enum_id,
+        variants,
+    })
+}
+
 fn extract_module_struct_types(
     module_tree: &HashMap<ModuleIdentifier, ParsedModule>,
-) -> MergerResult<HashMap<ModuleIdentifier, HashMap<String, Src<ParsedStructDefinition>>>> {
-    let mut struct_defs = HashMap::new();
+) -> MergerResult<
+    HashMap<
+        ModuleIdentifier,
+        (
+            HashMap<String, Src<ParsedStructDefinition>>,
+            HashMap<String, Src<ParsedEnumDefinition>>,
+        ),
+    >,
+> {
+    let mut module_defs = HashMap::new();
     for module in module_tree.values() {
         let mut module_structs = HashMap::new();
         for struct_def in &module.struct_definitions {
@@ -102,7 +157,18 @@ fn extract_module_struct_types(
                 ));
             }
         }
-        struct_defs.insert(module.module_path.clone(), module_structs);
+        let mut module_enums = HashMap::new();
+        for enum_def in &module.enums {
+            if let Some(_) = module_enums.insert(enum_def.value.enum_name.clone(), enum_def.clone())
+            {
+                return Err(anyhow::anyhow!(
+                    "Duplicate enum definition '{}' at {}",
+                    enum_def.value.enum_name.clone(),
+                    enum_def.location
+                ));
+            }
+        }
+        module_defs.insert(module.module_path.clone(), (module_structs, module_enums));
     }
-    Ok(struct_defs)
+    Ok(module_defs)
 }

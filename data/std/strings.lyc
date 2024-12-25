@@ -66,10 +66,6 @@ String concat(&String str1, &String str2) {
     str
 }
 
-unit write_string(&String str) {
-    write(str.data, str.size);
-}
-
 unit read_string(&String str) {
     read(str.data, str.size);
 }
@@ -95,36 +91,4 @@ int parse_int(&String str) {
         i++;
     };
     num * sign
-}
-
-unit print(&char literal) {
-    let int i = 0;
-    while (literal[i] != '\0') {
-        i++;
-    };
-    write(literal, i);
-}
-
-unit print(int num) {
-    if num < 0 {
-        write_char('-');
-        num = -num;
-    };
-    if num <= 9 {
-        write_char((num % 10 + '0' as int) as char);
-        return;
-    };
-
-    let var divisor = 1;
-
-    while num / divisor >= 10 {
-        divisor *= 10;
-    };
-
-    while divisor > 0 {
-        let var digit = num / divisor;
-        write_char((digit + '0' as int) as char);
-        num %= divisor;
-        divisor /= 10;
-    };
 }

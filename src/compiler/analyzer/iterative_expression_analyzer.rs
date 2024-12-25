@@ -389,26 +389,48 @@ pub fn analyze_expression(
                 }
                 ParsedExpressionKind::Variable(var_name) => {
                     if !var_name.is_module_local {
-                        Err(anyhow::anyhow!(
-                            "Expected module local identifier at {}.",
-                            location
-                        ))?;
+                        let enum_type = context.types.get_enum_from_variant(&var_name.item_id);
+                        if let Some(enum_type) = enum_type {
+                            let val = enum_type
+                                .get_variant_value(&var_name.item_id.item_name)
+                                .ok_or_else(|| {
+                                    anyhow::anyhow!(
+                                        "Enum variant '{}' not found at {}.",
+                                        var_name.item_id.item_name,
+                                        location
+                                    )
+                                })?;
+                            (
+                                AnalyzedTypeId::EnumType(enum_type.id.clone()),
+                                AnalyzedExpressionKind::Literal(AnalyzedLiteral::Integer(val)),
+                            )
+                        } else {
+                            Err(anyhow::anyhow!(
+                                "Expected module local identifier at {}.",
+                                location
+                            ))?
+                        }
+                    } else {
+                        let local_var = context
+                            .local_variables
+                            .get(&var_name.item_id.item_name)
+                            .ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "Variable '{}' not declared at {}.",
+                                    var_name,
+                                    location
+                                )
+                            })?;
+                        (
+                            local_var.ty.clone(),
+                            AnalyzedExpressionKind::ValueOfAssignable(AssignableExpression {
+                                kind: AssignableExpressionKind::LocalVariable(
+                                    var_name.item_id.item_name.clone(),
+                                ),
+                                ty: local_var.ty.clone(),
+                            }),
+                        )
                     }
-                    let local_var = context
-                        .local_variables
-                        .get(&var_name.item_id.item_name)
-                        .ok_or_else(|| {
-                            anyhow::anyhow!("Variable '{}' not declared at {}.", var_name, location)
-                        })?;
-                    (
-                        local_var.ty.clone(),
-                        AnalyzedExpressionKind::ValueOfAssignable(AssignableExpression {
-                            kind: AssignableExpressionKind::LocalVariable(
-                                var_name.item_id.item_name.clone(),
-                            ),
-                            ty: local_var.ty.clone(),
-                        }),
-                    )
                 }
                 ParsedExpressionKind::Literal(lit) => match lit {
                     ParsedLiteral::Unit => (
@@ -793,7 +815,10 @@ pub fn analyze_expression(
                         };
                         match &analyzed_left.ty {
                             AnalyzedTypeId::Integer(_) => {}
-                            AnalyzedTypeId::Char | AnalyzedTypeId::Bool if !needs_integers => {}
+                            AnalyzedTypeId::Char
+                            | AnalyzedTypeId::Bool
+                            | AnalyzedTypeId::EnumType(_)
+                                if !needs_integers => {}
                             _ => Err(anyhow::anyhow!(
                             "Comparison binary left expression has non-comparable type '{}' at {}.",
                             analyzed_left.ty,

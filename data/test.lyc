@@ -3,6 +3,7 @@ module std;
 
 import generic_test::{createStruct, test, MyStructIntInt, MyStruct};
 import std::arrays::*;
+import std::print::*;
 
 int main() {
     let Test arr = createArray::<int>(100);
@@ -18,13 +19,20 @@ int main() {
     std::io::file_test();
     generic_sizeof_test::<int>();
 
+    let TestEnum test_enum = TestEnum::A;
+    (TestEnum::D as int).println();
+    println(TestEnum::D == TestEnum::B);
+    println("hi");
+    (TestEnum::E as int).print();
     test() + arr.get::<int>(9)
 }
 
 enum TestEnum {
     A,
     B,
-    C
+    C = 100,
+    D = 1,
+    E = 0xFFFFFF10,
 }
 
 alias Test = Array<int>;

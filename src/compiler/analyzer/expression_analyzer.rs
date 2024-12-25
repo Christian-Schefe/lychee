@@ -260,6 +260,8 @@ pub fn can_cast_to(original_type: &AnalyzedTypeId, target_type: &AnalyzedTypeId)
         (AnalyzedTypeId::Bool, AnalyzedTypeId::Integer(_)) => true,
         (AnalyzedTypeId::Integer(_), AnalyzedTypeId::Bool) => true,
         (AnalyzedTypeId::Pointer(_), AnalyzedTypeId::Pointer(_)) => true,
+        (AnalyzedTypeId::EnumType(_), AnalyzedTypeId::Integer(_)) => true,
+        (AnalyzedTypeId::Integer(_), AnalyzedTypeId::EnumType(_)) => true,
         _ => false,
     }
 }

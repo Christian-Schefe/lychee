@@ -18,6 +18,7 @@ pub struct ParsedModule {
     pub struct_definitions: Vec<Src<ParsedStructDefinition>>,
     pub type_aliases: Vec<Src<ParsedTypeAlias>>,
     pub imports: Vec<Src<ParsedImport>>,
+    pub enums: Vec<Src<ParsedEnumDefinition>>,
 }
 
 #[derive(Debug, Clone)]
@@ -39,6 +40,7 @@ pub struct ParsedStructDefinition {
     pub generics: ParsedGenericParams,
 }
 
+#[derive(Debug, Clone)]
 pub struct ParsedEnumDefinition {
     pub enum_name: String,
     pub variants: Vec<(String, Option<ParsedLiteral>)>,
