@@ -1,8 +1,8 @@
 use clap::Parser;
+use lychee_vm::execute;
 use std::path::PathBuf;
-use vm::execute;
 
-mod input; 
+mod input;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
