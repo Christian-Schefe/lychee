@@ -113,6 +113,10 @@ pub enum ParsedExpressionKind {
         generic_args: Vec<ParsedType>,
     },
     Sizeof(ParsedType),
+    StructInstance {
+        struct_type: ParsedType,
+        fields: Vec<(String, ParsedExpression)>,
+    },
 }
 
 pub type ParsedType = Src<ParsedTypeKind>;
@@ -156,7 +160,6 @@ pub enum ParsedLiteral {
     Char(i8),
     Integer(i64),
     String(String),
-    Struct(ParsedType, Vec<(String, ParsedExpression)>),
 }
 
 #[derive(Debug, Clone)]

@@ -1,5 +1,5 @@
 use crate::compiler::analyzer::analyzed_expression::{
-    AnalyzedExpression, AnalyzedExpressionKind, AnalyzedFunction, AnalyzedLiteral, AnalyzedProgram,
+    AnalyzedExpression, AnalyzedExpressionKind, AnalyzedFunction, AnalyzedProgram,
     AssignableExpression, AssignableExpressionKind,
 };
 use crate::compiler::merger::merged_expression::ResolvedFunctionHeader;
@@ -120,8 +120,17 @@ fn print_expression(printer: &mut Printer, expr: &AnalyzedExpression) {
             print_assignable_expression(printer, inner);
             printer.dedent();
         }
+        AnalyzedExpressionKind::StructInstance { fields } => {
+            printer.add_line("Struct".to_string());
+            printer.indent();
+            for (field_name, field_value) in fields {
+                printer.add_line(format!("{}: ", field_name));
+                print_expression(printer, field_value);
+            }
+            printer.dedent();
+        }
         AnalyzedExpressionKind::Literal(lit) => {
-            print_literal(printer, lit);
+            printer.add_line(format!("Literal({:?})", lit));
         }
         AnalyzedExpressionKind::ConstantPointer(constant) => {
             printer.add_line(format!("ConstantPointer({:?})", constant));
@@ -183,32 +192,6 @@ fn print_expression(printer: &mut Printer, expr: &AnalyzedExpression) {
         }
         AnalyzedExpressionKind::Sizeof(ty) => {
             printer.add_line(format!("Sizeof({:?})", ty));
-        }
-    }
-}
-
-fn print_literal(printer: &mut Printer, literal: &AnalyzedLiteral) {
-    match literal {
-        AnalyzedLiteral::Unit => {
-            printer.add_line("Unit".to_string());
-        }
-        AnalyzedLiteral::Bool(value) => {
-            printer.add_line(format!("Bool({})", value));
-        }
-        AnalyzedLiteral::Char(value) => {
-            printer.add_line(format!("Char({})", value));
-        }
-        AnalyzedLiteral::Integer(value) => {
-            printer.add_line(format!("Integer({})", value));
-        }
-        AnalyzedLiteral::Struct(fields) => {
-            printer.add_line("Struct".to_string());
-            printer.indent();
-            for (field_name, field_value) in fields {
-                printer.add_line(format!("{}: ", field_name));
-                print_expression(printer, field_value);
-            }
-            printer.dedent();
         }
     }
 }

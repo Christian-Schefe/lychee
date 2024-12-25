@@ -1,12 +1,14 @@
-use crate::compiler::analyzer::analyzed_expression::{AnalyzedConstant, AnalyzedUnaryOp};
+use crate::compiler::analyzer::analyzed_expression::{
+    AnalyzedConstant, AnalyzedLiteral, AnalyzedUnaryOp,
+};
 use crate::compiler::resolver::program_resolver::ResolverContext;
 use crate::compiler::resolver::resolved_expression::{
-    ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedLiteral,
-    ResolvedUnaryOp, ValueData,
+    ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedUnaryOp,
+    ValueData,
 };
 use crate::compiler::unwrapper::unwrapped_type::{
     AssignableUnwrappedExpression, AssignableUnwrappedExpressionKind, UnwrappedExpression,
-    UnwrappedExpressionKind, UnwrappedLiteral, UnwrappedTypeId,
+    UnwrappedExpressionKind, UnwrappedTypeId,
 };
 
 pub fn resolve_expression(
@@ -157,27 +159,24 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        UnwrappedExpressionKind::Literal(lit) => {
-            let kind = match lit {
-                UnwrappedLiteral::Unit => ResolvedLiteral::Unit,
-                UnwrappedLiteral::Bool(b) => ResolvedLiteral::Bool(*b),
-                UnwrappedLiteral::Char(c) => ResolvedLiteral::Char(*c),
-                UnwrappedLiteral::Integer(i) => ResolvedLiteral::Integer(*i),
-                UnwrappedLiteral::Struct(fields) => {
-                    let resolved_fields = fields
-                        .iter()
-                        .map(|(_, expr)| resolve_expression(context, expr, false))
-                        .collect();
-                    ResolvedLiteral::Struct(resolved_fields)
-                }
-            };
-
+        UnwrappedExpressionKind::StructInstance { fields } => {
+            let resolved_fields = fields
+                .iter()
+                .map(|(_, expr)| resolve_expression(context, expr, false))
+                .collect();
             ResolvedExpression {
-                kind: ResolvedExpressionKind::Literal(kind),
+                kind: ResolvedExpressionKind::StructInstance {
+                    fields: resolved_fields,
+                },
                 stack_discard,
                 value_data,
             }
         }
+        UnwrappedExpressionKind::Literal(lit) => ResolvedExpression {
+            kind: ResolvedExpressionKind::Literal(lit.clone()),
+            stack_discard,
+            value_data,
+        },
         UnwrappedExpressionKind::Unary { op, expr } => {
             let resolved_expr = resolve_expression(context, expr, false);
             let mapped_op = match op {
@@ -319,7 +318,7 @@ pub fn resolve_expression(
         UnwrappedExpressionKind::Sizeof(ty) => {
             let size = context.get_type_size(ty);
             ResolvedExpression {
-                kind: ResolvedExpressionKind::Literal(ResolvedLiteral::Integer(size as i64)),
+                kind: ResolvedExpressionKind::Literal(AnalyzedLiteral::Integer(size as i64)),
                 stack_discard,
                 value_data,
             }

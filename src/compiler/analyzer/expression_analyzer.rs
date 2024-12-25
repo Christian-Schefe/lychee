@@ -51,6 +51,10 @@ pub fn analyze_assignable_expression(
             "Literal expression cannot be assigned to at {}.",
             expression.location
         )),
+        ParsedExpressionKind::StructInstance { .. } => Err(anyhow::anyhow!(
+            "Struct instance expression cannot be assigned to at {}.",
+            expression.location
+        )),
         ParsedExpressionKind::Binary { op, left, right } => match op {
             BinaryOp::Index => {
                 let analyzed_expr = analyze_expression(context, left).with_context(|| {

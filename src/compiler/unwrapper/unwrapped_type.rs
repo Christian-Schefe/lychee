@@ -1,5 +1,5 @@
 use crate::compiler::analyzer::analyzed_expression::{
-    AnalyzedBinaryOp, AnalyzedConstant, AnalyzedUnaryOp, BinaryAssignOp,
+    AnalyzedBinaryOp, AnalyzedConstant, AnalyzedLiteral, AnalyzedUnaryOp, BinaryAssignOp,
 };
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -89,7 +89,7 @@ pub enum UnwrappedExpressionKind {
         value: Box<UnwrappedExpression>,
     },
     ValueOfAssignable(AssignableUnwrappedExpression),
-    Literal(UnwrappedLiteral),
+    Literal(AnalyzedLiteral),
     ConstantPointer(AnalyzedConstant),
     Unary {
         op: AnalyzedUnaryOp,
@@ -119,15 +119,9 @@ pub enum UnwrappedExpressionKind {
     Increment(AssignableUnwrappedExpression, bool),
     Decrement(AssignableUnwrappedExpression, bool),
     Sizeof(UnwrappedTypeId),
-}
-
-#[derive(Debug, Clone)]
-pub enum UnwrappedLiteral {
-    Unit,
-    Bool(bool),
-    Char(i8),
-    Integer(i64),
-    Struct(Vec<(String, UnwrappedExpression)>),
+    StructInstance {
+        fields: Vec<(String, UnwrappedExpression)>,
+    },
 }
 
 #[derive(Debug, Clone)]

@@ -1,5 +1,5 @@
 use crate::compiler::parser::parsed_expression::{
-    ParsedExpression, ParsedExpressionKind, ParsedFunction, ParsedLiteral, ParsedModule,
+    ParsedExpression, ParsedExpressionKind, ParsedFunction, ParsedModule,
     ParsedProgram, ParsedStructDefinition,
 };
 use std::fmt::Display;
@@ -112,6 +112,18 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
         ParsedExpressionKind::Sizeof(ty) => {
             printer.add_line(format!("Sizeof({:?})", ty));
         }
+        ParsedExpressionKind::StructInstance {
+            struct_type,
+            fields,
+        } => {
+            printer.add_line(format!("StructInstance({:?})", struct_type));
+            printer.indent();
+            for (field_name, field_value) in fields {
+                printer.add_line(format!("{}: ", field_name));
+                print_expression(printer, field_value);
+            }
+            printer.dedent();
+        }
         ParsedExpressionKind::Variable(name) => {
             printer.add_line(format!("Var({})", name));
         }
@@ -140,7 +152,7 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
             printer.dedent();
         }
         ParsedExpressionKind::Literal(lit) => {
-            print_literal(printer, lit);
+            printer.add_line(format!("Literal({:?})", lit));
         }
         ParsedExpressionKind::Block {
             expressions,
@@ -226,35 +238,6 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
             printer.indent();
             for arg in args {
                 print_expression(printer, arg);
-            }
-            printer.dedent();
-        }
-    }
-}
-
-fn print_literal(printer: &mut Printer, lit: &ParsedLiteral) {
-    match lit {
-        ParsedLiteral::Integer(value) => {
-            printer.add_line(format!("Int({})", value));
-        }
-        ParsedLiteral::Unit => {
-            printer.add_line("Unit".to_string());
-        }
-        ParsedLiteral::String(value) => {
-            printer.add_line(format!("String({})", value));
-        }
-        ParsedLiteral::Char(value) => {
-            printer.add_line(format!("Char({})", value));
-        }
-        ParsedLiteral::Bool(value) => {
-            printer.add_line(format!("Bool({})", value));
-        }
-        ParsedLiteral::Struct(struct_type, fields) => {
-            printer.add_line(format!("Struct({:?})", struct_type.value));
-            printer.indent();
-            for (field_name, field_value) in fields {
-                printer.add_line(format!("{}: ", field_name));
-                print_expression(printer, field_value);
             }
             printer.dedent();
         }

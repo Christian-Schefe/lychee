@@ -1,4 +1,6 @@
-use crate::compiler::analyzer::analyzed_expression::{AnalyzedBinaryOp, BinaryAssignOp};
+use crate::compiler::analyzer::analyzed_expression::{
+    AnalyzedBinaryOp, AnalyzedLiteral, BinaryAssignOp,
+};
 use crate::compiler::parser::parsed_expression::UnaryMathOp;
 use crate::compiler::resolver::program_resolver::ResolverContext;
 use crate::compiler::unwrapper::unwrapped_type::UnwrappedTypeId;
@@ -104,7 +106,7 @@ pub enum ResolvedExpressionKind {
         value: Box<ResolvedExpression>,
     },
     ValueOfAssignable(ResolvedAssignableExpression),
-    Literal(ResolvedLiteral),
+    Literal(AnalyzedLiteral),
     ConstantPointer(usize),
     Unary {
         op: ResolvedUnaryOp,
@@ -135,15 +137,9 @@ pub enum ResolvedExpressionKind {
     },
     Increment(ResolvedAssignableExpression, bool),
     Decrement(ResolvedAssignableExpression, bool),
-}
-
-#[derive(Debug, Clone)]
-pub enum ResolvedLiteral {
-    Unit,
-    Bool(bool),
-    Char(i8),
-    Integer(i64),
-    Struct(Vec<ResolvedExpression>),
+    StructInstance {
+        fields: Vec<ResolvedExpression>,
+    },
 }
 
 #[derive(Debug, Clone)]

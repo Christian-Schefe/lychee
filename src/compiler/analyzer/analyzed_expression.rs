@@ -84,6 +84,9 @@ pub enum AnalyzedExpressionKind {
     Increment(AssignableExpression, bool),
     Decrement(AssignableExpression, bool),
     Sizeof(AnalyzedTypeId),
+    StructInstance {
+        fields: Vec<(String, AnalyzedExpression)>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -92,7 +95,6 @@ pub enum AnalyzedLiteral {
     Bool(bool),
     Char(i8),
     Integer(i64),
-    Struct(Vec<(String, AnalyzedExpression)>),
 }
 
 #[derive(Debug, Clone)]

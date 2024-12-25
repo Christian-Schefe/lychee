@@ -8,6 +8,11 @@ int main() {
     let Test arr = createArray::<int>(100);
     arr.fill::<int>(10);
     arr.set::<int>(8, generic_sizeof_test::<MyStruct<char, long>, int>());
+    for (let int i = 0; i < 5; i++) {
+        arr.set::<int>(i, i);
+        continue.unit_test(break);
+        arr.set::<int>(i, i + 50);
+    };
     arr.print();
     let MyStructIntInt my_struct = createStruct::<int, int>(10, 20, 30);
     std::io::file_test();
@@ -23,4 +28,8 @@ int generic_sizeof_test<T>() {
 
 int generic_sizeof_test<T, K>() {
     sizeof(T) * sizeof(K)
+}
+
+unit unit_test(unit a, unit b) {
+    a
 }

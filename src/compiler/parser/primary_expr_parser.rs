@@ -97,24 +97,11 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             .with_context(|| format!("Failed to parse block expression at {}.", token.location)),
         Token::Keyword(Keyword::Return) => {
             tokens.pop();
-            match tokens.peek().value {
-                Token::Static(StaticToken::Semicolon) | Token::Static(StaticToken::CloseBrace) => {
-                    Ok(ParsedExpression::new(
-                        ParsedExpressionKind::Return(None),
-                        token.location,
-                    ))
-                }
-                _ => {
-                    let expr_location = tokens.location().clone();
-                    let expr = parse_expression(tokens).with_context(|| {
-                        format!("Failed to parse return expression at {}.", expr_location)
-                    })?;
-                    Ok(ParsedExpression::new(
-                        ParsedExpressionKind::Return(Some(Box::new(expr))),
-                        token.location,
-                    ))
-                }
-            }
+            let expr = parse_expression(tokens).map(|x| Box::new(x)).ok();
+            Ok(ParsedExpression::new(
+                ParsedExpressionKind::Return(expr),
+                token.location,
+            ))
         }
         Token::Keyword(Keyword::Continue) => {
             tokens.pop();
@@ -125,24 +112,11 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
         }
         Token::Keyword(Keyword::Break) => {
             tokens.pop();
-            match tokens.peek().value {
-                Token::Static(StaticToken::Semicolon) | Token::Static(StaticToken::CloseBrace) => {
-                    Ok(ParsedExpression::new(
-                        ParsedExpressionKind::Break(None),
-                        token.location,
-                    ))
-                }
-                _ => {
-                    let expr_location = tokens.location().clone();
-                    let expr = parse_expression(tokens).with_context(|| {
-                        format!("Failed to parse break expression at {}.", expr_location)
-                    })?;
-                    Ok(ParsedExpression::new(
-                        ParsedExpressionKind::Break(Some(Box::new(expr))),
-                        token.location,
-                    ))
-                }
-            }
+            let expr = parse_expression(tokens).map(|x| Box::new(x)).ok();
+            Ok(ParsedExpression::new(
+                ParsedExpressionKind::Break(expr),
+                token.location,
+            ))
         }
         Token::Keyword(Keyword::If) => {
             tokens.pop();
@@ -402,7 +376,10 @@ fn parse_struct_literal(
     }
     pop_expected(tokens, Token::Static(StaticToken::CloseBrace))?;
     Ok(ParsedExpression::new(
-        ParsedExpressionKind::Literal(ParsedLiteral::Struct(struct_type, fields)),
+        ParsedExpressionKind::StructInstance {
+            struct_type,
+            fields,
+        },
         location,
     ))
 }

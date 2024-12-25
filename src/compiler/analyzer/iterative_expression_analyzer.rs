@@ -85,50 +85,51 @@ pub fn analyze_expression(
                     stack.push((value, false, in_loop));
                 }
                 ParsedExpressionKind::Variable(_) => {}
-                ParsedExpressionKind::Literal(lit) => match lit {
-                    ParsedLiteral::Struct(ty, fields) => {
-                        let resolved_type = context
-                            .types
-                            .map_generic_parsed_type(&ty.value, context.generic_params)
-                            .ok_or_else(|| {
-                                anyhow::anyhow!("Type '{}' not found at {}.", ty.value, ty.location)
-                            })?;
-                        let struct_decl = context
-                            .types
-                            .get_struct_from_type(&resolved_type)
-                            .ok_or_else(|| {
-                                anyhow::anyhow!(
-                                    "Type '{}' is not a struct type at {}.",
-                                    resolved_type,
-                                    ty.location
-                                )
-                            })?;
-                        let mut present_fields = fields
-                            .iter()
-                            .map(|x| (&x.0, &x.1))
-                            .collect::<HashMap<_, _>>();
-                        for field in struct_decl.field_order.iter().rev() {
-                            if let Some(value) = present_fields.get(field) {
-                                stack.push((value, false, in_loop));
-                                present_fields.remove(field);
-                            } else {
-                                Err(anyhow::anyhow!(
-                                    "Struct field '{}' missing at {}.",
-                                    field,
-                                    location
-                                ))?;
-                            }
-                        }
-                        if !present_fields.is_empty() {
+                ParsedExpressionKind::StructInstance {
+                    struct_type: ty,
+                    fields,
+                } => {
+                    let resolved_type = context
+                        .types
+                        .map_generic_parsed_type(&ty.value, context.generic_params)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!("Type '{}' not found at {}.", ty.value, ty.location)
+                        })?;
+                    let struct_decl = context
+                        .types
+                        .get_struct_from_type(&resolved_type)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "Type '{}' is not a struct type at {}.",
+                                resolved_type,
+                                ty.location
+                            )
+                        })?;
+                    let mut present_fields = fields
+                        .iter()
+                        .map(|x| (&x.0, &x.1))
+                        .collect::<HashMap<_, _>>();
+                    for field in struct_decl.field_order.iter().rev() {
+                        if let Some(value) = present_fields.get(field) {
+                            stack.push((value, false, in_loop));
+                            present_fields.remove(field);
+                        } else {
                             Err(anyhow::anyhow!(
-                                "Struct has extra fields {:?} at {}.",
-                                present_fields.keys(),
+                                "Struct field '{}' missing at {}.",
+                                field,
                                 location
                             ))?;
                         }
                     }
-                    _ => {}
-                },
+                    if !present_fields.is_empty() {
+                        Err(anyhow::anyhow!(
+                            "Struct has extra fields {:?} at {}.",
+                            present_fields.keys(),
+                            location
+                        ))?;
+                    }
+                }
+                ParsedExpressionKind::Literal(_) => {}
                 ParsedExpressionKind::Unary { op, expr } => {
                     let expr_is_assignable = match op {
                         UnaryOp::Increment { .. } | UnaryOp::Decrement { .. } | UnaryOp::Borrow => {
@@ -432,58 +433,60 @@ pub fn analyze_expression(
                             )),
                         )
                     }
-                    ParsedLiteral::Struct(ty, field_values) => {
-                        let resolved_type = context
-                            .types
-                            .map_generic_parsed_type(&ty.value, context.generic_params)
-                            .unwrap();
-                        let struct_type =
-                            context.types.get_struct_from_type(&resolved_type).unwrap();
-
-                        let struct_ref = match &resolved_type {
-                            AnalyzedTypeId::StructType(struct_ref) => struct_ref,
-                            _ => {
-                                return Err(anyhow::anyhow!(
-                                    "Resolved type '{}' is not a struct at {}.",
-                                    resolved_type,
-                                    location
-                                ))?
-                            }
-                        };
-
-                        let mut analyzed_field_values = Vec::new();
-                        let location_map = field_values
-                            .iter()
-                            .map(|(k, v)| (k.clone(), &v.location))
-                            .collect::<HashMap<_, _>>();
-
-                        for field_name in struct_type.field_order.iter().rev() {
-                            let analyzed_field_value = output.pop().unwrap();
-                            let expected_type = struct_type
-                                .get_field_type(field_name, &struct_ref.generic_args)
-                                .unwrap();
-                            if analyzed_field_value.ty != expected_type {
-                                Err(anyhow::anyhow!(
-                                    "Struct field '{}' has type '{}', but expected '{}' at {}.",
-                                    field_name,
-                                    analyzed_field_value.ty,
-                                    expected_type,
-                                    location_map.get(field_name).unwrap()
-                                ))?;
-                            }
-                            analyzed_field_values.push((field_name.clone(), analyzed_field_value));
-                        }
-
-                        analyzed_field_values.reverse();
-
-                        (
-                            resolved_type,
-                            AnalyzedExpressionKind::Literal(AnalyzedLiteral::Struct(
-                                analyzed_field_values,
-                            )),
-                        )
-                    }
                 },
+                ParsedExpressionKind::StructInstance {
+                    struct_type: ty,
+                    fields: field_values,
+                } => {
+                    let resolved_type = context
+                        .types
+                        .map_generic_parsed_type(&ty.value, context.generic_params)
+                        .unwrap();
+                    let struct_type = context.types.get_struct_from_type(&resolved_type).unwrap();
+
+                    let struct_ref = match &resolved_type {
+                        AnalyzedTypeId::StructType(struct_ref) => struct_ref,
+                        _ => {
+                            return Err(anyhow::anyhow!(
+                                "Resolved type '{}' is not a struct at {}.",
+                                resolved_type,
+                                location
+                            ))?
+                        }
+                    };
+
+                    let mut analyzed_field_values = Vec::new();
+                    let location_map = field_values
+                        .iter()
+                        .map(|(k, v)| (k.clone(), &v.location))
+                        .collect::<HashMap<_, _>>();
+
+                    for field_name in struct_type.field_order.iter().rev() {
+                        let analyzed_field_value = output.pop().unwrap();
+                        let expected_type = struct_type
+                            .get_field_type(field_name, &struct_ref.generic_args)
+                            .unwrap();
+                        if analyzed_field_value.ty != expected_type {
+                            Err(anyhow::anyhow!(
+                                "Struct field '{}' has type '{}', but expected '{}' at {}.",
+                                field_name,
+                                analyzed_field_value.ty,
+                                expected_type,
+                                location_map.get(field_name).unwrap()
+                            ))?;
+                        }
+                        analyzed_field_values.push((field_name.clone(), analyzed_field_value));
+                    }
+
+                    analyzed_field_values.reverse();
+
+                    (
+                        resolved_type,
+                        AnalyzedExpressionKind::StructInstance {
+                            fields: analyzed_field_values,
+                        },
+                    )
+                }
                 ParsedExpressionKind::Unary { expr, op } => match op {
                     UnaryOp::Math(math_op) => {
                         let analyzed_expr = output.pop().unwrap();
@@ -1033,17 +1036,14 @@ fn assert_break_return_type(
         AnalyzedExpressionKind::ValueOfAssignable(assignable) => {
             assert_break_return_type_assignable(break_type, assignable)
         }
-        AnalyzedExpressionKind::Literal(lit) => match lit {
-            AnalyzedLiteral::Struct(fields) => {
-                let mut actual_break_type = break_type.cloned();
-                for (_, field) in fields {
-                    actual_break_type =
-                        assert_break_return_type(actual_break_type.as_ref(), field)?;
-                }
-                Ok(actual_break_type)
+        AnalyzedExpressionKind::StructInstance { fields } => {
+            let mut actual_break_type = break_type.cloned();
+            for (_, field) in fields {
+                actual_break_type = assert_break_return_type(actual_break_type.as_ref(), field)?;
             }
-            _ => Ok(break_type.cloned()),
-        },
+            Ok(actual_break_type)
+        }
+        AnalyzedExpressionKind::Literal(_) => Ok(break_type.cloned()),
         AnalyzedExpressionKind::ConstantPointer(_) => Ok(break_type.cloned()),
         AnalyzedExpressionKind::Unary { expr, .. } => assert_break_return_type(break_type, expr),
         AnalyzedExpressionKind::Binary { left, right, .. } => {

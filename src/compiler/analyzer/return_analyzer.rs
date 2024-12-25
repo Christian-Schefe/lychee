@@ -1,6 +1,6 @@
 use crate::compiler::analyzer::analyzed_expression::{
-    AnalyzedBinaryOp, AnalyzedExpression, AnalyzedExpressionKind, AnalyzedLiteral,
-    AssignableExpression, AssignableExpressionKind, BinaryAssignOp,
+    AnalyzedBinaryOp, AnalyzedExpression, AnalyzedExpressionKind, AssignableExpression,
+    AssignableExpressionKind, BinaryAssignOp,
 };
 
 pub fn always_calls_return(expression: &AnalyzedExpression) -> bool {
@@ -43,12 +43,10 @@ pub fn always_calls_return(expression: &AnalyzedExpression) -> bool {
         }
         AnalyzedExpressionKind::Declaration { var_name: _, value } => always_calls_return(value),
         AnalyzedExpressionKind::ValueOfAssignable(expr) => always_calls_return_assignable(expr),
-        AnalyzedExpressionKind::Literal(lit) => match lit {
-            AnalyzedLiteral::Struct(fields) => {
-                fields.iter().any(|(_, value)| always_calls_return(value))
-            }
-            _ => false,
-        },
+        AnalyzedExpressionKind::StructInstance { fields } => {
+            fields.iter().any(|(_, value)| always_calls_return(value))
+        }
+        AnalyzedExpressionKind::Literal(_) => false,
         AnalyzedExpressionKind::Unary { op: _, expr } => always_calls_return(expr),
         AnalyzedExpressionKind::Binary { op, left, right } => match op {
             AnalyzedBinaryOp::Logical(_) => always_calls_return(left),

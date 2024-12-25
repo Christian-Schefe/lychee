@@ -1,7 +1,7 @@
 use crate::compiler::parser::expression_tree_printer::Printer;
 use crate::compiler::resolver::resolved_expression::{
     ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedFunction,
-    ResolvedLiteral, ResolvedProgram,
+    ResolvedProgram,
 };
 
 pub fn print_program(expr: &ResolvedProgram) {
@@ -28,22 +28,19 @@ fn print_expression(printer: &mut Printer, expr: &ResolvedExpression) {
         expr.value_data, expr.stack_discard
     ));
     match &expr.kind {
-        ResolvedExpressionKind::Literal(literal) => match literal {
-            ResolvedLiteral::Struct(fields) => {
-                printer.add_line("StructLiteral".to_string());
+        ResolvedExpressionKind::StructInstance { fields } => {
+            printer.add_line("StructLiteral".to_string());
+            printer.indent();
+            for field_expr in fields {
                 printer.indent();
-                for field_expr in fields {
-                    printer.indent();
-                    print_expression(printer, field_expr);
-                    printer.dedent();
-                }
+                print_expression(printer, field_expr);
                 printer.dedent();
             }
-            ResolvedLiteral::Unit => printer.add_line("Unit".to_string()),
-            ResolvedLiteral::Bool(b) => printer.add_line(format!("Bool({})", b)),
-            ResolvedLiteral::Char(c) => printer.add_line(format!("Char({})", c)),
-            ResolvedLiteral::Integer(i) => printer.add_line(format!("Int({})", i)),
-        },
+            printer.dedent();
+        }
+        ResolvedExpressionKind::Literal(literal) => {
+            printer.add_line(format!("Literal {:?}", literal));
+        }
         ResolvedExpressionKind::Block(expressions) => {
             printer.add_line("{".to_string());
             printer.indent();

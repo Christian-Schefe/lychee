@@ -1,12 +1,12 @@
 use crate::compiler::analyzer::analyzed_expression::{
-    AnalyzedExpression, AnalyzedExpressionKind, AnalyzedLiteral, AnalyzedProgram,
-    AssignableExpression, AssignableExpressionKind,
+    AnalyzedExpression, AnalyzedExpressionKind, AnalyzedProgram, AssignableExpression,
+    AssignableExpressionKind,
 };
 use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericParams};
 use crate::compiler::merger::merged_expression::{FunctionRef, StructRef};
 use crate::compiler::unwrapper::unwrapped_type::{
     AssignableUnwrappedExpression, AssignableUnwrappedExpressionKind, UnwrappedExpression,
-    UnwrappedExpressionKind, UnwrappedFunction, UnwrappedLiteral, UnwrappedStruct, UnwrappedTypeId,
+    UnwrappedExpressionKind, UnwrappedFunction, UnwrappedStruct, UnwrappedTypeId,
 };
 use std::collections::{HashMap, HashSet};
 
@@ -341,36 +341,27 @@ fn unwrap_expression(
             );
             UnwrappedExpressionKind::ValueOfAssignable(unwrapped_inner)
         }
-        AnalyzedExpressionKind::Literal(lit) => match lit {
-            AnalyzedLiteral::Unit => UnwrappedExpressionKind::Literal(UnwrappedLiteral::Unit),
-            AnalyzedLiteral::Bool(value) => {
-                UnwrappedExpressionKind::Literal(UnwrappedLiteral::Bool(*value))
+        AnalyzedExpressionKind::StructInstance { fields } => {
+            let unwrapped_fields = fields
+                .iter()
+                .map(|(name, expr)| {
+                    (
+                        name.clone(),
+                        unwrap_expression(
+                            context,
+                            program,
+                            func_generic_params,
+                            func_generic_args,
+                            expr,
+                        ),
+                    )
+                })
+                .collect();
+            UnwrappedExpressionKind::StructInstance {
+                fields: unwrapped_fields,
             }
-            AnalyzedLiteral::Char(value) => {
-                UnwrappedExpressionKind::Literal(UnwrappedLiteral::Char(*value))
-            }
-            AnalyzedLiteral::Integer(value) => {
-                UnwrappedExpressionKind::Literal(UnwrappedLiteral::Integer(*value))
-            }
-            AnalyzedLiteral::Struct(fields) => {
-                let unwrapped_fields = fields
-                    .iter()
-                    .map(|(name, expr)| {
-                        (
-                            name.clone(),
-                            unwrap_expression(
-                                context,
-                                program,
-                                func_generic_params,
-                                func_generic_args,
-                                expr,
-                            ),
-                        )
-                    })
-                    .collect();
-                UnwrappedExpressionKind::Literal(UnwrappedLiteral::Struct(unwrapped_fields))
-            }
-        },
+        }
+        AnalyzedExpressionKind::Literal(lit) => UnwrappedExpressionKind::Literal(lit.clone()),
         AnalyzedExpressionKind::ConstantPointer(constant) => {
             UnwrappedExpressionKind::ConstantPointer(constant.clone())
         }

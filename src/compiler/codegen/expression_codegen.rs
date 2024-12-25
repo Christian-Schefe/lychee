@@ -1,10 +1,12 @@
-use crate::compiler::analyzer::analyzed_expression::{AnalyzedBinaryOp, BinaryAssignOp};
+use crate::compiler::analyzer::analyzed_expression::{
+    AnalyzedBinaryOp, AnalyzedLiteral, BinaryAssignOp,
+};
 use crate::compiler::codegen::CodegenContext;
 use crate::compiler::parser::binary_op::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp};
 use crate::compiler::parser::parsed_expression::UnaryMathOp;
 use crate::compiler::resolver::resolved_expression::{
-    ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedLiteral,
-    ResolvedUnaryOp, ValueData, ValueLocation,
+    ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedUnaryOp,
+    ValueData, ValueLocation,
 };
 
 pub fn generate_expression_code(context: &mut CodegenContext, expression: &ResolvedExpression) {
@@ -134,25 +136,25 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
         ResolvedExpressionKind::ValueOfAssignable(assignable) => {
             generate_assignable_expression_value_code(context, assignable, &expression.value_data);
         }
+        ResolvedExpressionKind::StructInstance { fields } => {
+            for field in fields {
+                generate_expression_code(context, field);
+                if let ValueLocation::Register = field.value_data.location {
+                    context.push(field.value_data.size, "r0");
+                    context.current_stack_size += field.value_data.size;
+                }
+            }
+        }
         ResolvedExpressionKind::Literal(lit) => match lit {
-            ResolvedLiteral::Unit => {}
-            ResolvedLiteral::Bool(b) => {
+            AnalyzedLiteral::Unit => {}
+            AnalyzedLiteral::Bool(b) => {
                 context.movi("r0", if *b { 1 } else { 0 });
             }
-            ResolvedLiteral::Char(c) => {
+            AnalyzedLiteral::Char(c) => {
                 context.movi("r0", *c as isize);
             }
-            ResolvedLiteral::Integer(i) => {
+            AnalyzedLiteral::Integer(i) => {
                 context.movi("r0", *i as isize);
-            }
-            ResolvedLiteral::Struct(fields) => {
-                for field in fields {
-                    generate_expression_code(context, field);
-                    if let ValueLocation::Register = field.value_data.location {
-                        context.push(field.value_data.size, "r0");
-                        context.current_stack_size += field.value_data.size;
-                    }
-                }
             }
         },
         ResolvedExpressionKind::Unary { op, expr } => {
