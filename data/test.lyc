@@ -1,4 +1,5 @@
 module generic_test;
+module enum_test;
 module std;
 
 import generic_test::{createStruct, test, MyStructIntInt, MyStruct};
@@ -24,6 +25,7 @@ int main() {
     println(TestEnum::D == TestEnum::B);
     println("hi");
     (TestEnum::E as int).print();
+    enum_test::enum_test();
     test() + arr.get::<int>(9)
 }
 
@@ -32,7 +34,7 @@ enum TestEnum {
     B,
     C = 100,
     D = 1,
-    E = 0xFFFFFF10,
+    E = -240,
 }
 
 alias Test = Array<int>;

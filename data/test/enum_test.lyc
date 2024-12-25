@@ -1,0 +1,19 @@
+import ::std::print::*;
+
+enum Direction {
+    Up = 1,
+    Down = 2,
+    Left = 3,
+    Right = 0x7FFFFFFF,
+}
+
+unit enum_test() {
+    println("ENUM TEST");
+    let Direction dir = Direction::Up;
+    (dir as int).println();
+    println(Direction::Down == Direction::Left);
+    println("hi");
+    (Direction::Right as int).println();
+    let Direction from_int = (sizeof(Direction)) as Direction;
+    (from_int as int).println();
+}

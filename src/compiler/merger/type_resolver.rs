@@ -126,6 +126,17 @@ fn resolve_enum_definition(
         }
     }
 
+    for (variant, value) in &variants {
+        if *value < i32::MIN as i64 || *value > i32::MAX as i64 {
+            return Err(anyhow::anyhow!(
+                "Enum variant {} value {} out of range at {}",
+                variant,
+                value,
+                enum_def.location
+            ));
+        }
+    }
+
     Ok(ResolvedEnum {
         id: enum_id,
         variants,
