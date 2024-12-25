@@ -6,9 +6,8 @@ use crate::compiler::analyzer::iterative_expression_analyzer::analyze_expression
 use crate::compiler::analyzer::program_analyzer::AnalyzerContext;
 use crate::compiler::analyzer::AnalyzerResult;
 use crate::compiler::lexer::location::Location;
-use crate::compiler::parser::parsed_expression::{
-    BinaryOp, ParsedExpression, ParsedExpressionKind, UnaryOp,
-};
+use crate::compiler::parser::binary_op::BinaryOp;
+use crate::compiler::parser::parsed_expression::{ParsedExpression, ParsedExpressionKind, UnaryOp};
 use anyhow::Context;
 
 pub fn analyze_assignable_expression(

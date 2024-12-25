@@ -1,7 +1,8 @@
 use crate::compiler::lexer::token::{StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
+use crate::compiler::parser::binary_op::BinaryOp;
 use crate::compiler::parser::parsed_expression::{
-    BinaryOp, ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryMathOp, UnaryOp,
+    ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryMathOp, UnaryOp,
 };
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::primary_expr_parser::{parse_function_call, parse_primary_expression};

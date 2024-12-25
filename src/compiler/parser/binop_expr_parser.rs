@@ -1,9 +1,9 @@
 use crate::compiler::lexer::token::{Keyword, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
+use crate::compiler::parser::binary_op::{BinaryLogicOp, BinaryMathOp, BinaryOp};
 use crate::compiler::parser::binop_constructor::{
     build_binop_expression, BinopElement, LEFT_ASSOCIATIVE_BINARY_OPERATORS,
 };
-use crate::compiler::parser::parsed_expression::{BinaryLogicOp, BinaryMathOp, BinaryOp};
 use crate::compiler::parser::parsed_expression::{ParsedExpression, ParsedExpressionKind, UnaryOp};
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::type_parser::parse_type;

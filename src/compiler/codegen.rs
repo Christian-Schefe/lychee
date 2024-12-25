@@ -198,7 +198,10 @@ impl CodegenContext {
     }
     pub fn call(&mut self, function: &str) {
         let label = self.function_labels.get(function).unwrap_or_else(|| {
-            panic!("Function label not found for function {}, {:?}", function, self.function_labels);
+            panic!(
+                "Function label not found for function {}, {:?}",
+                function, self.function_labels
+            );
         });
         self.lines.push(format!("call {}", label));
     }

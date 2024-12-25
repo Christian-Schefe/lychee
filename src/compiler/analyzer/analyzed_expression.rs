@@ -3,9 +3,8 @@ use crate::compiler::lexer::location::Location;
 use crate::compiler::merger::merged_expression::{FunctionId, FunctionRef};
 use crate::compiler::merger::resolved_functions::ResolvedFunctions;
 use crate::compiler::merger::resolved_types::ResolvedTypes;
-use crate::compiler::parser::parsed_expression::{
-    BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, UnaryMathOp,
-};
+use crate::compiler::parser::binary_op::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp};
+use crate::compiler::parser::parsed_expression::UnaryMathOp;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]

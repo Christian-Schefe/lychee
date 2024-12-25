@@ -5,9 +5,7 @@ use crate::compiler::merger::merged_expression::{FunctionId, ResolvedFunctionHea
 use crate::compiler::merger::resolved_functions::ResolvedFunctions;
 use crate::compiler::merger::resolved_types::ResolvedTypes;
 use crate::compiler::merger::MergerResult;
-use crate::compiler::parser::parsed_expression::{
-    ParsedFunction, ParsedProgram,
-};
+use crate::compiler::parser::parsed_expression::{ParsedFunction, ParsedProgram};
 use std::collections::HashMap;
 
 pub fn build_resolved_functions(

@@ -1,8 +1,7 @@
 use crate::compiler::analyzer::analyzed_expression::{AnalyzedBinaryOp, BinaryAssignOp};
 use crate::compiler::codegen::CodegenContext;
-use crate::compiler::parser::parsed_expression::{
-    BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, UnaryMathOp,
-};
+use crate::compiler::parser::binary_op::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp};
+use crate::compiler::parser::parsed_expression::UnaryMathOp;
 use crate::compiler::resolver::resolved_expression::{
     ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedLiteral,
     ResolvedUnaryOp, ValueData, ValueLocation,

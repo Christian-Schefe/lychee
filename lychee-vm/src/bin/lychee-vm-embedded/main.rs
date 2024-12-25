@@ -1,5 +1,5 @@
-use std::fs;
 use lychee_vm::execute;
+use std::fs;
 
 fn main() {
     let program = get_bundled();

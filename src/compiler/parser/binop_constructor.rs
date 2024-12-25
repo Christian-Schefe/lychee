@@ -1,8 +1,8 @@
 use crate::compiler::lexer::token::StaticToken;
-use crate::compiler::parser::parsed_expression::{
-    BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, BinaryOp, ParsedExpression,
-    ParsedExpressionKind,
+use crate::compiler::parser::binary_op::{
+    BinaryComparisonOp, BinaryLogicOp, BinaryMathOp, BinaryOp,
 };
+use crate::compiler::parser::parsed_expression::{ParsedExpression, ParsedExpressionKind};
 use crate::compiler::parser::parser_error::ParseResult;
 use lazy_static::lazy_static;
 

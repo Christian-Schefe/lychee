@@ -8,9 +8,9 @@ use crate::compiler::analyzer::expression_analyzer::{analyze_assignable_expressi
 use crate::compiler::analyzer::program_analyzer::{AnalyzerContext, LocalVariable};
 use crate::compiler::analyzer::AnalyzerResult;
 use crate::compiler::merger::merged_expression::StructRef;
+use crate::compiler::parser::binary_op::{BinaryComparisonOp, BinaryOp};
 use crate::compiler::parser::parsed_expression::{
-    BinaryComparisonOp, BinaryOp, ParsedExpression, ParsedExpressionKind, ParsedLiteral,
-    ParsedType, UnaryOp,
+    ParsedExpression, ParsedExpressionKind, ParsedLiteral, ParsedType, UnaryOp,
 };
 use anyhow::Context;
 use std::collections::HashMap;
