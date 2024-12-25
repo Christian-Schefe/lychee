@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/lychee-vm.iml" filepath="$PROJECT_DIR$/.idea/lychee-vm.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/lychee.iml" filepath="$PROJECT_DIR$/.idea/lychee.iml" />
     </modules>
   </component>
 </project>
