@@ -5,6 +5,7 @@ module std;
 import generic_test::{createStruct, test, MyStructIntInt, MyStruct};
 import std::arrays::*;
 import std::print::*;
+import std::vec::*;
 
 int main() {
     let Test arr = createArray::<int>(100);
@@ -38,6 +39,26 @@ int main() {
     b.println();
     let var arr2 = arr.map::<int, int>(test_fn);
     arr2.print();
+
+    let var vec = createVec::<int>(100);
+    (&vec).push::<int>(10);
+    (&vec).push::<int>(20);
+    vec.print();
+    (&vec).push::<int>(30);
+    vec.print();
+    vec.capacity.println();
+    (&vec).push::<int>(40);
+    (&vec).push::<int>(50);
+    vec.print();
+    vec.capacity.println();
+    (&vec).pop::<int>().println();
+    (&vec).pop::<int>().println();
+    (&vec).pop::<int>().println();
+    (&vec).pop::<int>().println();
+    vec.print();
+    (&vec).pop::<int>().println();
+    (&vec).pop::<int>().println();
+
     test() + arr.get::<int>(9)
 }
 

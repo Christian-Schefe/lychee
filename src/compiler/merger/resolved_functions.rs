@@ -71,8 +71,13 @@ impl ResolvedFunctions {
                     matching_param_types.pop().unwrap()?;
                 }
                 return Err(anyhow::anyhow!(
-                    "Function {} doesn't have matching parameters at {}",
+                    "Function {} doesn't have matching parameters {} at {}",
                     function_id.item_id,
+                    arg_types
+                        .iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<_>>()
+                        .join(","),
                     location
                 ));
             }

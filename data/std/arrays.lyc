@@ -57,3 +57,17 @@ Array<K> map<T,K>(Array<T> this, (T) -> K fn) {
     };
     arr
 }
+
+Array<T> filter<T>(Array<T> this, (T) -> bool fn) {
+    let Array<T> arr = createArray::<T>(this.size);
+    let int i = 0;
+    let int j = 0;
+    while (i < this.size) {
+        if fn(this.get::<T>(i)) {
+            arr.set::<T>(j, this.get::<T>(i));
+            j++;
+        };
+        i++;
+    };
+    arr
+}

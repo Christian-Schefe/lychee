@@ -1,0 +1,7 @@
+import ::std::print::*;
+
+unit panic(&char message) {
+    println("PANIC:");
+    println(message);
+    exit(1);
+}

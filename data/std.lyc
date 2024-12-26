@@ -2,3 +2,5 @@ module arrays;
 module strings;
 module io;
 module print;
+module vec;
+module panic;

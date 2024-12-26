@@ -1,0 +1,88 @@
+import ::std::panic::*;
+import ::std::print::*;
+
+struct Vec<T> {
+    &T data;
+    int size;
+    int capacity;
+}
+
+T get<T>(Vec<T> this, int index) {
+    if index < 0 || index >= this.size {
+        panic("Index out of bounds");
+    };
+    return this.data[index];
+}
+
+unit set<T>(Vec<T> this, int index, T value) {
+    if index < 0 || index >= this.size {
+        panic("Index out of bounds");
+    };
+    this.data[index] = value;
+}
+
+unit fill<T>(Vec<T> this, T value) {
+    let int i = 0;
+    while (i < this.size) {
+        this.data[i] = value;
+        i++;
+    }
+}
+
+unit print(Vec<int> this) {
+    let int i = 0;
+    write_char('[');
+    while (i < this.size) {
+        if i > 0 {
+            write_char(',');
+            write_char(' ');
+        };
+        this.data[i].print();
+        i++;
+    };
+    write_char(']');
+    write_char('\n');
+}
+
+Vec<T> createVec<T>(int initial_capacity) {
+    if initial_capacity <= 0 {
+        panic("Initial capacity must be greater than 0");
+    };
+    let Vec<T> arr = new Vec<T> {
+        data: malloc(initial_capacity * sizeof(T)) as &T,
+        size: 0,
+        capacity: initial_capacity
+    };
+    arr
+}
+
+unit free<T>(Vec<T> this) {
+    free(this.data as &unit);
+}
+
+unit push<T>(&Vec<T> this, T value) {
+    if this.size == this.capacity {
+        this.capacity *= 2;
+        this.data = reallocate(this.data as &unit, this.capacity * sizeof(T)) as &T;
+    };
+    this.data[this.size] = value;
+    this.size++;
+}
+
+T pop<T>(&Vec<T> this) {
+    if this.size == 0 {
+        panic("Pop from empty Vec");
+    };
+    this.size--;
+    let T value = this.data[this.size];
+    if this.size < this.capacity / 2 {
+        this.capacity /= 2;
+        this.data = reallocate(this.data as &unit, this.capacity * sizeof(T)) as &T;
+    };
+    value
+}
+
+&unit reallocate(&unit pointer, int bytes) {
+    free(pointer);
+    malloc(bytes)
+}
