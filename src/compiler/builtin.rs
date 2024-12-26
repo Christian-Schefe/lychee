@@ -1,8 +1,9 @@
 use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericIdKind, GenericParams};
 use crate::compiler::codegen::CodegenContext;
-use crate::compiler::merger::merged_expression::{FunctionId, FunctionRef, ResolvedFunctionHeader};
+use crate::compiler::merger::merged_expression::{FunctionId, ResolvedFunctionHeader};
 use crate::compiler::parser::item_id::ItemId;
 use crate::compiler::parser::ModuleIdentifier;
+use crate::compiler::unwrapper::unwrapped_type::{UnwrappedFunctionRef, UnwrappedTypeId};
 use std::collections::HashMap;
 
 pub struct BuiltinFunction {
@@ -27,8 +28,8 @@ impl BuiltinFunction {
         }
     }
 
-    fn function_ref(&self) -> FunctionRef {
-        FunctionRef {
+    fn function_ref(&self) -> UnwrappedFunctionRef {
+        UnwrappedFunctionRef {
             id: FunctionId {
                 id: ItemId {
                     module_id: ModuleIdentifier { path: vec![] },
@@ -38,7 +39,11 @@ impl BuiltinFunction {
                 generic_count: 0,
                 body_index: usize::MAX,
             },
-            arg_types: self.parameters.iter().map(|(_, ty)| ty.clone()).collect(),
+            arg_types: self
+                .parameters
+                .iter()
+                .map(|(_, ty)| UnwrappedTypeId::upgrade_no_generic(ty))
+                .collect(),
             generic_args: Vec::new(),
         }
     }
@@ -286,7 +291,7 @@ impl BuiltinFunction {
         function_ids
     }
 
-    pub fn get_builtin_function_refs() -> Vec<FunctionRef> {
+    pub fn get_builtin_function_refs() -> Vec<UnwrappedFunctionRef> {
         let mut function_refs = Vec::new();
         for function in BuiltinFunction::all_functions() {
             let id = function.function_ref();

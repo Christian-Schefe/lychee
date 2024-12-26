@@ -1,6 +1,7 @@
 use crate::compiler::lexer::token::{StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::binary_op::BinaryOp;
+use crate::compiler::parser::item_id::ParsedGenericId;
 use crate::compiler::parser::parsed_expression::{
     ParsedExpression, ParsedExpressionKind, ParsedLiteral, UnaryMathOp, UnaryOp,
 };
@@ -112,8 +113,6 @@ fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression>
                     format!("Failed to parse identifier at {}.", token.location)
                 })?;
 
-                println!("{} {}", id, tokens.peek().value);
-
                 match tokens.peek().value {
                     Token::Static(StaticToken::OpenParen) => {}
                     Token::Static(StaticToken::DoubleColon) => {}
@@ -139,25 +138,19 @@ fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression>
                     parse_generic_scoped_id_extension(tokens).with_context(|| {
                         format!("Failed to parse generic arguments at {}.", token.location)
                     })?;
+                let generic_id = ParsedGenericId {
+                    id: id,
+                    generic_args,
+                };
                 let var_expr = ParsedExpression::new(
-                    ParsedExpressionKind::Variable(id),
+                    ParsedExpressionKind::Variable(generic_id),
                     token.location.clone(),
                 );
 
-                expr = parse_function_call(
-                    tokens,
-                    var_expr,
-                    generic_args,
-                    location.clone(),
-                    Some(expr),
-                )?
+                expr = parse_function_call(tokens, var_expr, location.clone(), Some(expr))?
             }
-            Token::Static(StaticToken::DoubleColon) | Token::Static(StaticToken::OpenParen) => {
-                let generic_args =
-                    parse_generic_scoped_id_extension(tokens).with_context(|| {
-                        format!("Failed to parse generic arguments at {}.", token.location)
-                    })?;
-                expr = parse_function_call(tokens, expr, generic_args, location.clone(), None)?;
+            Token::Static(StaticToken::OpenParen) => {
+                expr = parse_function_call(tokens, expr, location.clone(), None)?;
             }
             Token::Static(StaticToken::OpenBracket) => {
                 tokens.shift();

@@ -101,11 +101,7 @@ impl GenericParams {
         }
         Self { order, kind }
     }
-    pub fn resolve(
-        &self,
-        generic_name: &GenericId,
-        generic_args: &Vec<AnalyzedTypeId>,
-    ) -> Option<AnalyzedTypeId> {
+    pub fn resolve<T: Clone>(&self, generic_name: &GenericId, generic_args: &Vec<T>) -> Option<T> {
         if self.kind != generic_name.kind {
             return None;
         }

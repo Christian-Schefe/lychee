@@ -3,6 +3,7 @@ use crate::compiler::lexer::location::Location;
 use crate::compiler::lexer::token::{Keyword, Literal, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::lexer::SrcToken;
+use crate::compiler::parser::item_id::ParsedGenericId;
 use crate::compiler::parser::parsed_expression::{
     ParsedExpression, ParsedExpressionKind, ParsedGenericParams, ParsedLiteral, ParsedType,
     ParsedTypeKind,
@@ -10,7 +11,9 @@ use crate::compiler::parser::parsed_expression::{
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::parsing_utils::parse_seperated_elements;
 use crate::compiler::parser::program_parser::{parse_expression, parse_identifier, pop_expected};
-use crate::compiler::parser::type_parser::{parse_scoped_id, parse_type};
+use crate::compiler::parser::type_parser::{
+    parse_generic_scoped_id_extension, parse_scoped_id, parse_type,
+};
 use anyhow::Context;
 use std::collections::HashSet;
 
@@ -21,21 +24,19 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
         Token::Identifier(_) | Token::Static(StaticToken::DoubleColon) => {
             let id = parse_scoped_id(tokens, current_module)
                 .with_context(|| format!("Failed to parse identifier at {}.", token.location))?;
-
-            let var_expr =
-                ParsedExpression::new(ParsedExpressionKind::Variable(id), token.location.clone());
-            Ok(var_expr)
-            /*match tokens.peek().value {
-                Token::Static(StaticToken::OpenParen) => {}
-                Token::Static(StaticToken::DoubleColon) => {}
-                _ => return Ok(var_expr),
-            }
-
             let generic_args = parse_generic_scoped_id_extension(tokens).with_context(|| {
                 format!("Failed to parse generic arguments at {}.", token.location)
             })?;
+            let generic_id = ParsedGenericId {
+                id: id,
+                generic_args,
+            };
+            let var_expr = ParsedExpression::new(
+                ParsedExpressionKind::Variable(generic_id),
+                token.location.clone(),
+            );
 
-            parse_function_call(tokens, var_expr, generic_args, token.location.clone(), None)*/
+            Ok(var_expr)
         }
         Token::Literal(lit) => {
             tokens.shift();
@@ -400,7 +401,6 @@ pub fn parse_generic_params(tokens: &mut TokenStack) -> ParseResult<ParsedGeneri
 pub fn parse_function_call(
     tokens: &mut TokenStack,
     function_expr: ParsedExpression,
-    generic_args: Vec<ParsedType>,
     location: Location,
     member_call: Option<ParsedExpression>,
 ) -> ParseResult<ParsedExpression> {
@@ -421,7 +421,6 @@ pub fn parse_function_call(
         ParsedExpressionKind::FunctionCall {
             expr: Box::new(function_expr),
             args,
-            generic_args,
         },
         location,
     ))

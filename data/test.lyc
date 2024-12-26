@@ -33,6 +33,11 @@ int main() {
     test_fn(10).println();
     call_test_fn(test_fn, 10).println();
     println("END TEST 2");
+    let ((int) -> int, int) -> int test_fn2 = generic_call_test::<int>;
+    let int b = test_fn2(test_fn, 12);
+    b.println();
+    let var arr2 = arr.map::<int, int>(test_fn);
+    arr2.print();
     test() + arr.get::<int>(9)
 }
 
@@ -63,5 +68,9 @@ int mul2(int a) {
 }
 
 int call_test_fn((int) -> int fn, int val) {
+    fn(val)
+}
+
+T generic_call_test<T>((T) -> T fn, T val) {
     fn(val)
 }

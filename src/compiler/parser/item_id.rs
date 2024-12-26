@@ -1,3 +1,4 @@
+use crate::compiler::parser::parsed_expression::ParsedType;
 use crate::compiler::parser::ModuleIdentifier;
 use std::fmt::Display;
 
@@ -13,6 +14,29 @@ impl Display for ParsedScopeId {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ParsedGenericId {
+    pub id: ParsedScopeId,
+    pub generic_args: Option<Vec<ParsedType>>,
+}
+
+impl Display for ParsedGenericId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.id)?;
+        if let Some(generic_args) = &self.generic_args {
+            write!(f, "<")?;
+            for (i, arg) in generic_args.iter().enumerate() {
+                if i > 0 {
+                    write!(f, ", ")?;
+                }
+                write!(f, "{}", arg.value)?;
+            }
+            write!(f, ">")?;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ItemId {
     pub module_id: ModuleIdentifier,
@@ -22,11 +46,5 @@ pub struct ItemId {
 impl Display for ItemId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}::{}", self.module_id.get_identifier(), self.item_name)
-    }
-}
-
-impl ItemId {
-    pub fn get_key(&self) -> String {
-        format!("{}::{}", self.module_id.get_identifier(), self.item_name)
     }
 }

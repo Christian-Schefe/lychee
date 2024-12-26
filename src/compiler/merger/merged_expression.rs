@@ -82,20 +82,6 @@ pub struct StructRef {
     pub generic_args: Vec<AnalyzedTypeId>,
 }
 
-impl StructRef {
-    pub fn get_key(&self) -> String {
-        format!(
-            "{};<{}>",
-            self.id.get_key(),
-            self.generic_args
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<_>>()
-                .join(",")
-        )
-    }
-}
-
 impl Display for StructRef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.id)?;
@@ -184,24 +170,5 @@ impl Display for FunctionRef {
             write!(f, ">")?;
         }
         Ok(())
-    }
-}
-
-impl FunctionRef {
-    pub fn get_key(&self) -> String {
-        format!(
-            "{};<{}>;({})",
-            self.id.get_key(),
-            self.generic_args
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<_>>()
-                .join(","),
-            self.arg_types
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<_>>()
-                .join(",")
-        )
     }
 }

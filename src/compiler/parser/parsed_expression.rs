@@ -1,6 +1,6 @@
 use crate::compiler::lexer::location::Src;
 use crate::compiler::parser::binary_op::BinaryOp;
-use crate::compiler::parser::item_id::ParsedScopeId;
+use crate::compiler::parser::item_id::{ParsedGenericId, ParsedScopeId};
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::{HashMap, HashSet};
@@ -103,7 +103,7 @@ pub enum ParsedExpressionKind {
         var_name: String,
         value: Box<ParsedExpression>,
     },
-    Variable(ParsedScopeId),
+    Variable(ParsedGenericId),
     Literal(ParsedLiteral),
     Unary {
         op: UnaryOp,
@@ -117,7 +117,6 @@ pub enum ParsedExpressionKind {
     FunctionCall {
         expr: Box<ParsedExpression>,
         args: Vec<ParsedExpression>,
-        generic_args: Vec<ParsedType>,
     },
     Sizeof(ParsedType),
     StructInstance {

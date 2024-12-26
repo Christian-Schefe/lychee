@@ -1,9 +1,10 @@
 use crate::compiler::analyzer::analyzed_expression::AnalyzedProgram;
-use crate::compiler::unwrapper::program_unwrapper::UnwrapperContext;
+use crate::compiler::analyzer::analyzed_type::{GenericIdKind, GenericParams};
+use crate::compiler::unwrapper::program_unwrapper::{GenericInfo, UnwrapperContext};
 use crate::compiler::unwrapper::unwrapped_type::UnwrappedProgram;
 use std::collections::{HashMap, HashSet};
 
-mod program_unwrapper;
+pub mod program_unwrapper;
 pub mod unwrapped_type;
 
 pub fn unwrap_program(program: &AnalyzedProgram) -> UnwrappedProgram {
@@ -17,11 +18,29 @@ pub fn unwrap_program(program: &AnalyzedProgram) -> UnwrappedProgram {
             .collect::<HashSet<String>>(),
     };
 
-    program_unwrapper::unwrap_function(&mut context, program, &program.main_function);
+    let mut generic_infos = GenericInfo {
+        generic_args: Vec::new(),
+        generic_params: GenericParams::empty(GenericIdKind::Function(
+            program.main_function.id.clone(),
+        )),
+    };
+
+    let unwrapped_main_ref = program_unwrapper::unwrap_function_ref(
+        &mut context,
+        program,
+        &mut generic_infos,
+        &program.main_function,
+    );
+
+    program_unwrapper::unwrap_function(
+        &mut context,
+        program,
+        &unwrapped_main_ref,
+    );
 
     UnwrappedProgram {
         structs: context.structs,
         functions: context.functions,
-        main_function_name: program.main_function.get_key(),
+        main_function_name: unwrapped_main_ref.get_key(),
     }
 }

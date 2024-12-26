@@ -47,3 +47,13 @@ Array<T> createArray<T>(int size) {
 unit free<T>(Array<T> this) {
     free(this.data as &unit);
 }
+
+Array<K> map<T,K>(Array<T> this, (T) -> K fn) {
+    let Array<K> arr = createArray::<K>(this.size);
+    let int i = 0;
+    while (i < this.size) {
+        arr.set::<K>(i, fn(this.get::<T>(i)));
+        i++;
+    };
+    arr
+}

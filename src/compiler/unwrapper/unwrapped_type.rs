@@ -1,8 +1,9 @@
 use crate::compiler::analyzer::analyzed_expression::{
     AnalyzedBinaryOp, AnalyzedConstant, AnalyzedLiteral, AnalyzedUnaryOp, BinaryAssignOp,
 };
+use crate::compiler::analyzer::analyzed_type::AnalyzedTypeId;
+use crate::compiler::merger::merged_expression::{FunctionId, ResolvedStruct, StructId};
 use std::collections::HashMap;
-use std::fmt::Display;
 
 #[derive(Debug, Clone)]
 pub struct UnwrappedProgram {
@@ -37,34 +38,93 @@ pub enum UnwrappedTypeId {
     FunctionType(Box<UnwrappedTypeId>, Vec<UnwrappedTypeId>),
 }
 
-impl Display for UnwrappedTypeId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            UnwrappedTypeId::Unit => write!(f, "unit"),
-            UnwrappedTypeId::Bool => write!(f, "bool"),
-            UnwrappedTypeId::Char => write!(f, "char"),
-            UnwrappedTypeId::Integer(size) => match size {
-                1 => write!(f, "byte"),
-                2 => write!(f, "short"),
-                4 => write!(f, "int"),
-                8 => write!(f, "long"),
-                _ => unreachable!("Invalid integer size: {}", size),
-            },
-            UnwrappedTypeId::Pointer(inner) => write!(f, "&{}", inner),
-            UnwrappedTypeId::StructType(struct_id) => {
-                write!(f, "{}", struct_id,)
+impl UnwrappedTypeId {
+    pub fn upgrade_no_generic(type_id: &AnalyzedTypeId) -> Self {
+        match type_id {
+            AnalyzedTypeId::Unit => UnwrappedTypeId::Unit,
+            AnalyzedTypeId::Bool => UnwrappedTypeId::Bool,
+            AnalyzedTypeId::Char => UnwrappedTypeId::Char,
+            AnalyzedTypeId::Integer(size) => UnwrappedTypeId::Integer(*size),
+            AnalyzedTypeId::Pointer(inner) => {
+                UnwrappedTypeId::Pointer(Box::new(Self::upgrade_no_generic(inner)))
             }
+            AnalyzedTypeId::StructType(_) => unimplemented!(),
+            AnalyzedTypeId::FunctionType(return_type, params) => UnwrappedTypeId::FunctionType(
+                Box::new(Self::upgrade_no_generic(return_type)),
+                params.iter().map(|x| Self::upgrade_no_generic(x)).collect(),
+            ),
+            AnalyzedTypeId::GenericType(_) => unreachable!(),
+            AnalyzedTypeId::EnumType(_) => unreachable!(),
+        }
+    }
+    pub fn get_key(&self) -> String {
+        match self {
+            UnwrappedTypeId::Unit => "unit".to_string(),
+            UnwrappedTypeId::Bool => "bool".to_string(),
+            UnwrappedTypeId::Char => "char".to_string(),
+            UnwrappedTypeId::Integer(size) => format!("int{}", size),
+            UnwrappedTypeId::Pointer(inner) => format!("&{}", inner.get_key()),
+            UnwrappedTypeId::StructType(id) => format!("Struct({})", id),
             UnwrappedTypeId::FunctionType(return_type, params) => {
-                write!(f, "fn(")?;
+                let mut key = format!("fn(");
                 for (i, param) in params.iter().enumerate() {
                     if i > 0 {
-                        write!(f, ", ")?;
+                        key.push_str(",");
                     }
-                    write!(f, "{}", param)?;
+                    key.push_str(&param.get_key());
                 }
-                write!(f, ") -> {}", return_type)
+                key.push_str(")->");
+                key.push_str(&return_type.get_key());
+                key
             }
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct UnwrappedFunctionRef {
+    pub id: FunctionId,
+    pub generic_args: Vec<UnwrappedTypeId>,
+    pub arg_types: Vec<UnwrappedTypeId>,
+}
+
+impl UnwrappedFunctionRef {
+    pub fn get_key(&self) -> String {
+        format!(
+            "{};<{}>;({})",
+            self.id.get_key(),
+            self.generic_args
+                .iter()
+                .map(|x| x.get_key())
+                .collect::<Vec<_>>()
+                .join(","),
+            self.arg_types
+                .iter()
+                .map(|x| x.get_key())
+                .collect::<Vec<_>>()
+                .join(",")
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct UnwrappedStructRef<'a> {
+    pub id: StructId,
+    pub generic_args: Vec<UnwrappedTypeId>,
+    pub struct_def: &'a ResolvedStruct,
+}
+
+impl<'a> UnwrappedStructRef<'a> {
+    pub fn get_key(&self) -> String {
+        format!(
+            "{};<{}>",
+            self.id.get_key(),
+            self.generic_args
+                .iter()
+                .map(|x| x.get_key())
+                .collect::<Vec<_>>()
+                .join(",")
+        )
     }
 }
 

@@ -10,7 +10,7 @@ use crate::compiler::analyzer::AnalyzerResult;
 use crate::compiler::lexer::location::Location;
 use crate::compiler::merger::merged_expression::StructRef;
 use crate::compiler::parser::binary_op::{BinaryComparisonOp, BinaryOp};
-use crate::compiler::parser::item_id::ParsedScopeId;
+use crate::compiler::parser::item_id::ParsedGenericId;
 use crate::compiler::parser::parsed_expression::{
     ParsedExpression, ParsedExpressionKind, ParsedLiteral, ParsedType, UnaryOp,
 };
@@ -889,27 +889,15 @@ pub fn analyze_expression(
                         )
                     }
                 },
-                ParsedExpressionKind::FunctionCall {
-                    expr,
-                    args,
-                    generic_args,
-                } => {
+                ParsedExpressionKind::FunctionCall { expr, args } => {
                     let new_len = output.len() - args.len();
                     let analyzed_args = output.split_off(new_len);
                     let arg_types = analyzed_args
                         .iter()
                         .map(|x| x.ty.clone())
                         .collect::<Vec<_>>();
-                    let analyzed_generic_args = analyze_generic_args(context, &generic_args)?;
 
-                    determine_function_call(
-                        context,
-                        expr,
-                        arg_types,
-                        &location,
-                        analyzed_args,
-                        analyzed_generic_args,
-                    )?
+                    determine_function_call(context, expr, arg_types, &location, analyzed_args)?
                 }
                 ParsedExpressionKind::Sizeof(ty) => {
                     let resolved_type = context
@@ -1096,6 +1084,20 @@ pub fn resolve_generic_type(
                 generic_args: resolved_generic_args,
             })
         }
+        AnalyzedTypeId::FunctionType(return_type, params) => {
+            let mut resolved_params = Vec::new();
+            for param in params.iter() {
+                resolved_params.push(resolve_generic_type(param, generic_params, generic_args));
+            }
+            AnalyzedTypeId::FunctionType(
+                Box::new(resolve_generic_type(
+                    return_type,
+                    generic_params,
+                    generic_args,
+                )),
+                resolved_params,
+            )
+        }
         _ => ty.clone(),
     }
 }
@@ -1123,18 +1125,18 @@ fn analyze_generic_args(
 
 fn determine_variable_expression(
     context: &mut AnalyzerContext,
-    var_name: &ParsedScopeId,
+    var_name: &ParsedGenericId,
     location: &Location,
     type_hint: Option<AnalyzedTypeId>,
 ) -> AnalyzerResult<(AnalyzedTypeId, AnalyzedExpressionKind)> {
-    if var_name.is_module_local {
-        let local_var = context.local_variables.get(&var_name.item_id.item_name);
+    if var_name.id.is_module_local && var_name.generic_args.is_none() {
+        let local_var = context.local_variables.get(&var_name.id.item_id.item_name);
         if let Some(local_var) = local_var {
             return Ok((
                 local_var.ty.clone(),
                 AnalyzedExpressionKind::ValueOfAssignable(AssignableExpression {
                     kind: AssignableExpressionKind::LocalVariable(
-                        var_name.item_id.item_name.clone(),
+                        var_name.id.item_id.item_name.clone(),
                     ),
                     ty: local_var.ty.clone(),
                 }),
@@ -1143,27 +1145,48 @@ fn determine_variable_expression(
     }
 
     if let Some(AnalyzedTypeId::FunctionType(return_type, params)) = type_hint {
-        if let Ok(function_id) =
-            context
-                .functions
-                .map_function_id(&var_name, params.clone(), Vec::new(), &location)
-        {
+        let default_generic_args = Vec::new();
+        let generic_args = var_name
+            .generic_args
+            .as_ref()
+            .unwrap_or(&default_generic_args);
+        let analyzed_generic_args = analyze_generic_args(context, &generic_args)?;
+
+        println!("{} {:?} {:?}", var_name.id, params, analyzed_generic_args);
+
+        let res = context.functions.map_function_id(
+            &var_name.id,
+            params.clone(),
+            analyzed_generic_args,
+            &location,
+        );
+
+        if let Ok(function_id) = res {
             return Ok((
                 AnalyzedTypeId::FunctionType(return_type.clone(), params),
                 AnalyzedExpressionKind::FunctionPointer(function_id),
             ));
+        } else if var_name.generic_args.is_some() {
+            res?;
         }
     }
 
-    if !var_name.is_module_local {
-        let enum_type = context.types.get_enum_from_variant(&var_name.item_id);
+    if var_name.generic_args.is_some() {
+        return Err(anyhow::anyhow!(
+            "Expected non-generic identifier at {}.",
+            location
+        ));
+    }
+
+    if !var_name.id.is_module_local {
+        let enum_type = context.types.get_enum_from_variant(&var_name.id.item_id);
         if let Some(enum_type) = enum_type {
             let val = enum_type
-                .get_variant_value(&var_name.item_id.item_name)
+                .get_variant_value(&var_name.id.item_id.item_name)
                 .ok_or_else(|| {
                     anyhow::anyhow!(
                         "Enum variant '{}' not found at {}.",
-                        var_name.item_id.item_name,
+                        var_name.id.item_id.item_name,
                         location
                     )
                 })?;
@@ -1180,7 +1203,7 @@ fn determine_variable_expression(
     } else {
         Err(anyhow::anyhow!(
             "Variable '{}' not found at {}.",
-            var_name.item_id.item_name,
+            var_name.id.item_id.item_name,
             location
         ))
     }
@@ -1192,7 +1215,6 @@ fn determine_function_call(
     arg_types: Vec<AnalyzedTypeId>,
     location: &Location,
     analyzed_args: Vec<AnalyzedExpression>,
-    analyzed_generic_args: Vec<AnalyzedTypeId>,
 ) -> AnalyzerResult<(AnalyzedTypeId, AnalyzedExpressionKind)> {
     if let Ok(analyzed_expr) = analyze_expression(context, expr) {
         if let AnalyzedTypeId::FunctionType(return_type, params) = analyzed_expr.ty.clone() {
@@ -1211,10 +1233,15 @@ fn determine_function_call(
     }
 
     if let ParsedExpressionKind::Variable(id) = &expr.value {
-        let function_ref =
-            context
-                .functions
-                .map_function_id(id, arg_types, analyzed_generic_args, &location)?;
+        let default_generic_args = Vec::new();
+        let generic_args = id.generic_args.as_ref().unwrap_or(&default_generic_args);
+        let analyzed_generic_args = analyze_generic_args(context, &generic_args)?;
+        let function_ref = context.functions.map_function_id(
+            &id.id,
+            arg_types,
+            analyzed_generic_args,
+            &location,
+        )?;
 
         let function_header = context.functions.get_header(&function_ref.id);
 

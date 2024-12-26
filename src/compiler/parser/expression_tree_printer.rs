@@ -229,12 +229,8 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
             }
             printer.dedent();
         }
-        ParsedExpressionKind::FunctionCall {
-            expr,
-            args,
-            generic_args,
-        } => {
-            printer.add_line(format!("FunctionCall<{:?}>", generic_args));
+        ParsedExpressionKind::FunctionCall { expr, args } => {
+            printer.add_line(format!("FunctionCall"));
             printer.indent();
             print_expression(printer, expr);
             for arg in args {

@@ -129,17 +129,19 @@ pub fn parse_import_id(
     })
 }
 
-pub fn parse_generic_scoped_id_extension(tokens: &mut TokenStack) -> ParseResult<Vec<ParsedType>> {
+pub fn parse_generic_scoped_id_extension(
+    tokens: &mut TokenStack,
+) -> ParseResult<Option<Vec<ParsedType>>> {
     let generic_args = if tokens.peek().value == Token::Static(StaticToken::DoubleColon) {
         tokens.shift();
         if tokens.peek().value == Token::Static(StaticToken::LessThan) {
-            parse_generic_args(tokens)?
+            Some(parse_generic_args(tokens)?)
         } else {
             tokens.reverse_shift();
-            Vec::new()
+            None
         }
     } else {
-        Vec::new()
+        None
     };
 
     Ok(generic_args)

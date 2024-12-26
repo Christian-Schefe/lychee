@@ -98,7 +98,7 @@ pub fn analyze_assignable_expression(
             )),
         },
         ParsedExpressionKind::Variable(name) => {
-            if !name.is_module_local {
+            if !name.id.is_module_local {
                 return Err(anyhow::anyhow!(
                     "Expected module local identifier at {}.",
                     expression.location
@@ -106,7 +106,7 @@ pub fn analyze_assignable_expression(
             }
             let var_type = context
                 .local_variables
-                .get(&name.item_id.item_name)
+                .get(&name.id.item_id.item_name)
                 .ok_or_else(|| {
                     anyhow::anyhow!(
                         "Variable '{}' not declared at {}.",
@@ -115,7 +115,7 @@ pub fn analyze_assignable_expression(
                     )
                 })?;
             Ok(AssignableExpression {
-                kind: AssignableExpressionKind::LocalVariable(name.item_id.item_name.clone()),
+                kind: AssignableExpressionKind::LocalVariable(name.id.item_id.item_name.clone()),
                 ty: var_type.ty.clone(),
             })
         }
