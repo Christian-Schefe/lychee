@@ -92,7 +92,7 @@ impl ResolvedFunctions {
         })
     }
 
-    pub fn get_header(&self, function_id: &FunctionId) -> Option<&ResolvedFunctionHeader> {
-        self.function_headers.get(&function_id)
+    pub fn get_header(&self, function_id: &FunctionId) -> &ResolvedFunctionHeader {
+        self.function_headers.get(&function_id).unwrap()
     }
 }

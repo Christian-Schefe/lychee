@@ -5,8 +5,8 @@ use crate::compiler::codegen::CodegenContext;
 use crate::compiler::parser::binary_op::{BinaryComparisonOp, BinaryLogicOp, BinaryMathOp};
 use crate::compiler::parser::parsed_expression::UnaryMathOp;
 use crate::compiler::resolver::resolved_expression::{
-    ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedUnaryOp,
-    ValueData, ValueLocation,
+    ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind,
+    ResolvedFunctionCallType, ResolvedUnaryOp, ValueData, ValueLocation,
 };
 
 pub fn generate_expression_code(context: &mut CodegenContext, expression: &ResolvedExpression) {
@@ -187,7 +187,7 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
             generate_assignable_expression_pointer_code(context, expr);
         }
         ResolvedExpressionKind::FunctionCall {
-            function_name,
+            call_type,
             args,
             return_stack_space,
         } => {
@@ -202,7 +202,15 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
                     context.current_stack_size += arg.value_data.size;
                 }
             }
-            context.call(function_name);
+            match call_type {
+                ResolvedFunctionCallType::Pointer(ptr) => {
+                    generate_expression_code(context, ptr);
+                    context.call_address("[r0]");
+                }
+                ResolvedFunctionCallType::Function(function_name) => {
+                    context.call_function(function_name)
+                }
+            }
         }
         ResolvedExpressionKind::FieldAccess {
             field_offset,
@@ -325,6 +333,10 @@ pub fn generate_expression_code(context: &mut CodegenContext, expression: &Resol
         },
         ResolvedExpressionKind::ConstantPointer(constant) => {
             let label = context.constant_labels[*constant].clone();
+            context.lea("r0", &label);
+        }
+        ResolvedExpressionKind::FunctionPointer(function) => {
+            let label = context.function_labels[function].clone();
             context.lea("r0", &label);
         }
     };

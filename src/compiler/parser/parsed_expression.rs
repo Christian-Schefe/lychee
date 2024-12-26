@@ -115,7 +115,7 @@ pub enum ParsedExpressionKind {
         right: Box<ParsedExpression>,
     },
     FunctionCall {
-        id: ParsedScopeId,
+        expr: Box<ParsedExpression>,
         args: Vec<ParsedExpression>,
         generic_args: Vec<ParsedType>,
     },
@@ -146,6 +146,19 @@ impl Display for ParsedTypeKind {
             ParsedTypeKind::Bool => write!(f, "bool"),
             ParsedTypeKind::Char => write!(f, "char"),
             ParsedTypeKind::Integer(size) => write!(f, "int{}", size),
+            ParsedTypeKind::Function {
+                return_type,
+                params,
+            } => {
+                write!(f, "fn(")?;
+                for (i, param) in params.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", param.value)?;
+                }
+                write!(f, ") -> {}", return_type.value)
+            }
         }
     }
 }
@@ -158,6 +171,10 @@ pub enum ParsedTypeKind {
     Bool,
     Char,
     Integer(usize),
+    Function {
+        return_type: Box<ParsedType>,
+        params: Vec<ParsedType>,
+    },
 }
 
 #[derive(Debug, Clone)]

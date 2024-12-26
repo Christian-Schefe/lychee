@@ -1,12 +1,13 @@
 use crate::compiler::analyzer::analyzed_expression::{
-    AnalyzedExpression, AnalyzedExpressionKind, AnalyzedProgram, AssignableExpression,
-    AssignableExpressionKind,
+    AnalyzedExpression, AnalyzedExpressionKind, AnalyzedFunctionCallType, AnalyzedProgram,
+    AssignableExpression, AssignableExpressionKind,
 };
 use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericParams};
 use crate::compiler::merger::merged_expression::{FunctionRef, StructRef};
 use crate::compiler::unwrapper::unwrapped_type::{
     AssignableUnwrappedExpression, AssignableUnwrappedExpressionKind, UnwrappedExpression,
-    UnwrappedExpressionKind, UnwrappedFunction, UnwrappedStruct, UnwrappedTypeId,
+    UnwrappedExpressionKind, UnwrappedFunction, UnwrappedFunctionCallType, UnwrappedStruct,
+    UnwrappedTypeId,
 };
 use std::collections::{HashMap, HashSet};
 
@@ -32,10 +33,7 @@ pub fn unwrap_function(
     let function = program.functions.get(&function_ref.id).unwrap_or_else(|| {
         panic!("Function not found: {}", function_ref.id);
     });
-    let header = program
-        .resolved_functions
-        .get_header(&function_ref.id)
-        .unwrap();
+    let header = program.resolved_functions.get_header(&function_ref.id);
     let unwrapped_body = unwrap_expression(
         context,
         program,
@@ -122,6 +120,28 @@ fn unwrap_type(
                 );
             }
             panic!("Generic type not found: {}", name);
+        }
+        AnalyzedTypeId::FunctionType(return_type, params) => {
+            let unwrapped_return_type = unwrap_type(
+                context,
+                program,
+                return_type,
+                func_generic_params,
+                func_generic_args,
+            );
+            let unwrapped_params = params
+                .iter()
+                .map(|param| {
+                    unwrap_type(
+                        context,
+                        program,
+                        param,
+                        func_generic_params,
+                        func_generic_args,
+                    )
+                })
+                .collect();
+            UnwrappedTypeId::FunctionType(Box::new(unwrapped_return_type), unwrapped_params)
         }
     }
 }
@@ -433,11 +453,23 @@ fn unwrap_expression(
                 expr: unwrapped_expr,
             }
         }
-        AnalyzedExpressionKind::FunctionCall {
-            function_name,
-            args,
-        } => {
-            unwrap_function(context, program, function_name);
+        AnalyzedExpressionKind::FunctionCall { call_type, args } => {
+            let unwrapped_call_type = match call_type {
+                AnalyzedFunctionCallType::FunctionPointer(inner) => {
+                    let unwrapped_expr = unwrap_expression(
+                        context,
+                        program,
+                        func_generic_params,
+                        func_generic_args,
+                        inner,
+                    );
+                    UnwrappedFunctionCallType::Pointer(Box::new(unwrapped_expr))
+                }
+                AnalyzedFunctionCallType::Function(function) => {
+                    unwrap_function(context, program, function);
+                    UnwrappedFunctionCallType::Function(function.get_key())
+                }
+            };
             let unwrapped_args = args
                 .iter()
                 .map(|arg| {
@@ -451,7 +483,7 @@ fn unwrap_expression(
                 })
                 .collect();
             UnwrappedExpressionKind::FunctionCall {
-                function_name: function_name.get_key(),
+                call_type: unwrapped_call_type,
                 args: unwrapped_args,
             }
         }
@@ -492,6 +524,10 @@ fn unwrap_expression(
             let unwrapped_ty =
                 unwrap_type(context, program, ty, func_generic_params, func_generic_args);
             UnwrappedExpressionKind::Sizeof(unwrapped_ty)
+        }
+        AnalyzedExpressionKind::FunctionPointer(function) => {
+            unwrap_function(context, program, function);
+            UnwrappedExpressionKind::FunctionPointer(function.get_key())
         }
     };
 

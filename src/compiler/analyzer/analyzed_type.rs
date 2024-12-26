@@ -15,6 +15,7 @@ pub enum AnalyzedTypeId {
     StructType(StructRef),
     EnumType(ItemId),
     GenericType(GenericId),
+    FunctionType(Box<AnalyzedTypeId>, Vec<AnalyzedTypeId>),
 }
 
 impl Display for AnalyzedTypeId {
@@ -39,6 +40,16 @@ impl Display for AnalyzedTypeId {
             }
             AnalyzedTypeId::GenericType(id) => {
                 write!(f, "{}", id)
+            }
+            AnalyzedTypeId::FunctionType(return_type, params) => {
+                write!(f, "fn(")?;
+                for (i, param) in params.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ",")?;
+                    }
+                    write!(f, "{}", param)?;
+                }
+                write!(f, ")->{}", return_type)
             }
         }
     }

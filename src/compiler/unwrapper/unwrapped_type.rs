@@ -34,6 +34,7 @@ pub enum UnwrappedTypeId {
     Integer(usize),
     Pointer(Box<UnwrappedTypeId>),
     StructType(String),
+    FunctionType(Box<UnwrappedTypeId>, Vec<UnwrappedTypeId>),
 }
 
 impl Display for UnwrappedTypeId {
@@ -52,6 +53,16 @@ impl Display for UnwrappedTypeId {
             UnwrappedTypeId::Pointer(inner) => write!(f, "&{}", inner),
             UnwrappedTypeId::StructType(struct_id) => {
                 write!(f, "{}", struct_id,)
+            }
+            UnwrappedTypeId::FunctionType(return_type, params) => {
+                write!(f, "fn(")?;
+                for (i, param) in params.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", param)?;
+                }
+                write!(f, ") -> {}", return_type)
             }
         }
     }
@@ -109,7 +120,7 @@ pub enum UnwrappedExpressionKind {
         expr: AssignableUnwrappedExpression,
     },
     FunctionCall {
-        function_name: String,
+        call_type: UnwrappedFunctionCallType,
         args: Vec<UnwrappedExpression>,
     },
     FieldAccess {
@@ -122,6 +133,13 @@ pub enum UnwrappedExpressionKind {
     StructInstance {
         fields: Vec<(String, UnwrappedExpression)>,
     },
+    FunctionPointer(String),
+}
+
+#[derive(Debug, Clone)]
+pub enum UnwrappedFunctionCallType {
+    Function(String),
+    Pointer(Box<UnwrappedExpression>),
 }
 
 #[derive(Debug, Clone)]

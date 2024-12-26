@@ -1,6 +1,6 @@
 use crate::compiler::parser::parsed_expression::{
-    ParsedExpression, ParsedExpressionKind, ParsedFunction, ParsedModule,
-    ParsedProgram, ParsedStructDefinition,
+    ParsedExpression, ParsedExpressionKind, ParsedFunction, ParsedModule, ParsedProgram,
+    ParsedStructDefinition,
 };
 use std::fmt::Display;
 
@@ -230,12 +230,13 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
             printer.dedent();
         }
         ParsedExpressionKind::FunctionCall {
-            id,
+            expr,
             args,
             generic_args,
         } => {
-            printer.add_line(format!("FunctionCall<{:?}>({:?})", generic_args, id));
+            printer.add_line(format!("FunctionCall<{:?}>", generic_args));
             printer.indent();
+            print_expression(printer, expr);
             for arg in args {
                 print_expression(printer, arg);
             }

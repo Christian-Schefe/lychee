@@ -1,14 +1,16 @@
 use crate::compiler::analyzer::analyzed_expression::{
     AnalyzedBinaryOp, AnalyzedConstant, AnalyzedExpression, AnalyzedExpressionKind,
-    AnalyzedLiteral, AnalyzedUnaryOp, AssignableExpression, AssignableExpressionKind,
-    BinaryAssignOp,
+    AnalyzedFunctionCallType, AnalyzedLiteral, AnalyzedUnaryOp, AssignableExpression,
+    AssignableExpressionKind, BinaryAssignOp,
 };
 use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericParams};
 use crate::compiler::analyzer::expression_analyzer::{analyze_assignable_expression, can_cast_to};
 use crate::compiler::analyzer::program_analyzer::{AnalyzerContext, LocalVariable};
 use crate::compiler::analyzer::AnalyzerResult;
+use crate::compiler::lexer::location::Location;
 use crate::compiler::merger::merged_expression::StructRef;
 use crate::compiler::parser::binary_op::{BinaryComparisonOp, BinaryOp};
+use crate::compiler::parser::item_id::ParsedScopeId;
 use crate::compiler::parser::parsed_expression::{
     ParsedExpression, ParsedExpressionKind, ParsedLiteral, ParsedType, UnaryOp,
 };
@@ -20,13 +22,13 @@ pub fn analyze_expression(
     expression: &ParsedExpression,
 ) -> AnalyzerResult<AnalyzedExpression> {
     let mut local_var_stack = vec![];
-    let mut stack = vec![(expression, false, false)];
+    let mut stack = vec![(expression, false, false, None)];
     let mut output: Vec<AnalyzedExpression> = vec![];
 
-    while let Some((stack_expr, was_visited, in_loop)) = stack.pop() {
+    while let Some((stack_expr, was_visited, in_loop, type_hint)) = stack.pop() {
         let location = stack_expr.location.clone();
         if !was_visited {
-            stack.push((stack_expr, true, in_loop));
+            stack.push((stack_expr, true, in_loop, type_hint));
             match &stack_expr.value {
                 ParsedExpressionKind::Block { expressions, .. } => {
                     local_var_stack.push(context.local_variables.clone());
@@ -35,18 +37,18 @@ pub fn analyze_expression(
                         .values_mut()
                         .for_each(|v| v.is_current_scope = false);
                     for expression in expressions.iter().rev() {
-                        stack.push((expression, false, in_loop));
+                        stack.push((expression, false, in_loop, None));
                     }
                 }
                 ParsedExpressionKind::Return(maybe_expr) => {
                     if let Some(expr) = maybe_expr {
-                        stack.push((expr, false, in_loop));
+                        stack.push((expr, false, in_loop, None));
                     }
                 }
                 ParsedExpressionKind::Continue => {}
                 ParsedExpressionKind::Break(maybe_expr) => {
                     if let Some(expr) = maybe_expr {
-                        stack.push((expr, false, in_loop));
+                        stack.push((expr, false, in_loop, None));
                     }
                 }
                 ParsedExpressionKind::If {
@@ -55,10 +57,10 @@ pub fn analyze_expression(
                     else_expr,
                 } => {
                     if let Some(else_expr) = else_expr {
-                        stack.push((else_expr, false, in_loop));
+                        stack.push((else_expr, false, in_loop, None));
                     }
-                    stack.push((then_block, false, in_loop));
-                    stack.push((condition, false, in_loop));
+                    stack.push((then_block, false, in_loop, None));
+                    stack.push((condition, false, in_loop, None));
                 }
                 ParsedExpressionKind::Loop {
                     init,
@@ -68,21 +70,38 @@ pub fn analyze_expression(
                     else_expr,
                 } => {
                     if let Some(else_expr) = else_expr {
-                        stack.push((else_expr, false, in_loop));
+                        stack.push((else_expr, false, in_loop, None));
                     }
-                    stack.push((loop_body, false, true));
+                    stack.push((loop_body, false, true, None));
                     if let Some(step) = step {
-                        stack.push((step, false, false));
+                        stack.push((step, false, false, None));
                     }
                     if let Some(condition) = condition {
-                        stack.push((condition, false, false));
+                        stack.push((condition, false, false, None));
                     }
                     if let Some(init) = init {
-                        stack.push((init, false, in_loop));
+                        stack.push((init, false, in_loop, None));
                     }
                 }
-                ParsedExpressionKind::Declaration { value, .. } => {
-                    stack.push((value, false, in_loop));
+                ParsedExpressionKind::Declaration {
+                    value, var_type, ..
+                } => {
+                    let resolved_type_hint = var_type
+                        .as_ref()
+                        .map(|x| {
+                            context
+                                .types
+                                .map_generic_parsed_type(&x.value, context.generic_params)
+                                .ok_or_else(|| {
+                                    anyhow::anyhow!(
+                                        "Declaration type '{}' not found at {}.",
+                                        x.value,
+                                        x.location
+                                    )
+                                })
+                        })
+                        .transpose()?;
+                    stack.push((value, false, in_loop, resolved_type_hint));
                 }
                 ParsedExpressionKind::Variable(_) => {}
                 ParsedExpressionKind::StructInstance {
@@ -111,7 +130,7 @@ pub fn analyze_expression(
                         .collect::<HashMap<_, _>>();
                     for field in struct_decl.field_order.iter().rev() {
                         if let Some(value) = present_fields.get(field) {
-                            stack.push((value, false, in_loop));
+                            stack.push((value, false, in_loop, None));
                             present_fields.remove(field);
                         } else {
                             Err(anyhow::anyhow!(
@@ -138,7 +157,7 @@ pub fn analyze_expression(
                         _ => false,
                     };
                     if !expr_is_assignable {
-                        stack.push((expr, false, in_loop));
+                        stack.push((expr, false, in_loop, None));
                     }
                 }
                 ParsedExpressionKind::Binary { left, right, op } => {
@@ -148,14 +167,14 @@ pub fn analyze_expression(
                         }
                         _ => false,
                     };
-                    stack.push((right, false, in_loop));
+                    stack.push((right, false, in_loop, None));
                     if !left_is_assignable {
-                        stack.push((left, false, in_loop));
+                        stack.push((left, false, in_loop, None));
                     }
                 }
                 ParsedExpressionKind::FunctionCall { args, .. } => {
                     for arg in args.iter().rev() {
-                        stack.push((arg, false, in_loop));
+                        stack.push((arg, false, in_loop, None));
                     }
                 }
                 ParsedExpressionKind::Sizeof(_) => {}
@@ -388,49 +407,7 @@ pub fn analyze_expression(
                     )
                 }
                 ParsedExpressionKind::Variable(var_name) => {
-                    if !var_name.is_module_local {
-                        let enum_type = context.types.get_enum_from_variant(&var_name.item_id);
-                        if let Some(enum_type) = enum_type {
-                            let val = enum_type
-                                .get_variant_value(&var_name.item_id.item_name)
-                                .ok_or_else(|| {
-                                    anyhow::anyhow!(
-                                        "Enum variant '{}' not found at {}.",
-                                        var_name.item_id.item_name,
-                                        location
-                                    )
-                                })?;
-                            (
-                                AnalyzedTypeId::EnumType(enum_type.id.clone()),
-                                AnalyzedExpressionKind::Literal(AnalyzedLiteral::Integer(val)),
-                            )
-                        } else {
-                            Err(anyhow::anyhow!(
-                                "Expected module local identifier at {}.",
-                                location
-                            ))?
-                        }
-                    } else {
-                        let local_var = context
-                            .local_variables
-                            .get(&var_name.item_id.item_name)
-                            .ok_or_else(|| {
-                                anyhow::anyhow!(
-                                    "Variable '{}' not declared at {}.",
-                                    var_name,
-                                    location
-                                )
-                            })?;
-                        (
-                            local_var.ty.clone(),
-                            AnalyzedExpressionKind::ValueOfAssignable(AssignableExpression {
-                                kind: AssignableExpressionKind::LocalVariable(
-                                    var_name.item_id.item_name.clone(),
-                                ),
-                                ty: local_var.ty.clone(),
-                            }),
-                        )
-                    }
+                    determine_variable_expression(context, var_name, &location, type_hint)?
                 }
                 ParsedExpressionKind::Literal(lit) => match lit {
                     ParsedLiteral::Unit => (
@@ -913,7 +890,7 @@ pub fn analyze_expression(
                     }
                 },
                 ParsedExpressionKind::FunctionCall {
-                    id,
+                    expr,
                     args,
                     generic_args,
                 } => {
@@ -925,58 +902,14 @@ pub fn analyze_expression(
                         .collect::<Vec<_>>();
                     let analyzed_generic_args = analyze_generic_args(context, &generic_args)?;
 
-                    let function_ref = context.functions.map_function_id(
-                        id,
+                    determine_function_call(
+                        context,
+                        expr,
                         arg_types,
-                        analyzed_generic_args,
                         &location,
-                    )?;
-                    let function_header = context
-                        .functions
-                        .get_header(&function_ref.id)
-                        .ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "Function '{}' not found at {}.",
-                                function_ref,
-                                location
-                            )
-                        })?;
-
-                    /*for (arg, arg_name) in analyzed_args
-                        .iter()
-                        .zip(function_header.parameter_order.iter())
-                        .rev()
-                    {
-                        let arg_type = function_header.parameter_types.get(arg_name).unwrap();
-                        let actual_arg_type = resolve_generic_type(
-                            arg_type,
-                            &function_header.generic_params,
-                            &function_ref.generic_args,
-                        );
-                        if arg.ty != actual_arg_type {
-                            Err(anyhow::anyhow!(
-                                "Function call argument has type '{}', but expected '{}' at {}.",
-                                arg.ty,
-                                actual_arg_type,
-                                arg.location
-                            ))?;
-                        }
-                    }*/
-
-                    let return_type = function_header.return_type.clone();
-                    let actual_return_type = resolve_generic_type(
-                        &return_type,
-                        &function_header.generic_params,
-                        &function_ref.generic_args,
-                    );
-
-                    (
-                        actual_return_type,
-                        AnalyzedExpressionKind::FunctionCall {
-                            function_name: function_ref,
-                            args: analyzed_args,
-                        },
-                    )
+                        analyzed_args,
+                        analyzed_generic_args,
+                    )?
                 }
                 ParsedExpressionKind::Sizeof(ty) => {
                     let resolved_type = context
@@ -1093,8 +1026,13 @@ fn assert_break_return_type(
         AnalyzedExpressionKind::Borrow { expr } => {
             assert_break_return_type_assignable(break_type, expr)
         }
-        AnalyzedExpressionKind::FunctionCall { args, .. } => {
-            let mut actual_break_type = break_type.cloned();
+        AnalyzedExpressionKind::FunctionCall { args, call_type } => {
+            let mut actual_break_type = match call_type {
+                AnalyzedFunctionCallType::Function(_) => break_type.cloned(),
+                AnalyzedFunctionCallType::FunctionPointer(inner) => {
+                    assert_break_return_type(break_type, inner)?
+                }
+            };
             for arg in args {
                 actual_break_type = assert_break_return_type(actual_break_type.as_ref(), arg)?;
             }
@@ -1110,6 +1048,7 @@ fn assert_break_return_type(
             assert_break_return_type_assignable(break_type, expr)
         }
         AnalyzedExpressionKind::Sizeof(_) => Ok(break_type.cloned()),
+        AnalyzedExpressionKind::FunctionPointer(_) => Ok(break_type.cloned()),
     }
 }
 
@@ -1180,4 +1119,123 @@ fn analyze_generic_args(
                 })
         })
         .collect()
+}
+
+fn determine_variable_expression(
+    context: &mut AnalyzerContext,
+    var_name: &ParsedScopeId,
+    location: &Location,
+    type_hint: Option<AnalyzedTypeId>,
+) -> AnalyzerResult<(AnalyzedTypeId, AnalyzedExpressionKind)> {
+    if var_name.is_module_local {
+        let local_var = context.local_variables.get(&var_name.item_id.item_name);
+        if let Some(local_var) = local_var {
+            return Ok((
+                local_var.ty.clone(),
+                AnalyzedExpressionKind::ValueOfAssignable(AssignableExpression {
+                    kind: AssignableExpressionKind::LocalVariable(
+                        var_name.item_id.item_name.clone(),
+                    ),
+                    ty: local_var.ty.clone(),
+                }),
+            ));
+        }
+    }
+
+    if let Some(AnalyzedTypeId::FunctionType(return_type, params)) = type_hint {
+        if let Ok(function_id) =
+            context
+                .functions
+                .map_function_id(&var_name, params.clone(), Vec::new(), &location)
+        {
+            return Ok((
+                AnalyzedTypeId::FunctionType(return_type.clone(), params),
+                AnalyzedExpressionKind::FunctionPointer(function_id),
+            ));
+        }
+    }
+
+    if !var_name.is_module_local {
+        let enum_type = context.types.get_enum_from_variant(&var_name.item_id);
+        if let Some(enum_type) = enum_type {
+            let val = enum_type
+                .get_variant_value(&var_name.item_id.item_name)
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Enum variant '{}' not found at {}.",
+                        var_name.item_id.item_name,
+                        location
+                    )
+                })?;
+            Ok((
+                AnalyzedTypeId::EnumType(enum_type.id.clone()),
+                AnalyzedExpressionKind::Literal(AnalyzedLiteral::Integer(val)),
+            ))
+        } else {
+            Err(anyhow::anyhow!(
+                "Expected module local identifier at {}.",
+                location
+            ))
+        }
+    } else {
+        Err(anyhow::anyhow!(
+            "Variable '{}' not found at {}.",
+            var_name.item_id.item_name,
+            location
+        ))
+    }
+}
+
+fn determine_function_call(
+    context: &mut AnalyzerContext,
+    expr: &ParsedExpression,
+    arg_types: Vec<AnalyzedTypeId>,
+    location: &Location,
+    analyzed_args: Vec<AnalyzedExpression>,
+    analyzed_generic_args: Vec<AnalyzedTypeId>,
+) -> AnalyzerResult<(AnalyzedTypeId, AnalyzedExpressionKind)> {
+    if let Ok(analyzed_expr) = analyze_expression(context, expr) {
+        if let AnalyzedTypeId::FunctionType(return_type, params) = analyzed_expr.ty.clone() {
+            if params == arg_types {
+                return Ok((
+                    *return_type,
+                    AnalyzedExpressionKind::FunctionCall {
+                        call_type: AnalyzedFunctionCallType::FunctionPointer(Box::new(
+                            analyzed_expr,
+                        )),
+                        args: analyzed_args,
+                    },
+                ));
+            }
+        }
+    }
+
+    if let ParsedExpressionKind::Variable(id) = &expr.value {
+        let function_ref =
+            context
+                .functions
+                .map_function_id(id, arg_types, analyzed_generic_args, &location)?;
+
+        let function_header = context.functions.get_header(&function_ref.id);
+
+        let return_type = function_header.return_type.clone();
+        let actual_return_type = resolve_generic_type(
+            &return_type,
+            &function_header.generic_params,
+            &function_ref.generic_args,
+        );
+
+        Ok((
+            actual_return_type,
+            AnalyzedExpressionKind::FunctionCall {
+                call_type: AnalyzedFunctionCallType::Function(function_ref),
+                args: analyzed_args,
+            },
+        ))
+    } else {
+        Err(anyhow::anyhow!(
+            "Expected callable expression at {}.",
+            location
+        ))
+    }
 }

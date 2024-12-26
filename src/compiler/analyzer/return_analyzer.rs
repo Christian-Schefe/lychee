@@ -1,6 +1,6 @@
 use crate::compiler::analyzer::analyzed_expression::{
-    AnalyzedBinaryOp, AnalyzedExpression, AnalyzedExpressionKind, AssignableExpression,
-    AssignableExpressionKind, BinaryAssignOp,
+    AnalyzedBinaryOp, AnalyzedExpression, AnalyzedExpressionKind, AnalyzedFunctionCallType,
+    AssignableExpression, AssignableExpressionKind, BinaryAssignOp,
 };
 
 pub fn always_calls_return(expression: &AnalyzedExpression) -> bool {
@@ -57,10 +57,13 @@ pub fn always_calls_return(expression: &AnalyzedExpression) -> bool {
             _ => always_calls_return_assignable(lhs) || always_calls_return(rhs),
         },
         AnalyzedExpressionKind::Borrow { expr } => always_calls_return_assignable(expr),
-        AnalyzedExpressionKind::FunctionCall {
-            function_name: _,
-            args,
-        } => args.iter().any(always_calls_return),
+        AnalyzedExpressionKind::FunctionCall { call_type, args } => {
+            args.iter().any(always_calls_return)
+                || match call_type {
+                    AnalyzedFunctionCallType::FunctionPointer(inner) => always_calls_return(inner),
+                    AnalyzedFunctionCallType::Function(_) => false,
+                }
+        }
         AnalyzedExpressionKind::FieldAccess {
             expr,
             field_name: _,
@@ -69,6 +72,7 @@ pub fn always_calls_return(expression: &AnalyzedExpression) -> bool {
         AnalyzedExpressionKind::Decrement(inner, _) => always_calls_return_assignable(inner),
         AnalyzedExpressionKind::ConstantPointer(_) => false,
         AnalyzedExpressionKind::Sizeof(_) => false,
+        AnalyzedExpressionKind::FunctionPointer(_) => false,
     }
 }
 

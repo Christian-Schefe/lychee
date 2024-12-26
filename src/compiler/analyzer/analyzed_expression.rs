@@ -74,7 +74,7 @@ pub enum AnalyzedExpressionKind {
         expr: AssignableExpression,
     },
     FunctionCall {
-        function_name: FunctionRef,
+        call_type: AnalyzedFunctionCallType,
         args: Vec<AnalyzedExpression>,
     },
     FieldAccess {
@@ -87,6 +87,13 @@ pub enum AnalyzedExpressionKind {
     StructInstance {
         fields: Vec<(String, AnalyzedExpression)>,
     },
+    FunctionPointer(FunctionRef),
+}
+
+#[derive(Debug, Clone)]
+pub enum AnalyzedFunctionCallType {
+    Function(FunctionRef),
+    FunctionPointer(Box<AnalyzedExpression>),
 }
 
 #[derive(Debug, Clone)]

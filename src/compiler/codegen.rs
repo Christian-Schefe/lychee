@@ -196,14 +196,21 @@ impl CodegenContext {
         self.lines
             .push(format!("signext #{} {register}", to_bytes * 8));
     }
-    pub fn call(&mut self, function: &str) {
+    pub fn call_function(&mut self, function: &str) {
+        let label = self.get_label(function);
+        self.lines.push(format!("call {}", label));
+    }
+    pub fn get_label(&mut self, function: &str) -> String {
         let label = self.function_labels.get(function).unwrap_or_else(|| {
             panic!(
                 "Function label not found for function {}, {:?}",
                 function, self.function_labels
             );
         });
-        self.lines.push(format!("call {}", label));
+        label.clone()
+    }
+    pub fn call_address(&mut self, address: &str) {
+        self.lines.push(format!("call {}", address));
     }
     pub fn read(&mut self, register: &str, address: &str) {
         self.lines.push(format!("read {register} {address}"));

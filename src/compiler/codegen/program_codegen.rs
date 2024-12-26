@@ -34,7 +34,7 @@ pub fn generate_program_code(context: &mut CodegenContext, program: &ResolvedPro
 }
 
 fn generate_program_prelude(context: &mut CodegenContext, main_function_name: &String) {
-    context.call(main_function_name);
+    context.call_function(main_function_name);
     context.exit();
 }
 

@@ -146,13 +146,13 @@ fn print_expression(printer: &mut Printer, expr: &ResolvedExpression) {
             printer.dedent();
         }
         ResolvedExpressionKind::FunctionCall {
-            function_name,
+            call_type,
             args,
             return_stack_space,
         } => {
             printer.add_line(format!(
-                "FunctionCall {} (return on stack: {})",
-                function_name, return_stack_space
+                "FunctionCall {:?} (return on stack: {})",
+                call_type, return_stack_space
             ));
             printer.indent();
             for arg in args {
@@ -187,6 +187,9 @@ fn print_expression(printer: &mut Printer, expr: &ResolvedExpression) {
         }
         ResolvedExpressionKind::ConstantPointer(constant) => {
             printer.add_line(format!("Constant {}", constant));
+        }
+        ResolvedExpressionKind::FunctionPointer(function_name) => {
+            printer.add_line(format!("FunctionPointer {}", function_name));
         }
     }
 }

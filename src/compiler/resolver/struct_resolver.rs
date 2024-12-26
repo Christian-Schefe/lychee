@@ -68,6 +68,7 @@ fn compute_type_size(
         UnwrappedTypeId::Bool => Ok(1),
         UnwrappedTypeId::Char => Ok(1),
         UnwrappedTypeId::Integer(size) => Ok(*size),
+        UnwrappedTypeId::FunctionType(_, _) => Ok(8),
     }
 }
 
@@ -79,5 +80,6 @@ pub fn get_type_size(type_id: &UnwrappedTypeId, struct_sizes: &HashMap<String, u
         UnwrappedTypeId::Bool => 1,
         UnwrappedTypeId::Char => 1,
         UnwrappedTypeId::Integer(size) => *size,
+        UnwrappedTypeId::FunctionType(_, _) => 8,
     }
 }

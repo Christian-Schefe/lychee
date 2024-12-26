@@ -4,8 +4,9 @@ use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::parser::item_id::{ItemId, ParsedScopeId};
 use crate::compiler::parser::parsed_expression::{ParsedImport, ParsedType, ParsedTypeKind};
 use crate::compiler::parser::parser_error::ParseResult;
+use crate::compiler::parser::parsing_utils::parse_seperated_elements;
 use crate::compiler::parser::primary_expr_parser::parse_generic_args;
-use crate::compiler::parser::program_parser::parse_identifier;
+use crate::compiler::parser::program_parser::{parse_identifier, pop_expected};
 use crate::compiler::parser::ModuleIdentifier;
 
 pub fn parse_type(tokens: &mut TokenStack) -> ParseResult<ParsedType> {
@@ -42,6 +43,28 @@ pub fn parse_type(tokens: &mut TokenStack) -> ParseResult<ParsedType> {
             Ok(ParsedType::new(
                 ParsedTypeKind::Pointer(Box::new(inner.value)),
                 location,
+            ))
+        }
+        Token::Static(StaticToken::OpenParen) => {
+            let (loc, elements, _) = parse_seperated_elements(
+                tokens,
+                Token::Static(StaticToken::OpenParen),
+                Token::Static(StaticToken::CloseParen),
+                Token::Static(StaticToken::Comma),
+                false,
+                true,
+                "function type",
+                parse_type,
+            )?;
+
+            pop_expected(tokens, Token::Static(StaticToken::Arrow))?;
+            let return_type = parse_type(tokens)?;
+            Ok(ParsedType::new(
+                ParsedTypeKind::Function {
+                    return_type: Box::new(return_type),
+                    params: elements,
+                },
+                loc,
             ))
         }
         _ => Err(LocationError::new(

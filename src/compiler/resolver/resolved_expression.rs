@@ -40,7 +40,8 @@ impl ValueData {
             UnwrappedTypeId::Bool
             | UnwrappedTypeId::Char
             | UnwrappedTypeId::Integer(_)
-            | UnwrappedTypeId::Pointer(_) => ValueData {
+            | UnwrappedTypeId::Pointer(_)
+            | UnwrappedTypeId::FunctionType(_, _) => ValueData {
                 location: ValueLocation::Register,
                 size,
             },
@@ -126,7 +127,7 @@ pub enum ResolvedExpressionKind {
         expr: ResolvedAssignableExpression,
     },
     FunctionCall {
-        function_name: String,
+        call_type: ResolvedFunctionCallType,
         args: Vec<ResolvedExpression>,
         return_stack_space: usize,
     },
@@ -140,6 +141,13 @@ pub enum ResolvedExpressionKind {
     StructInstance {
         fields: Vec<ResolvedExpression>,
     },
+    FunctionPointer(String),
+}
+
+#[derive(Debug, Clone)]
+pub enum ResolvedFunctionCallType {
+    Function(String),
+    Pointer(Box<ResolvedExpression>),
 }
 
 #[derive(Debug, Clone)]

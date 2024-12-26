@@ -3,12 +3,12 @@ use crate::compiler::analyzer::analyzed_expression::{
 };
 use crate::compiler::resolver::program_resolver::ResolverContext;
 use crate::compiler::resolver::resolved_expression::{
-    ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedUnaryOp,
-    ValueData,
+    ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind,
+    ResolvedFunctionCallType, ResolvedUnaryOp, ValueData,
 };
 use crate::compiler::unwrapper::unwrapped_type::{
     AssignableUnwrappedExpression, AssignableUnwrappedExpressionKind, UnwrappedExpression,
-    UnwrappedExpressionKind, UnwrappedTypeId,
+    UnwrappedExpressionKind, UnwrappedFunctionCallType, UnwrappedTypeId,
 };
 
 pub fn resolve_expression(
@@ -245,10 +245,17 @@ pub fn resolve_expression(
                 value_data,
             }
         }
-        UnwrappedExpressionKind::FunctionCall {
-            function_name,
-            args,
-        } => {
+        UnwrappedExpressionKind::FunctionCall { call_type, args } => {
+            let mapped_call_type = match call_type {
+                UnwrappedFunctionCallType::Function(function) => {
+                    ResolvedFunctionCallType::Function(function.clone())
+                }
+                UnwrappedFunctionCallType::Pointer(expr) => {
+                    let resolved_expr = resolve_expression(context, expr, false);
+                    ResolvedFunctionCallType::Pointer(Box::new(resolved_expr))
+                }
+            };
+
             let mut arg_stack_size = 0;
             let resolved_args = args
                 .iter()
@@ -265,7 +272,7 @@ pub fn resolve_expression(
 
             ResolvedExpression {
                 kind: ResolvedExpressionKind::FunctionCall {
-                    function_name: function_name.clone(),
+                    call_type: mapped_call_type,
                     args: resolved_args,
                     return_stack_space,
                 },
@@ -323,6 +330,11 @@ pub fn resolve_expression(
                 value_data,
             }
         }
+        UnwrappedExpressionKind::FunctionPointer(function) => ResolvedExpression {
+            kind: ResolvedExpressionKind::FunctionPointer(function.clone()),
+            stack_discard,
+            value_data,
+        },
     }
 }
 

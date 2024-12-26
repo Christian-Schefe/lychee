@@ -79,13 +79,7 @@ pub fn analyze_function(
     resolved_functions: &ResolvedFunctions,
     body: &ParsedExpression,
 ) -> AnalyzerResult<AnalyzedFunction> {
-    let header = resolved_functions.get_header(id).ok_or_else(|| {
-        anyhow::anyhow!(
-            "Function header not found for function {:?} at {}",
-            id,
-            body.location
-        )
-    })?;
+    let header = resolved_functions.get_header(id);
 
     let return_type = header.return_type.clone();
 

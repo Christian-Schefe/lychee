@@ -1,14 +1,11 @@
-use crate::compiler::analyzer::analyzed_expression::{
-    AnalyzedExpression, AnalyzedExpressionKind, AnalyzedFunction, AnalyzedProgram,
-    AssignableExpression, AssignableExpressionKind,
-};
+use crate::compiler::analyzer::analyzed_expression::{AnalyzedExpression, AnalyzedExpressionKind, AnalyzedFunction, AnalyzedFunctionCallType, AnalyzedProgram, AssignableExpression, AssignableExpressionKind};
 use crate::compiler::merger::merged_expression::ResolvedFunctionHeader;
 use crate::compiler::parser::expression_tree_printer::Printer;
 
 pub fn print_program(program: &AnalyzedProgram) {
     let mut printer = Printer::new();
     for (id, function) in program.functions.iter() {
-        let header = program.resolved_functions.get_header(id).unwrap();
+        let header = program.resolved_functions.get_header(id);
         print_function_header(&mut printer, header);
         print_function(&mut printer, function);
     }
@@ -162,11 +159,19 @@ fn print_expression(printer: &mut Printer, expr: &AnalyzedExpression) {
             printer.dedent();
         }
         AnalyzedExpressionKind::FunctionCall {
-            function_name,
+            call_type,
             args,
         } => {
-            printer.add_line(format!("FunctionCall({})", function_name));
+            printer.add_line(format!("FunctionCall"));
             printer.indent();
+            match call_type {
+                AnalyzedFunctionCallType::Function(function) => {
+                    printer.add_line(format!("Function({})", function));
+                }
+                AnalyzedFunctionCallType::FunctionPointer(inner) => {
+                    print_expression(printer, inner);
+                }
+            }
             for arg in args {
                 print_expression(printer, arg);
             }
@@ -192,6 +197,9 @@ fn print_expression(printer: &mut Printer, expr: &AnalyzedExpression) {
         }
         AnalyzedExpressionKind::Sizeof(ty) => {
             printer.add_line(format!("Sizeof({:?})", ty));
+        }
+        AnalyzedExpressionKind::FunctionPointer(function) => {
+            printer.add_line(format!("FunctionPointer({})", function));
         }
     }
 }

@@ -139,8 +139,25 @@ fn parse_postfix_unary(tokens: &mut TokenStack) -> ParseResult<ParsedExpression>
                     parse_generic_scoped_id_extension(tokens).with_context(|| {
                         format!("Failed to parse generic arguments at {}.", token.location)
                     })?;
+                let var_expr = ParsedExpression::new(
+                    ParsedExpressionKind::Variable(id),
+                    token.location.clone(),
+                );
 
-                expr = parse_function_call(tokens, id, generic_args, location.clone(), Some(expr))?
+                expr = parse_function_call(
+                    tokens,
+                    var_expr,
+                    generic_args,
+                    location.clone(),
+                    Some(expr),
+                )?
+            }
+            Token::Static(StaticToken::DoubleColon) | Token::Static(StaticToken::OpenParen) => {
+                let generic_args =
+                    parse_generic_scoped_id_extension(tokens).with_context(|| {
+                        format!("Failed to parse generic arguments at {}.", token.location)
+                    })?;
+                expr = parse_function_call(tokens, expr, generic_args, location.clone(), None)?;
             }
             Token::Static(StaticToken::OpenBracket) => {
                 tokens.shift();

@@ -118,6 +118,21 @@ impl CollectedTypeData {
             ParsedTypeKind::Bool => Some(AnalyzedTypeId::Bool),
             ParsedTypeKind::Char => Some(AnalyzedTypeId::Char),
             ParsedTypeKind::Integer(size) => Some(AnalyzedTypeId::Integer(*size)),
+            ParsedTypeKind::Function {
+                return_type,
+                params,
+            } => {
+                let mapped_return =
+                    self.map_generic_parsed_type(&return_type.value, generic_params)?;
+                let mapped_params = params
+                    .iter()
+                    .map(|x| self.map_generic_parsed_type(&x.value, generic_params))
+                    .collect::<Option<Vec<AnalyzedTypeId>>>()?;
+                Some(AnalyzedTypeId::FunctionType(
+                    Box::new(mapped_return),
+                    mapped_params,
+                ))
+            }
         }
     }
 }

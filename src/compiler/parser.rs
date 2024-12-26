@@ -14,6 +14,7 @@ mod primary_expr_parser;
 mod program_parser;
 mod type_parser;
 mod unop_expr_parser;
+mod parsing_utils;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct ModuleIdentifier {

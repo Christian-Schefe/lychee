@@ -51,6 +51,7 @@ pub enum StaticToken {
     LogicalAndAssign,
     LogicalOrAssign,
     DoubleColon,
+    Arrow,
 }
 
 impl StaticToken {
@@ -103,10 +104,11 @@ impl StaticToken {
             StaticToken::LogicalAndAssign => "&&=".to_string(),
             StaticToken::LogicalOrAssign => "||=".to_string(),
             StaticToken::DoubleColon => "::".to_string(),
+            StaticToken::Arrow => "->".to_string(),
         }
     }
 
-    pub const VALUES: [StaticToken; 47] = [
+    pub const VALUES: [StaticToken; 48] = [
         StaticToken::Semicolon,
         StaticToken::OpenParen,
         StaticToken::CloseParen,
@@ -154,6 +156,7 @@ impl StaticToken {
         StaticToken::LogicalAndAssign,
         StaticToken::LogicalOrAssign,
         StaticToken::DoubleColon,
+        StaticToken::Arrow,
     ];
 
     pub const MAX_LENGTH: usize = 3;

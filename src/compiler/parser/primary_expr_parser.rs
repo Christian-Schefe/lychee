@@ -3,16 +3,14 @@ use crate::compiler::lexer::location::Location;
 use crate::compiler::lexer::token::{Keyword, Literal, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::lexer::SrcToken;
-use crate::compiler::parser::item_id::ParsedScopeId;
 use crate::compiler::parser::parsed_expression::{
     ParsedExpression, ParsedExpressionKind, ParsedGenericParams, ParsedLiteral, ParsedType,
     ParsedTypeKind,
 };
 use crate::compiler::parser::parser_error::ParseResult;
+use crate::compiler::parser::parsing_utils::parse_seperated_elements;
 use crate::compiler::parser::program_parser::{parse_expression, parse_identifier, pop_expected};
-use crate::compiler::parser::type_parser::{
-    parse_generic_scoped_id_extension, parse_scoped_id, parse_type,
-};
+use crate::compiler::parser::type_parser::{parse_scoped_id, parse_type};
 use anyhow::Context;
 use std::collections::HashSet;
 
@@ -24,22 +22,20 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             let id = parse_scoped_id(tokens, current_module)
                 .with_context(|| format!("Failed to parse identifier at {}.", token.location))?;
 
-            match tokens.peek().value {
+            let var_expr =
+                ParsedExpression::new(ParsedExpressionKind::Variable(id), token.location.clone());
+            Ok(var_expr)
+            /*match tokens.peek().value {
                 Token::Static(StaticToken::OpenParen) => {}
                 Token::Static(StaticToken::DoubleColon) => {}
-                _ => {
-                    return Ok(ParsedExpression::new(
-                        ParsedExpressionKind::Variable(id),
-                        token.location,
-                    ))
-                }
+                _ => return Ok(var_expr),
             }
 
             let generic_args = parse_generic_scoped_id_extension(tokens).with_context(|| {
                 format!("Failed to parse generic arguments at {}.", token.location)
             })?;
 
-            parse_function_call(tokens, id, generic_args, token.location.clone(), None)
+            parse_function_call(tokens, var_expr, generic_args, token.location.clone(), None)*/
         }
         Token::Literal(lit) => {
             tokens.shift();
@@ -266,13 +262,15 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
 }
 
 pub fn parse_block_expression(tokens: &mut TokenStack) -> ParseResult<ParsedExpression> {
-    let (location, expressions, has_trailed) = parse_seperated_expressions(
+    let (location, expressions, has_trailed) = parse_seperated_elements(
         tokens,
         Token::Static(StaticToken::OpenBrace),
         Token::Static(StaticToken::CloseBrace),
         Token::Static(StaticToken::Semicolon),
         true,
+        true,
         "block",
+        parse_expression,
     )?;
     Ok(ParsedExpression::new(
         ParsedExpressionKind::Block {
@@ -281,54 +279,6 @@ pub fn parse_block_expression(tokens: &mut TokenStack) -> ParseResult<ParsedExpr
         },
         location,
     ))
-}
-
-pub fn parse_seperated_expressions(
-    tokens: &mut TokenStack,
-    open_token: Token,
-    close_token: Token,
-    separator_token: Token,
-    allow_trailing: bool,
-    component_name: &str,
-) -> ParseResult<(Location, Vec<ParsedExpression>, bool)> {
-    let token = pop_expected(tokens, open_token)?;
-    let mut expressions = Vec::new();
-    let mut has_trailed = false;
-    while tokens.peek().value != close_token {
-        let expr_location = tokens.location().clone();
-        let expr = parse_expression(tokens).with_context(|| {
-            format!(
-                "Failed to parse expression in {component_name} at {}.",
-                expr_location
-            )
-        })?;
-        expressions.push(expr);
-        if tokens.peek().value == close_token {
-            break;
-        } else if tokens.peek().value == separator_token {
-            tokens.shift();
-            if tokens.peek().value == close_token {
-                has_trailed = true;
-                break;
-            }
-        } else {
-            Err(anyhow::anyhow!(
-                "Expected {} or {} after expression in {component_name} at {}.",
-                separator_token,
-                close_token,
-                tokens.location().clone()
-            ))?;
-        }
-    }
-    if !allow_trailing && has_trailed {
-        Err(anyhow::anyhow!(
-            "Unexpected trailing {} in {component_name} at {}.",
-            separator_token,
-            tokens.location().clone()
-        ))?;
-    }
-    pop_expected(tokens, close_token)?;
-    Ok((token.location, expressions, has_trailed))
 }
 
 fn parse_struct_literal(
@@ -449,25 +399,27 @@ pub fn parse_generic_params(tokens: &mut TokenStack) -> ParseResult<ParsedGeneri
 
 pub fn parse_function_call(
     tokens: &mut TokenStack,
-    function_id: ParsedScopeId,
+    function_expr: ParsedExpression,
     generic_args: Vec<ParsedType>,
     location: Location,
     member_call: Option<ParsedExpression>,
 ) -> ParseResult<ParsedExpression> {
-    let (_, mut args, _) = parse_seperated_expressions(
+    let (_, mut args, _) = parse_seperated_elements(
         tokens,
         Token::Static(StaticToken::OpenParen),
         Token::Static(StaticToken::CloseParen),
         Token::Static(StaticToken::Comma),
         false,
+        true,
         "function call arguments",
+        parse_expression,
     )?;
     if let Some(member_obj) = member_call {
         args.insert(0, member_obj);
     }
     Ok(ParsedExpression::new(
         ParsedExpressionKind::FunctionCall {
-            id: function_id,
+            expr: Box::new(function_expr),
             args,
             generic_args,
         },

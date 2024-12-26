@@ -26,6 +26,13 @@ int main() {
     println("hi");
     (TestEnum::E as int).print();
     enum_test::enum_test();
+    println("END TEST");
+    let (int) -> int test_fn = mul2;
+    let int a = {test_fn}(10);
+    a.println();
+    test_fn(10).println();
+    call_test_fn(test_fn, 10).println();
+    println("END TEST 2");
     test() + arr.get::<int>(9)
 }
 
@@ -49,4 +56,12 @@ int generic_sizeof_test<T, K>() {
 
 unit unit_test(unit a, unit b) {
     a
+}
+
+int mul2(int a) {
+    a * 2
+}
+
+int call_test_fn((int) -> int fn, int val) {
+    fn(val)
 }
