@@ -174,18 +174,20 @@ impl BuiltinFunction {
             AnalyzedTypeId::Unit,
             vec![
                 (
-                    "dest".to_string(),
-                    AnalyzedTypeId::Pointer(Box::new(AnalyzedTypeId::Char)),
+                    "src".to_string(),
+                    AnalyzedTypeId::Pointer(Box::new(AnalyzedTypeId::Unit)),
                 ),
                 (
-                    "src".to_string(),
-                    AnalyzedTypeId::Pointer(Box::new(AnalyzedTypeId::Char)),
+                    "dest".to_string(),
+                    AnalyzedTypeId::Pointer(Box::new(AnalyzedTypeId::Unit)),
                 ),
                 ("length".to_string(), AnalyzedTypeId::Integer(4)),
             ],
             Box::new(|context| {
                 context.load(4, "r0", "[sp;8]");
-                context.memcopy("r0", "[sp;12]", "[sp;20]");
+                context.load(8, "r1", "[sp;12]");
+                context.load(8, "r2", "[sp;20]");
+                context.memcopy("r0", "[r1]", "[r2]");
                 context.ret();
             }),
         )

@@ -40,11 +40,13 @@ int main() {
     let var arr2 = arr.map::<int, int>(test_fn);
     arr2.print();
 
-    let var vec = createVec::<int>(100);
+    let var vec = createVec::<int>(1);
     (&vec).push::<int>(10);
     (&vec).push::<int>(20);
     vec.print();
     (&vec).push::<int>(30);
+    let var cloned_vec = vec.clone::<int>();
+    cloned_vec.print();
     vec.print();
     vec.capacity.println();
     (&vec).push::<int>(40);
