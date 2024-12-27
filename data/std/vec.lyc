@@ -93,6 +93,24 @@ Vec<T> clone<T>(Vec<T> this) {
     new_vec
 }
 
+Vec<K> map<T,K>(Vec<T> this, (T) -> K fn) {
+    let Vec<K> arr = createVec::<K>(this.size);
+    let int i = 0;
+    while (i < this.size) {
+        (&arr).push::<K>(fn(this.get::<T>(i)));
+        i++;
+    };
+    arr
+}
+
+unit foreach<T>(Vec<T> this, (T) -> unit fn) {
+    let int i = 0;
+    while (i < this.size) {
+        fn(this.get::<T>(i));
+        i++;
+    };
+}
+
 &unit reallocate(&unit pointer, int bytes) {
     free(pointer);
     malloc(bytes)

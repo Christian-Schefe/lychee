@@ -17,8 +17,8 @@ impl CollectedFunctionData {
     pub fn find_function_id(
         &self,
         parsed_function_id: &ParsedScopeId,
-        arg_count: usize,
-        generic_count: usize,
+        arg_count: Option<usize>,
+        generic_count: Option<usize>,
     ) -> Option<Vec<FunctionId>> {
         let module_functions = self.functions.get(&parsed_function_id.item_id.module_id)?;
         let module_function_imports = self
@@ -27,13 +27,17 @@ impl CollectedFunctionData {
 
         let mut matching = Vec::new();
 
+        let maybe_add = |matching: &mut Vec<FunctionId>, id: &FunctionId| {
+            if generic_count.is_none_or(|x| x == id.generic_count)
+                && arg_count.is_none_or(|x| x == id.param_count)
+            {
+                matching.push(id.clone());
+            }
+        };
+
         if let Some(function_ids) = module_functions.get(&parsed_function_id.item_id.item_name) {
             for function_id in function_ids {
-                if function_id.generic_count == generic_count
-                    && function_id.param_count == arg_count
-                {
-                    matching.push(function_id.clone());
-                }
+                maybe_add(&mut matching, function_id);
             }
         }
 
@@ -42,22 +46,14 @@ impl CollectedFunctionData {
                 module_function_imports.get(&parsed_function_id.item_id.item_name)
             {
                 for function_id in function_ids {
-                    if function_id.generic_count == generic_count
-                        && function_id.param_count == arg_count
-                    {
-                        matching.push(function_id.clone());
-                    }
+                    maybe_add(&mut matching, function_id);
                 }
             }
             if let Some(builtin_fn_id) = self
                 .builtin_functions
                 .get(&parsed_function_id.item_id.item_name)
             {
-                if builtin_fn_id.generic_count == generic_count
-                    && builtin_fn_id.param_count == arg_count
-                {
-                    matching.push(builtin_fn_id.clone());
-                }
+                maybe_add(&mut matching, builtin_fn_id);
             }
         }
 

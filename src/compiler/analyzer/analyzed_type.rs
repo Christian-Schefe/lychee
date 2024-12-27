@@ -107,6 +107,16 @@ impl GenericParams {
         }
         Some(generic_args[generic_name.index].clone())
     }
+    
+    pub fn get_all_ids(&self) -> Vec<GenericId> {
+        self.order
+            .iter()
+            .map(|(name, index)| GenericId {
+                kind: self.kind.clone(),
+                index: *index,
+            })
+            .collect()
+    }
 
     pub fn get_generic_from_name(&self, generic_name: &String) -> Option<GenericId> {
         if let Some(index) = self.order.get(generic_name) {

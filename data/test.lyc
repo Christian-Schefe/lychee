@@ -9,15 +9,15 @@ import std::vec::*;
 
 int main() {
     let Test arr = createArray::<int>(100);
-    arr.fill::<int>(10);
-    arr.set::<int>(8, generic_sizeof_test::<MyStruct<char, long>, int>());
+    arr.fill(10);
+    arr.set(8, generic_sizeof_test::<MyStruct<char, long>, int>());
     for (let int i = 0; i < 5; i++) {
-        arr.set::<int>(i, i);
+        arr.set(i, i);
         continue.unit_test(break);
-        arr.set::<int>(i, i + 50);
+        arr.set(i, i + 50);
     };
     arr.print();
-    let MyStructIntInt my_struct = createStruct::<int, int>(10, 20, 30);
+    let MyStructIntInt my_struct = createStruct(10, 20, 30);
     std::io::file_test();
     generic_sizeof_test::<int>();
 
@@ -29,7 +29,7 @@ int main() {
     enum_test::enum_test();
     println("END TEST");
     let (int) -> int test_fn = mul2;
-    let int a = {test_fn}(10);
+    let int a = test_fn(10);
     a.println();
     test_fn(10).println();
     call_test_fn(test_fn, 10).println();
@@ -37,31 +37,42 @@ int main() {
     let ((int) -> int, int) -> int test_fn2 = generic_call_test::<int>;
     let int b = test_fn2(test_fn, 12);
     b.println();
-    let var arr2 = arr.map::<int, int>(test_fn);
+    let var arr2 = arr.map(test_fn);
     arr2.print();
 
     let var vec = createVec::<int>(1);
-    (&vec).push::<int>(10);
-    (&vec).push::<int>(20);
+    (&vec).push(10);
+    (&vec).push(20);
     vec.print();
-    (&vec).push::<int>(30);
-    let var cloned_vec = vec.clone::<int>();
+    (&vec).push(30);
+    let var cloned_vec = vec.clone();
     cloned_vec.print();
     vec.print();
     vec.capacity.println();
-    (&vec).push::<int>(40);
-    (&vec).push::<int>(50);
+    (&vec).push(40);
+    (&vec).push(50);
     vec.print();
     vec.capacity.println();
-    (&vec).pop::<int>().println();
-    (&vec).pop::<int>().println();
-    (&vec).pop::<int>().println();
-    (&vec).pop::<int>().println();
+    let var vec2 = vec.map(mul2);
+    vec2.print();
+    (&vec).pop().println();
+    (&vec).pop().println();
+    (&vec).pop().println();
+    (&vec).pop().println();
     vec.print();
-    (&vec).pop::<int>().println();
-    (&vec).pop::<int>().println();
 
-    test() + arr.get::<int>(9)
+    let (int) -> unit printer = println;
+    vec2.foreach(printer);
+
+    (&vec).pop().println();
+    (&vec).pop().println();
+
+
+    test() + arr.get(9)
+}
+
+unit my_println(int a) {
+    a.println()
 }
 
 enum TestEnum {
@@ -88,6 +99,10 @@ unit unit_test(unit a, unit b) {
 
 int mul2(int a) {
     a * 2
+}
+
+char mul3(char a) {
+    a
 }
 
 int call_test_fn((int) -> int fn, int val) {

@@ -3,7 +3,7 @@ use crate::compiler::analyzer::analyzed_expression::{
     AnalyzedFunctionCallType, AnalyzedLiteral, AnalyzedUnaryOp, AssignableExpression,
     AssignableExpressionKind, BinaryAssignOp,
 };
-use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericParams};
+use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericId, GenericParams};
 use crate::compiler::analyzer::expression_analyzer::{analyze_assignable_expression, can_cast_to};
 use crate::compiler::analyzer::program_analyzer::{AnalyzerContext, LocalVariable};
 use crate::compiler::analyzer::AnalyzerResult;
@@ -1102,6 +1102,60 @@ pub fn resolve_generic_type(
     }
 }
 
+pub fn check_matches_try_find_generic_args(
+    arg_ty: &AnalyzedTypeId,
+    param_ty: &AnalyzedTypeId,
+    generic_arg_map: &mut HashMap<GenericId, AnalyzedTypeId>,
+) -> AnalyzerResult<()> {
+    match (arg_ty, param_ty) {
+        (ty, AnalyzedTypeId::GenericType(generic_id)) => {
+            if generic_arg_map
+                .insert(generic_id.clone(), ty.clone())
+                .is_some_and(|x| x != *ty)
+            {
+                return Err(anyhow::anyhow!(
+                    "Ambiguous generic argument '{}'.",
+                    generic_id
+                ));
+            }
+            Ok(())
+        }
+        (AnalyzedTypeId::Pointer(inner), AnalyzedTypeId::Pointer(inner2)) => {
+            check_matches_try_find_generic_args(inner, inner2, generic_arg_map)
+        }
+        (AnalyzedTypeId::StructType(struct_ref), AnalyzedTypeId::StructType(struct_ref2)) => {
+            for (arg, arg2) in struct_ref
+                .generic_args
+                .iter()
+                .zip(struct_ref2.generic_args.iter())
+            {
+                check_matches_try_find_generic_args(arg, arg2, generic_arg_map)?
+            }
+            Ok(())
+        }
+        (
+            AnalyzedTypeId::FunctionType(return_type, params),
+            AnalyzedTypeId::FunctionType(return_type2, params2),
+        ) => {
+            for (param, param2) in params.iter().zip(params2.iter()) {
+                check_matches_try_find_generic_args(param, param2, generic_arg_map)?;
+            }
+            check_matches_try_find_generic_args(return_type, return_type2, generic_arg_map)
+        }
+        (ty, ty2) => {
+            if ty == ty2 {
+                Ok(())
+            } else {
+                Err(anyhow::anyhow!(
+                    "Type '{}' does not match expected type '{}'.",
+                    ty,
+                    ty2
+                ))
+            }
+        }
+    }
+}
+
 fn analyze_generic_args(
     context: &mut AnalyzerContext,
     generic_args: &Vec<ParsedType>,
@@ -1144,26 +1198,49 @@ fn determine_variable_expression(
         }
     }
 
+    let default_generic_args = Vec::new();
+    let generic_args = var_name
+        .generic_args
+        .as_ref()
+        .unwrap_or(&default_generic_args);
+    let analyzed_generic_args = analyze_generic_args(context, &generic_args)?;
+
     if let Some(AnalyzedTypeId::FunctionType(return_type, params)) = type_hint {
-        let default_generic_args = Vec::new();
-        let generic_args = var_name
-            .generic_args
-            .as_ref()
-            .unwrap_or(&default_generic_args);
-        let analyzed_generic_args = analyze_generic_args(context, &generic_args)?;
-
-        println!("{} {:?} {:?}", var_name.id, params, analyzed_generic_args);
-
         let res = context.functions.map_function_id(
             &var_name.id,
-            params.clone(),
+            params,
             analyzed_generic_args,
             &location,
         );
 
         if let Ok(function_id) = res {
             return Ok((
-                AnalyzedTypeId::FunctionType(return_type.clone(), params),
+                AnalyzedTypeId::FunctionType(return_type.clone(), function_id.arg_types.clone()),
+                AnalyzedExpressionKind::FunctionPointer(function_id),
+            ));
+        } else if var_name.generic_args.is_some() {
+            res?;
+        }
+    } else {
+        let res = context.functions.function_id_from_scope_id(
+            &var_name.id,
+            analyzed_generic_args,
+            &location,
+        );
+
+        if let Ok(function_id) = res {
+            let header = context.functions.get_header(&function_id.id);
+            let return_type = header.return_type.clone();
+            let actual_return_type = resolve_generic_type(
+                &return_type,
+                &header.generic_params,
+                &function_id.generic_args,
+            );
+            return Ok((
+                AnalyzedTypeId::FunctionType(
+                    Box::new(actual_return_type),
+                    function_id.arg_types.clone(),
+                ),
                 AnalyzedExpressionKind::FunctionPointer(function_id),
             ));
         } else if var_name.generic_args.is_some() {
@@ -1173,7 +1250,8 @@ fn determine_variable_expression(
 
     if var_name.generic_args.is_some() {
         return Err(anyhow::anyhow!(
-            "Expected non-generic identifier at {}.",
+            "Function '{}' not found at {}.",
+            var_name,
             location
         ));
     }
@@ -1202,8 +1280,8 @@ fn determine_variable_expression(
         }
     } else {
         Err(anyhow::anyhow!(
-            "Variable '{}' not found at {}.",
-            var_name.id.item_id.item_name,
+            "Variable or function '{}' not found or ambiguous at {}.",
+            var_name,
             location
         ))
     }
@@ -1217,17 +1295,21 @@ fn determine_function_call(
     analyzed_args: Vec<AnalyzedExpression>,
 ) -> AnalyzerResult<(AnalyzedTypeId, AnalyzedExpressionKind)> {
     if let Ok(analyzed_expr) = analyze_expression(context, expr) {
-        if let AnalyzedTypeId::FunctionType(return_type, params) = analyzed_expr.ty.clone() {
-            if params == arg_types {
-                return Ok((
-                    *return_type,
-                    AnalyzedExpressionKind::FunctionCall {
-                        call_type: AnalyzedFunctionCallType::FunctionPointer(Box::new(
-                            analyzed_expr,
-                        )),
-                        args: analyzed_args,
-                    },
-                ));
+        if let AnalyzedExpressionKind::FunctionPointer(_) = analyzed_expr.kind {
+            //if the callee expression resolves to a single function pointer, we can just call it directly
+        } else {
+            if let AnalyzedTypeId::FunctionType(return_type, params) = analyzed_expr.ty.clone() {
+                if params == arg_types {
+                    return Ok((
+                        *return_type,
+                        AnalyzedExpressionKind::FunctionCall {
+                            call_type: AnalyzedFunctionCallType::FunctionPointer(Box::new(
+                                analyzed_expr,
+                            )),
+                            args: analyzed_args,
+                        },
+                    ));
+                }
             }
         }
     }
@@ -1236,12 +1318,20 @@ fn determine_function_call(
         let default_generic_args = Vec::new();
         let generic_args = id.generic_args.as_ref().unwrap_or(&default_generic_args);
         let analyzed_generic_args = analyze_generic_args(context, &generic_args)?;
-        let function_ref = context.functions.map_function_id(
+        let mut function_ref_res = context.functions.map_function_id(
             &id.id,
-            arg_types,
+            arg_types.clone(),
             analyzed_generic_args,
             &location,
-        )?;
+        );
+
+        let function_ref = if generic_args.len() == 0 && function_ref_res.is_err() {
+            context
+                .functions
+                .map_function_id_guess_generics(&id.id, arg_types, &location)?
+        } else {
+            function_ref_res?
+        };
 
         let function_header = context.functions.get_header(&function_ref.id);
 

@@ -106,7 +106,7 @@ pub fn analyze_function(
     if analyzed_body.ty != return_type {
         if analyzed_body.ty != AnalyzedTypeId::Unit || !always_calls_return(&analyzed_body) {
             return Err(anyhow::anyhow!(
-                "All code paths in function body must return {:?}, found {:?} at {}",
+                "All code paths in function body must return {}, found {} at {}",
                 return_type,
                 analyzed_body.ty,
                 body.location
