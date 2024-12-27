@@ -4,8 +4,9 @@ use crate::compiler::parser::parsed_expression::ParsedGenericParams;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum AnalyzedTypeId {
     Unit,
     Bool,
@@ -55,19 +56,19 @@ impl Display for AnalyzedTypeId {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenericParams {
-    order: HashMap<String, usize>,
+    mapping: HashMap<String, usize>,
     kind: GenericIdKind,
 }
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct GenericId {
     pub kind: GenericIdKind,
     pub index: usize,
 }
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum GenericIdKind {
     Struct(StructId),
     Function(FunctionId),
@@ -90,26 +91,23 @@ impl Display for GenericId {
 impl GenericParams {
     pub fn empty(kind: GenericIdKind) -> Self {
         Self {
-            order: HashMap::new(),
+            mapping: HashMap::new(),
             kind,
         }
     }
     pub fn from_order(kind: GenericIdKind, order: Vec<String>) -> Self {
-        let mut map = HashMap::new();
+        let mut mapping = HashMap::new();
         for (i, name) in order.iter().enumerate() {
-            map.insert(name.clone(), i);
+            mapping.insert(name.clone(), i);
         }
-        Self { order: map, kind }
-    }
-    pub fn len(&self) -> usize {
-        self.order.len()
+        Self { mapping, kind }
     }
     pub fn from(kind: GenericIdKind, params: &ParsedGenericParams) -> Self {
-        let mut order = HashMap::new();
+        let mut mapping = HashMap::new();
         for (i, param) in params.order.iter().enumerate() {
-            order.insert(param.clone(), i);
+            mapping.insert(param.clone(), i);
         }
-        Self { order, kind }
+        Self { mapping, kind }
     }
     pub fn resolve<T: Clone>(&self, generic_name: &GenericId, generic_args: &Vec<T>) -> Option<T> {
         if self.kind != generic_name.kind {
@@ -117,11 +115,11 @@ impl GenericParams {
         }
         Some(generic_args[generic_name.index].clone())
     }
-    
+
     pub fn get_all_ids(&self) -> Vec<GenericId> {
-        self.order
+        self.mapping
             .iter()
-            .map(|(name, index)| GenericId {
+            .map(|(_, index)| GenericId {
                 kind: self.kind.clone(),
                 index: *index,
             })
@@ -129,7 +127,7 @@ impl GenericParams {
     }
 
     pub fn get_generic_from_name(&self, generic_name: &String) -> Option<GenericId> {
-        if let Some(index) = self.order.get(generic_name) {
+        if let Some(index) = self.mapping.get(generic_name) {
             Some(GenericId {
                 kind: self.kind.clone(),
                 index: *index,

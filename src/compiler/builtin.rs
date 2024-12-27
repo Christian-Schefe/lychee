@@ -36,12 +36,15 @@ impl BuiltinFunction {
         UnwrappedFunctionRef {
             id: FunctionId {
                 id: ItemId {
-                    module_id: ModuleIdentifier { path: vec![] },
+                    module_id: ModuleIdentifier {
+                        path: vec![],
+                        root_name: "".to_string(),
+                    },
                     item_name: self.name.clone(),
                 },
                 param_count: self.parameters.len(),
                 generic_count: 0,
-                body_index: usize::MAX,
+                body_index: -1,
             },
             arg_types: self
                 .parameters
@@ -372,7 +375,10 @@ impl BuiltinStruct {
     fn tuple(size: usize) -> BuiltinStruct {
         let id = StructId {
             id: ItemId {
-                module_id: ModuleIdentifier { path: vec![] },
+                module_id: ModuleIdentifier {
+                    path: vec![],
+                    root_name: "".to_string(),
+                },
                 item_name: "$tuple".to_string(),
             },
             generic_count: size,

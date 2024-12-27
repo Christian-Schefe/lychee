@@ -2,10 +2,12 @@ module generic_test;
 module enum_test;
 module std;
 
-import generic_test::{createStruct, test, MyStructIntInt, MyStruct};
-import std::arrays::*;
-import std::print::*;
-import std::vec::*;
+import root::generic_test::{createStruct, test, MyStructIntInt, MyStruct};
+import root::std::arrays::*;
+import root::std::print::*;
+import root::std::vec::*;
+
+import small_test::add;
 
 int main() {
     let Test arr = createArray::<int>(100);
@@ -18,7 +20,7 @@ int main() {
     };
     arr.print();
     let MyStructIntInt my_struct = createStruct(10, 20, 30);
-    std::io::file_test();
+    ::std::io::file_test();
     generic_sizeof_test::<int>();
 
     let TestEnum test_enum = TestEnum::A;
@@ -26,7 +28,7 @@ int main() {
     println(TestEnum::D == TestEnum::B);
     println("hi");
     (TestEnum::E as int).print();
-    enum_test::enum_test();
+    ::enum_test::enum_test();
     println("END TEST");
     let (int) -> int test_fn = mul2;
     let int a = test_fn(10);
@@ -74,10 +76,6 @@ int main() {
     tuple_2d.item1.item2.println();
     sizeof(A<A<A<A<A<A<int>>>>>>).println();
 
-    println("PANIC TEST");
-    (&vec).pop().println();
-    (&vec).pop().println();
-
     let A<A<int>> A = new A<A<int>> {
         a: new A<int> {
             a: 10,
@@ -88,6 +86,16 @@ int main() {
             b: 40
         }
     };
+
+    let ::enum_test::Direction dir = ::enum_test::Direction::Up;
+    (dir as int).println();
+
+    let int extern_test = small_test::add(10, 20).add(20);
+    extern_test.println();
+
+    println("PANIC TEST");
+    (&vec).pop().println();
+    (&vec).pop().println();
 
     test() + arr.get(9)
 }
@@ -108,6 +116,7 @@ enum TestEnum {
     D = 1,
     E = -240,
 }
+
 
 alias Test = Array<int>;
 

@@ -19,11 +19,16 @@ impl CollectedFunctionData {
         parsed_function_id: &ParsedScopeId,
         arg_count: Option<usize>,
         generic_count: Option<usize>,
-    ) -> Option<Vec<FunctionId>> {
-        let module_functions = self.functions.get(&parsed_function_id.item_id.module_id)?;
+    ) -> Vec<FunctionId> {
+        let empty_map = HashMap::new();
+        let module_functions = self
+            .functions
+            .get(&parsed_function_id.item_id.module_id)
+            .unwrap_or(&empty_map);
         let module_function_imports = self
             .function_imports
-            .get(&parsed_function_id.item_id.module_id)?;
+            .get(&parsed_function_id.item_id.module_id)
+            .unwrap_or(&empty_map);
 
         let mut matching = Vec::new();
 
@@ -57,7 +62,7 @@ impl CollectedFunctionData {
             }
         }
 
-        Some(matching)
+        matching
     }
 }
 
@@ -69,7 +74,7 @@ pub fn collect_function_data(
 )> {
     let builtin_functions = crate::compiler::builtin::BuiltinFunction::get_builtin_function_ids();
     let mut function_bodies = Vec::new();
-    let functions = collect_functions(program, &mut function_bodies)?;
+    let mut functions = collect_functions(program, &mut function_bodies)?;
     let function_imports = collect_function_imports(program, &functions)?;
     Ok((
         CollectedFunctionData {
@@ -98,7 +103,7 @@ fn collect_functions(
                 },
                 generic_count: function_def.value.generic_params.order.len(),
                 param_count: function_def.value.params.len(),
-                body_index,
+                body_index: body_index as isize,
             };
             let entry = module_functions
                 .entry(function_def.value.function_name.clone())

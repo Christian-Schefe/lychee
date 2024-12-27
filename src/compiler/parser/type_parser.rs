@@ -174,8 +174,8 @@ pub fn parse_scoped_id(
     tokens: &mut TokenStack,
     current_module: &ModuleIdentifier,
 ) -> ParseResult<ParsedScopeId> {
-    let is_absolute = tokens.peek().value == Token::Static(StaticToken::DoubleColon);
-    if is_absolute {
+    let is_relative = tokens.peek().value == Token::Static(StaticToken::DoubleColon);
+    if is_relative {
         tokens.shift();
     }
     let first_token = parse_identifier(tokens)?;
@@ -191,10 +191,12 @@ pub fn parse_scoped_id(
             break;
         }
     }
+    
+    let is_relative = is_relative || path.len() == 1;
 
     let item_name = path.pop().unwrap();
-    let is_module_local = path.is_empty() && !is_absolute;
-    let module_id = current_module.resolve(&path, is_absolute);
+    let is_module_local = path.is_empty() && is_relative;
+    let module_id = current_module.resolve(&path, !is_relative);
     let id = ParsedScopeId {
         item_id: ItemId {
             module_id,

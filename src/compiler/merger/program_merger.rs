@@ -11,5 +11,6 @@ pub fn merge_program(parsed_program: &ParsedProgram) -> MergerResult<MergedProgr
     Ok(MergedProgram {
         resolved_functions,
         resolved_types,
+        root_name: parsed_program.root_name.clone(),
     })
 }

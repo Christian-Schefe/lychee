@@ -1,5 +1,5 @@
-import ::std::panic::*;
-import ::std::print::*;
+import root::std::panic::*;
+import root::std::print::*;
 
 struct Vec<T> {
     &T data;

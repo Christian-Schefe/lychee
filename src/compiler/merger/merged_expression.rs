@@ -5,14 +5,16 @@ use crate::compiler::merger::resolved_types::ResolvedTypes;
 use crate::compiler::parser::item_id::ItemId;
 use std::collections::HashMap;
 use std::fmt::Display;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct MergedProgram {
     pub resolved_functions: ResolvedFunctions,
     pub resolved_types: ResolvedTypes,
+    pub root_name: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct StructId {
     pub id: ItemId,
     pub generic_count: usize,
@@ -41,7 +43,7 @@ impl Display for StructId {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResolvedStruct {
     pub id: StructId,
     pub field_types: HashMap<String, AnalyzedTypeId>,
@@ -64,7 +66,7 @@ impl ResolvedStruct {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResolvedEnum {
     pub id: ItemId,
     pub variants: HashMap<String, i64>,
@@ -76,7 +78,7 @@ impl ResolvedEnum {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct StructRef {
     pub id: StructId,
     pub generic_args: Vec<AnalyzedTypeId>,
@@ -106,10 +108,10 @@ impl Display for StructRef {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct FunctionId {
     pub id: ItemId,
-    pub body_index: usize,
+    pub body_index: isize,
     pub param_count: usize,
     pub generic_count: usize,
 }
@@ -147,7 +149,7 @@ impl FunctionId {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResolvedFunctionHeader {
     pub id: FunctionId,
     pub return_type: AnalyzedTypeId,

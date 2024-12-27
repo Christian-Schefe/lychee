@@ -1,4 +1,4 @@
-import ::std::print::*;
+import root::std::print::*;
 
 struct Array<T> {
     &T data;

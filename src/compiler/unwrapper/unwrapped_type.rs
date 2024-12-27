@@ -62,7 +62,13 @@ impl UnwrappedTypeId {
             UnwrappedTypeId::Unit => "unit".to_string(),
             UnwrappedTypeId::Bool => "bool".to_string(),
             UnwrappedTypeId::Char => "char".to_string(),
-            UnwrappedTypeId::Integer(size) => format!("int{}", size),
+            UnwrappedTypeId::Integer(size) => match size {
+                1 => "byte".to_string(),
+                2 => "short".to_string(),
+                4 => "int".to_string(),
+                8 => "long".to_string(),
+                _ => unreachable!(),
+            },
             UnwrappedTypeId::Pointer(inner) => format!("&{}", inner.get_key()),
             UnwrappedTypeId::StructType(id) => format!("Struct({})", id),
             UnwrappedTypeId::FunctionType(return_type, params) => {

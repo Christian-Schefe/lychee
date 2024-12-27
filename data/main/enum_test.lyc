@@ -1,4 +1,4 @@
-import ::std::print::*;
+import root::std::print::*;
 
 enum Direction {
     Up = 1,

@@ -11,14 +11,9 @@ use std::collections::HashMap;
 pub struct AnalyzedProgram {
     pub resolved_types: ResolvedTypes,
     pub resolved_functions: ResolvedFunctions,
-    pub functions: HashMap<FunctionId, AnalyzedFunction>,
+    pub function_bodies: HashMap<FunctionId, AnalyzedExpression>,
     pub main_function: FunctionRef,
-}
-
-#[derive(Debug, Clone)]
-pub struct AnalyzedFunction {
-    pub body: AnalyzedExpression,
-    pub return_type: AnalyzedTypeId,
+    pub root_name: String,
 }
 
 #[derive(Debug, Clone)]

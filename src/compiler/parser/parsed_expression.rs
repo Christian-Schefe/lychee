@@ -9,6 +9,7 @@ use std::fmt::Display;
 #[derive(Debug, Clone)]
 pub struct ParsedProgram {
     pub module_tree: HashMap<ModuleIdentifier, ParsedModule>,
+    pub root_name: String,
 }
 
 #[derive(Debug, Clone)]
@@ -145,7 +146,13 @@ impl Display for ParsedTypeKind {
             ParsedTypeKind::Unit => write!(f, "unit"),
             ParsedTypeKind::Bool => write!(f, "bool"),
             ParsedTypeKind::Char => write!(f, "char"),
-            ParsedTypeKind::Integer(size) => write!(f, "int{}", size),
+            ParsedTypeKind::Integer(size) => match size {
+                1 => write!(f, "byte"),
+                2 => write!(f, "short"),
+                4 => write!(f, "int"),
+                8 => write!(f, "long"),
+                _ => unreachable!(),
+            },
             ParsedTypeKind::Function {
                 return_type,
                 params,

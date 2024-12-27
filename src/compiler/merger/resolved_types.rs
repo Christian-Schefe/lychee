@@ -33,18 +33,33 @@ impl ResolvedTypes {
             _ => None,
         }
     }
-    pub fn get_enum_from_variant(&self, variant_id: &ItemId) -> Option<&ResolvedEnum> {
-        let mut enum_id = ItemId {
-            item_name: variant_id.module_id.path.last().unwrap().clone(),
-            module_id: variant_id.module_id.clone(),
-        };
-        enum_id.module_id.path.pop();
-        self.enums.get(&enum_id)
+    pub fn get_enum_from_variant(
+        &self,
+        variant_id: &ItemId,
+        current_module: &ModuleIdentifier,
+    ) -> Option<&ResolvedEnum> {
+        if variant_id.module_id.path.len() > 0 {
+            let mut enum_id = ItemId {
+                item_name: variant_id.module_id.path.last().unwrap().clone(),
+                module_id: variant_id.module_id.clone(),
+            };
+            enum_id.module_id.path.pop();
+            self.enums.get(&enum_id)
+        } else {
+            let enum_id = ItemId {
+                item_name: variant_id.module_id.root_name.clone(),
+                module_id: current_module.clone(),
+            };
+            self.enums.get(&enum_id)
+        }
     }
     pub fn get_tuple_type(&self, element_types: &Vec<AnalyzedTypeId>) -> AnalyzedTypeId {
         let item_id = ItemId {
             item_name: "$tuple".to_string(),
-            module_id: ModuleIdentifier { path: Vec::new() },
+            module_id: ModuleIdentifier {
+                path: Vec::new(),
+                root_name: "".to_string(),
+            },
         };
         let struct_id = StructId {
             id: item_id,

@@ -1,13 +1,16 @@
-use crate::compiler::analyzer::analyzed_expression::{AnalyzedExpression, AnalyzedExpressionKind, AnalyzedFunction, AnalyzedFunctionCallType, AnalyzedProgram, AssignableExpression, AssignableExpressionKind};
+use crate::compiler::analyzer::analyzed_expression::{
+    AnalyzedExpression, AnalyzedExpressionKind, AnalyzedFunctionCallType, AnalyzedProgram,
+    AssignableExpression, AssignableExpressionKind,
+};
 use crate::compiler::merger::merged_expression::ResolvedFunctionHeader;
 use crate::compiler::parser::expression_tree_printer::Printer;
 
 pub fn print_program(program: &AnalyzedProgram) {
     let mut printer = Printer::new();
-    for (id, function) in program.functions.iter() {
+    for (id, function_body) in program.function_bodies.iter() {
         let header = program.resolved_functions.get_header(id);
         print_function_header(&mut printer, header);
-        print_function(&mut printer, function);
+        print_expression(&mut printer, function_body);
     }
     println!("{}", printer.build());
 }
@@ -23,10 +26,6 @@ fn print_function_header(printer: &mut Printer, header: &ResolvedFunctionHeader)
     }
     printer.dedent();
     printer.add_line(format!("-> {}", header.return_type));
-}
-
-fn print_function(printer: &mut Printer, function: &AnalyzedFunction) {
-    print_expression(printer, &function.body);
 }
 
 fn print_expression(printer: &mut Printer, expr: &AnalyzedExpression) {
@@ -158,10 +157,7 @@ fn print_expression(printer: &mut Printer, expr: &AnalyzedExpression) {
             print_assignable_expression(printer, expr);
             printer.dedent();
         }
-        AnalyzedExpressionKind::FunctionCall {
-            call_type,
-            args,
-        } => {
+        AnalyzedExpressionKind::FunctionCall { call_type, args } => {
             printer.add_line(format!("FunctionCall"));
             printer.indent();
             match call_type {

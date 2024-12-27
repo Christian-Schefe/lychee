@@ -1,4 +1,4 @@
-use crate::compiler::analyzer::analyzed_expression::{AnalyzedFunction, AnalyzedProgram};
+use crate::compiler::analyzer::analyzed_expression::{AnalyzedExpression, AnalyzedProgram};
 use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericParams};
 use crate::compiler::analyzer::iterative_expression_analyzer::analyze_expression;
 use crate::compiler::analyzer::return_analyzer::always_calls_return;
@@ -29,11 +29,15 @@ pub fn analyze_program(program: &MergedProgram) -> AnalyzerResult<AnalyzedProgra
     let mut analyzed_function_vec =
         HashMap::with_capacity(program.resolved_functions.function_bodies.len());
 
+    let mut main_func_id = None;
+
     let main_item_id = ItemId {
         item_name: "main".to_string(),
-        module_id: ModuleIdentifier { path: Vec::new() },
+        module_id: ModuleIdentifier {
+            path: Vec::new(),
+            root_name: program.root_name.clone(),
+        },
     };
-    let mut main_func_id = None;
 
     for (id, body) in &program.resolved_functions.function_bodies {
         let analyzed_function = analyze_function(
@@ -44,6 +48,9 @@ pub fn analyze_program(program: &MergedProgram) -> AnalyzerResult<AnalyzedProgra
         )?;
         analyzed_function_vec.insert(id.clone(), analyzed_function);
         if id.id == main_item_id && id.generic_count == 0 && id.param_count == 0 {
+            if main_func_id.is_some() {
+                return Err(anyhow::anyhow!("Multiple main functions found"));
+            }
             main_func_id = Some(id.clone());
         }
     }
@@ -54,9 +61,7 @@ pub fn analyze_program(program: &MergedProgram) -> AnalyzerResult<AnalyzedProgra
         arg_types: Vec::new(),
     };
 
-    let main_function_header = analyzed_function_vec
-        .get(&main_func_ref.id)
-        .ok_or_else(|| anyhow::anyhow!("Main function not found"))?;
+    let main_function_header = program.resolved_functions.get_header(&main_func_ref.id);
 
     if main_function_header.return_type != AnalyzedTypeId::Integer(4) {
         return Err(anyhow::anyhow!(
@@ -68,8 +73,9 @@ pub fn analyze_program(program: &MergedProgram) -> AnalyzerResult<AnalyzedProgra
     Ok(AnalyzedProgram {
         resolved_types: program.resolved_types.clone(),
         resolved_functions: program.resolved_functions.clone(),
-        functions: analyzed_function_vec,
+        function_bodies: analyzed_function_vec,
         main_function: main_func_ref,
+        root_name: program.root_name.clone(),
     })
 }
 
@@ -78,7 +84,7 @@ pub fn analyze_function(
     resolved_types: &ResolvedTypes,
     resolved_functions: &ResolvedFunctions,
     body: &ParsedExpression,
-) -> AnalyzerResult<AnalyzedFunction> {
+) -> AnalyzerResult<AnalyzedExpression> {
     let header = resolved_functions.get_header(id);
 
     let return_type = header.return_type.clone();
@@ -114,8 +120,5 @@ pub fn analyze_function(
         }
     }
 
-    Ok(AnalyzedFunction {
-        body: analyzed_body,
-        return_type,
-    })
+    Ok(analyzed_body)
 }

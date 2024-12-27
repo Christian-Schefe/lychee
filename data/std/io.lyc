@@ -1,5 +1,5 @@
-import ::std::strings::{String, create_string, print, free};
-import ::std::print::*;
+import root::std::strings::{String, create_string, print, free};
+import root::std::print::*;
 
 unit file_test() {
     let var in_file = open_file("data/input.txt");

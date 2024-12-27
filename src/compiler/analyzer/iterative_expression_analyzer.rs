@@ -1287,7 +1287,9 @@ fn determine_variable_expression(
     }
 
     if !var_name.id.is_module_local {
-        let enum_type = context.types.get_enum_from_variant(&var_name.id.item_id);
+        let enum_type = context
+            .types
+            .get_enum_from_variant(&var_name.id.item_id, &location.file.as_ref().unwrap().id);
         if let Some(enum_type) = enum_type {
             let val = enum_type
                 .get_variant_value(&var_name.id.item_id.item_name)

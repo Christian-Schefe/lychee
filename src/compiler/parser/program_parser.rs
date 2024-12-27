@@ -141,9 +141,12 @@ pub fn parse_module(
 
     for (location, submodule) in submodule_declarations {
         let child_module = module_path.get_submodule_path(&submodule);
-        parse_module(visited_paths, module_tree, child_module).with_context(|| {
-            format!("Failed to parse submodule '{}' at {}.", submodule, location)
-        })?;
+        parse_module(
+            visited_paths,
+            module_tree,
+            child_module,
+        )
+        .with_context(|| format!("Failed to parse submodule '{}' at {}.", submodule, location))?;
         submodules.push(submodule);
     }
 
@@ -165,12 +168,12 @@ pub fn parse_import(tokens: &mut TokenStack) -> ParseResult<ParsedImport> {
     let token = tokens.shift().clone();
     let current_module = &token.location.file.as_ref().unwrap().id;
     let parsed_import = match &token.value {
-        Token::Identifier(module_name) => {
-            parse_import_id(tokens, module_name.clone(), false, current_module)?
+        Token::Identifier(root_name) => {
+            parse_import_id(tokens, root_name.clone(), true, current_module)?
         }
         Token::Static(StaticToken::DoubleColon) => {
             let first_id = parse_identifier(tokens)?;
-            parse_import_id(tokens, first_id.value, true, current_module)?
+            parse_import_id(tokens, first_id.value, false, current_module)?
         }
         _ => Err(LocationError::new(
             format!("Expected module name or '::', found '{}'", token.value),

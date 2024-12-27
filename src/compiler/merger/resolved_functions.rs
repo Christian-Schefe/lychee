@@ -25,10 +25,11 @@ impl ResolvedFunctions {
         generic_args: Vec<AnalyzedTypeId>,
         location: &Location,
     ) -> AnalyzerResult<FunctionRef> {
-        let function_ids = self
-            .collected_function_data
-            .find_function_id(function_id, Some(arg_types.len()), Some(generic_args.len()))
-            .ok_or_else(|| anyhow::anyhow!("Module not found"))?;
+        let function_ids = self.collected_function_data.find_function_id(
+            function_id,
+            Some(arg_types.len()),
+            Some(generic_args.len()),
+        );
 
         if function_ids.len() == 0 {
             return Err(anyhow::anyhow!(
@@ -105,10 +106,9 @@ impl ResolvedFunctions {
         arg_types: Vec<AnalyzedTypeId>,
         location: &Location,
     ) -> AnalyzerResult<FunctionRef> {
-        let function_ids = self
-            .collected_function_data
-            .find_function_id(function_id, Some(arg_types.len()), None)
-            .ok_or_else(|| anyhow::anyhow!("Module not found"))?;
+        let function_ids =
+            self.collected_function_data
+                .find_function_id(function_id, Some(arg_types.len()), None);
 
         if function_ids.len() == 0 {
             return Err(anyhow::anyhow!(
@@ -211,10 +211,11 @@ impl ResolvedFunctions {
         generic_args: Vec<AnalyzedTypeId>,
         location: &Location,
     ) -> AnalyzerResult<FunctionRef> {
-        let mut function_ids = self
-            .collected_function_data
-            .find_function_id(function_id, None, Some(generic_args.len()))
-            .ok_or_else(|| anyhow::anyhow!("Module not found"))?;
+        let mut function_ids = self.collected_function_data.find_function_id(
+            function_id,
+            None,
+            Some(generic_args.len()),
+        );
 
         match function_ids.len() {
             0 => {

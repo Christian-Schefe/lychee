@@ -36,9 +36,12 @@ pub fn unwrap_function(
         return;
     }
 
-    let function = program.functions.get(&function_ref.id).unwrap_or_else(|| {
-        panic!("Function not found: {}", function_ref.id);
-    });
+    let function_body = program
+        .function_bodies
+        .get(&function_ref.id)
+        .unwrap_or_else(|| {
+            panic!("Function not found: {}", function_ref.id);
+        });
     let header = program.resolved_functions.get_header(&function_ref.id);
 
     let generic_info = GenericInfo {
@@ -46,7 +49,7 @@ pub fn unwrap_function(
         generic_args: function_ref.generic_args.clone(),
     };
 
-    let unwrapped_body = unwrap_expression(context, program, &generic_info, &function.body);
+    let unwrapped_body = unwrap_expression(context, program, &generic_info, &function_body);
 
     let unwrapped_return_type = unwrap_type(context, program, &header.return_type, &generic_info);
 

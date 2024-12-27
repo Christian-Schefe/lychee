@@ -1,5 +1,7 @@
+use crate::compiler::config::ConfigData;
 use crate::compiler::parser::parsed_expression::ParsedProgram;
 use crate::compiler::parser::program_parser::parse_module;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
@@ -10,14 +12,15 @@ pub mod expression_tree_printer;
 pub mod item_id;
 pub mod parsed_expression;
 mod parser_error;
+mod parsing_utils;
 mod primary_expr_parser;
 mod program_parser;
 mod type_parser;
 mod unop_expr_parser;
-mod parsing_utils;
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ModuleIdentifier {
+    pub root_name: String,
     pub path: Vec<String>,
 }
 
@@ -47,38 +50,61 @@ impl ModulePath {
 
 impl ModuleIdentifier {
     pub fn get_identifier(&self) -> String {
-        self.path
+        let path_str = self
+            .path
             .iter()
             .map(|x| x.clone())
             .collect::<Vec<String>>()
-            .join("::")
+            .join("::");
+        format!("{}::{}", self.root_name, path_str)
     }
     pub fn resolve(&self, other: &Vec<String>, absolute: bool) -> ModuleIdentifier {
         if absolute {
+            let root_name = other.first().unwrap().clone();
+            let root_name = if root_name == "root" {
+                self.root_name.clone()
+            } else {
+                root_name
+            };
             ModuleIdentifier {
-                path: other.clone(),
+                path: other[1..].iter().cloned().collect(),
+                root_name,
             }
         } else {
             let mut new_path = self.path.clone();
             for name in other {
                 new_path.push(name.clone());
             }
-            ModuleIdentifier { path: new_path }
+            ModuleIdentifier {
+                path: new_path,
+                root_name: self.root_name.clone(),
+            }
         }
     }
 }
 
-pub fn parse(root_module_path: &PathBuf) -> ParsedProgram {
-    let mut visited_modules = HashSet::new();
+pub fn parse(entry_points: &Vec<ConfigData>) -> ParsedProgram {
     let mut module_tree = HashMap::new();
-    parse_module(
-        &mut visited_modules,
-        &mut module_tree,
-        ModulePath {
-            id: ModuleIdentifier { path: Vec::new() },
-            file: root_module_path.clone(),
-        },
-    )
-    .unwrap();
-    ParsedProgram { module_tree }
+    for entry_point in entry_points {
+        let mut visited_modules = HashSet::new();
+        parse_module(
+            &mut visited_modules,
+            &mut module_tree,
+            ModulePath {
+                id: ModuleIdentifier {
+                    path: vec![],
+                    root_name: entry_point.config.package.root_name.to_string(),
+                },
+                file: entry_point.get_entry_point(),
+            },
+        )
+        .unwrap();
+    }
+
+    let top_level_entry_point = entry_points.first().unwrap();
+
+    ParsedProgram {
+        module_tree,
+        root_name: top_level_entry_point.config.package.root_name.to_string(),
+    }
 }

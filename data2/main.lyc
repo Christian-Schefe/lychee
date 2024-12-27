@@ -1,0 +1,13 @@
+int main() {
+    let Simple s = new Simple { a: 1, b: 2 };
+    add(s.a, s.b)
+}
+
+int add(int a, int b) {
+    a + b
+}
+
+struct Simple {
+    int a;
+    int b;
+}

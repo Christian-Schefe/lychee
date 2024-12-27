@@ -1,0 +1,5 @@
+[package]
+root_name = "test"
+
+[dependencies]
+small_test = { path = "../data2" }

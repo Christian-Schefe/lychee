@@ -1,6 +1,7 @@
 use crate::compiler::parser::parsed_expression::ParsedType;
 use crate::compiler::parser::ModuleIdentifier;
 use std::fmt::Display;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct ParsedScopeId {
@@ -37,7 +38,7 @@ impl Display for ParsedGenericId {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ItemId {
     pub module_id: ModuleIdentifier,
     pub item_name: String,
