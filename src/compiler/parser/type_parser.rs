@@ -6,7 +6,7 @@ use crate::compiler::parser::parsed_expression::{ParsedImport, ParsedType, Parse
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::parsing_utils::parse_seperated_elements;
 use crate::compiler::parser::primary_expr_parser::parse_generic_args;
-use crate::compiler::parser::program_parser::{parse_identifier, pop_expected};
+use crate::compiler::parser::program_parser::parse_identifier;
 use crate::compiler::parser::ModuleIdentifier;
 
 pub fn parse_type(tokens: &mut TokenStack) -> ParseResult<ParsedType> {
@@ -57,15 +57,38 @@ pub fn parse_type(tokens: &mut TokenStack) -> ParseResult<ParsedType> {
                 parse_type,
             )?;
 
-            pop_expected(tokens, Token::Static(StaticToken::Arrow))?;
-            let return_type = parse_type(tokens)?;
-            Ok(ParsedType::new(
-                ParsedTypeKind::Function {
-                    return_type: Box::new(return_type),
-                    params: elements,
-                },
-                loc,
-            ))
+            if tokens.peek().value == Token::Static(StaticToken::Arrow) {
+                tokens.shift();
+                let return_type = parse_type(tokens)?;
+                Ok(ParsedType::new(
+                    ParsedTypeKind::Function {
+                        return_type: Box::new(return_type),
+                        params: elements,
+                    },
+                    loc,
+                ))
+            } else {
+                if elements.len() == 0 {
+                    Err(anyhow::anyhow!(
+                        "Expected at least one element in tuple type at {}",
+                        loc
+                    ))
+                } else {
+                    Ok(ParsedType::new(
+                        ParsedTypeKind::Struct(
+                            ParsedScopeId {
+                                item_id: ItemId {
+                                    module_id: current_module,
+                                    item_name: "$tuple".to_string(),
+                                },
+                                is_module_local: true,
+                            },
+                            elements,
+                        ),
+                        loc,
+                    ))
+                }
+            }
         }
         _ => Err(LocationError::new(
             format!("Expected type, found '{}'", token.value),

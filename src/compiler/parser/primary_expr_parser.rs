@@ -60,24 +60,30 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             }
         }
         Token::Static(StaticToken::OpenParen) => {
-            tokens.shift();
-            if let Token::Static(StaticToken::CloseParen) = tokens.peek().value {
-                tokens.shift();
-                return Ok(ParsedExpression::new(
+            let (loc, elements, is_trailing) = parse_seperated_elements(
+                tokens,
+                Token::Static(StaticToken::OpenParen),
+                Token::Static(StaticToken::CloseParen),
+                Token::Static(StaticToken::Comma),
+                true,
+                true,
+                "tuple",
+                parse_expression,
+            )?;
+            if elements.len() == 0 {
+                Ok(ParsedExpression::new(
                     ParsedExpressionKind::Literal(ParsedLiteral::Unit),
-                    token.location,
-                ));
+                    loc,
+                ))
+            } else if elements.len() == 1 && !is_trailing {
+                let inner = elements.into_iter().next().unwrap();
+                Ok(inner)
+            } else {
+                Ok(ParsedExpression::new(
+                    ParsedExpressionKind::Tuple(elements),
+                    loc,
+                ))
             }
-            let inner_location = tokens.location().clone();
-            let mut inner = parse_expression(tokens).with_context(|| {
-                format!(
-                    "Failed to parse parenthesized expression at {}.",
-                    inner_location
-                )
-            })?;
-            pop_expected(tokens, Token::Static(StaticToken::CloseParen))?;
-            inner.location = token.location;
-            Ok(inner)
         }
         Token::Static(StaticToken::OpenBrace) => parse_block_expression(tokens)
             .with_context(|| format!("Failed to parse block expression at {}.", token.location)),

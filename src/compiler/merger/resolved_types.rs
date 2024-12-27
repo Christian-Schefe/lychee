@@ -5,6 +5,7 @@ use crate::compiler::merger::merged_expression::{
 use crate::compiler::merger::type_collector::CollectedTypeData;
 use crate::compiler::parser::item_id::ItemId;
 use crate::compiler::parser::parsed_expression::ParsedTypeKind;
+use crate::compiler::parser::ModuleIdentifier;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -39,5 +40,20 @@ impl ResolvedTypes {
         };
         enum_id.module_id.path.pop();
         self.enums.get(&enum_id)
+    }
+    pub fn get_tuple_type(&self, element_types: &Vec<AnalyzedTypeId>) -> AnalyzedTypeId {
+        let item_id = ItemId {
+            item_name: "$tuple".to_string(),
+            module_id: ModuleIdentifier { path: Vec::new() },
+        };
+        let struct_id = StructId {
+            id: item_id,
+            generic_count: element_types.len(),
+        };
+        let struct_ref = StructRef {
+            id: struct_id,
+            generic_args: element_types.clone(),
+        };
+        AnalyzedTypeId::StructType(struct_ref)
     }
 }

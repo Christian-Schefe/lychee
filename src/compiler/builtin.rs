@@ -1,10 +1,14 @@
-use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericIdKind, GenericParams};
+use crate::compiler::analyzer::analyzed_type::{
+    AnalyzedTypeId, GenericId, GenericIdKind, GenericParams,
+};
 use crate::compiler::codegen::CodegenContext;
-use crate::compiler::merger::merged_expression::{FunctionId, ResolvedFunctionHeader};
+use crate::compiler::merger::merged_expression::{
+    FunctionId, ResolvedFunctionHeader, ResolvedStruct, StructId,
+};
 use crate::compiler::parser::item_id::ItemId;
 use crate::compiler::parser::ModuleIdentifier;
 use crate::compiler::unwrapper::unwrapped_type::{UnwrappedFunctionRef, UnwrappedTypeId};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct BuiltinFunction {
     pub name: String,
@@ -335,6 +339,94 @@ impl BuiltinFunction {
             context.function_labels.insert(identifier, label.clone());
             context.label(&label);
             (function.code)(context);
+        }
+    }
+}
+
+pub struct BuiltinStruct {
+    pub id: StructId,
+    pub fields: Vec<(String, AnalyzedTypeId)>,
+    pub generic_params: GenericParams,
+}
+
+impl BuiltinStruct {
+    fn new(
+        id: StructId,
+        fields: Vec<(String, AnalyzedTypeId)>,
+        generic_params: Vec<String>,
+    ) -> BuiltinStruct {
+        if id.generic_count != generic_params.len() {
+            panic!(
+                "Generic count mismatch: {} != {}",
+                id.generic_count,
+                generic_params.len()
+            );
+        }
+        BuiltinStruct {
+            id: id.clone(),
+            fields,
+            generic_params: GenericParams::from_order(GenericIdKind::Struct(id), generic_params),
+        }
+    }
+
+    fn tuple(size: usize) -> BuiltinStruct {
+        let id = StructId {
+            id: ItemId {
+                module_id: ModuleIdentifier { path: vec![] },
+                item_name: "$tuple".to_string(),
+            },
+            generic_count: size,
+        };
+
+        let mut fields = Vec::new();
+        for i in 0..size {
+            fields.push((
+                format!("item{}", i + 1),
+                AnalyzedTypeId::GenericType(GenericId {
+                    kind: GenericIdKind::Struct(id.clone()),
+                    index: i,
+                }),
+            ));
+        }
+        BuiltinStruct::new(id, fields, (0..size).map(|i| format!("T{}", i)).collect())
+    }
+
+    fn all_structs() -> Vec<BuiltinStruct> {
+        let mut structs = Vec::new();
+        for i in 1..16 {
+            structs.push(BuiltinStruct::tuple(i));
+        }
+        structs
+    }
+
+    pub fn get_builtin_struct_ids() -> HashMap<String, HashSet<StructId>> {
+        let mut struct_ids = HashMap::new();
+        for struct_def in BuiltinStruct::all_structs() {
+            let struct_id = struct_def.id.clone();
+            let entry = struct_ids
+                .entry(struct_id.id.item_name.clone())
+                .or_insert(HashSet::new());
+            if !entry.insert(struct_id.clone()) {
+                panic!("Duplicate struct id: {}", struct_id.id);
+            }
+        }
+        struct_ids
+    }
+
+    pub fn add_builtin_resolved_structs(structs: &mut HashMap<StructId, ResolvedStruct>) {
+        for struct_def in BuiltinStruct::all_structs() {
+            let struct_id = struct_def.id.clone();
+            let resolved_struct = ResolvedStruct {
+                id: struct_id.clone(),
+                generic_params: struct_def.generic_params.clone(),
+                field_order: struct_def
+                    .fields
+                    .iter()
+                    .map(|(name, _)| name.clone())
+                    .collect(),
+                field_types: struct_def.fields.iter().cloned().collect(),
+            };
+            structs.insert(struct_id, resolved_struct);
         }
     }
 }

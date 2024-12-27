@@ -11,6 +11,15 @@ unit println(&char literal) {
     write_char('\n');
 }
 
+unit print(char c) {
+    write_char(c);
+}
+
+unit println(char c) {
+    write_char(c);
+    write_char('\n');
+}
+
 unit print(bool b) {
     if b {
         print("true");

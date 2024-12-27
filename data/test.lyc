@@ -64,15 +64,41 @@ int main() {
     let (int) -> unit printer = println;
     vec2.foreach(printer);
 
+    println("TUPLE TEST");
+    let (int, int) tuple = (-11,-22);
+    let (char, int) tuple2 = tuple_test('c', 10);
+    tuple.item2.println();
+    tuple2.item1.println();
+    let ((int, int), (int, int)) tuple_2d = (tuple, tuple);
+    sizeof(((int, int, int), (int, int, int), long, int, long, int, long, long, long)).println();
+    tuple_2d.item1.item2.println();
+    sizeof(A<A<A<A<A<A<int>>>>>>).println();
+
+    println("PANIC TEST");
     (&vec).pop().println();
     (&vec).pop().println();
 
+    let A<A<int>> A = new A<A<int>> {
+        a: new A<int> {
+            a: 10,
+            b: 20
+        },
+        b: new A<int> {
+            a: 30,
+            b: 40
+        }
+    };
 
     test() + arr.get(9)
 }
 
 unit my_println(int a) {
     a.println()
+}
+
+struct A<T> {
+    T a;
+    T b;
 }
 
 enum TestEnum {
@@ -111,4 +137,8 @@ int call_test_fn((int) -> int fn, int val) {
 
 T generic_call_test<T>((T) -> T fn, T val) {
     fn(val)
+}
+
+(T, int) tuple_test<T>(T a, int b) {
+    (a, b)
 }

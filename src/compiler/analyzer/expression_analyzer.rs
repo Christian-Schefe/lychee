@@ -153,6 +153,10 @@ pub fn analyze_assignable_expression(
             "Sizeof expression cannot be assigned to at {}.",
             expression.location
         )),
+        ParsedExpressionKind::Tuple(_) => Err(anyhow::anyhow!(
+            "Tuple expression cannot be assigned to at {}.",
+            expression.location
+        )),
     }
 }
 

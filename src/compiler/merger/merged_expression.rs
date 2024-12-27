@@ -84,7 +84,14 @@ pub struct StructRef {
 
 impl Display for StructRef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.id)?;
+        write!(f, "{}", self.id.id)?;
+        if self.id.generic_count != self.generic_args.len() {
+            panic!(
+                "Generic argument count mismatch: {} != {}",
+                self.id.generic_count,
+                self.generic_args.len()
+            );
+        }
         if !self.generic_args.is_empty() {
             write!(f, "<")?;
             for (i, arg) in self.generic_args.iter().enumerate() {
@@ -158,7 +165,21 @@ pub struct FunctionRef {
 
 impl Display for FunctionRef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.id)?;
+        write!(f, "{}", self.id.id)?;
+        if self.id.generic_count != self.generic_args.len() {
+            panic!(
+                "Generic argument count mismatch: {} != {}",
+                self.id.generic_count,
+                self.generic_args.len()
+            );
+        }
+        if self.id.param_count != self.arg_types.len() {
+            panic!(
+                "Argument count mismatch: {} != {}",
+                self.id.param_count,
+                self.arg_types.len()
+            );
+        }
         if !self.generic_args.is_empty() {
             write!(f, "<")?;
             for (i, arg) in self.generic_args.iter().enumerate() {
@@ -169,6 +190,13 @@ impl Display for FunctionRef {
             }
             write!(f, ">")?;
         }
-        Ok(())
+        write!(f, "(")?;
+        for (i, arg) in self.arg_types.iter().enumerate() {
+            if i != 0 {
+                write!(f, ",")?;
+            }
+            write!(f, "{}", arg)?;
+        }
+        write!(f, ")")
     }
 }

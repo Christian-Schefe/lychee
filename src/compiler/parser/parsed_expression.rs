@@ -123,6 +123,7 @@ pub enum ParsedExpressionKind {
         struct_type: ParsedType,
         fields: Vec<(String, ParsedExpression)>,
     },
+    Tuple(Vec<ParsedExpression>),
 }
 
 pub type ParsedType = Src<ParsedTypeKind>;

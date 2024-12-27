@@ -94,6 +94,16 @@ impl GenericParams {
             kind,
         }
     }
+    pub fn from_order(kind: GenericIdKind, order: Vec<String>) -> Self {
+        let mut map = HashMap::new();
+        for (i, name) in order.iter().enumerate() {
+            map.insert(name.clone(), i);
+        }
+        Self { order: map, kind }
+    }
+    pub fn len(&self) -> usize {
+        self.order.len()
+    }
     pub fn from(kind: GenericIdKind, params: &ParsedGenericParams) -> Self {
         let mut order = HashMap::new();
         for (i, param) in params.order.iter().enumerate() {

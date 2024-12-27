@@ -1,4 +1,5 @@
 use crate::compiler::analyzer::analyzed_type::{GenericIdKind, GenericParams};
+use crate::compiler::builtin;
 use crate::compiler::lexer::location::Src;
 use crate::compiler::merger::merged_expression::{ResolvedEnum, ResolvedStruct, StructId};
 use crate::compiler::merger::resolved_types::ResolvedTypes;
@@ -18,6 +19,8 @@ pub fn build_resolved_types(program: &ParsedProgram) -> MergerResult<ResolvedTyp
 
     let mut resolved_structs = HashMap::new();
     let mut resolved_enums = HashMap::new();
+
+    builtin::BuiltinStruct::add_builtin_resolved_structs(&mut resolved_structs);
 
     for (module_id, (module_struct_defs, module_enum_defs)) in &module_defs {
         for (_, struct_def) in module_struct_defs {

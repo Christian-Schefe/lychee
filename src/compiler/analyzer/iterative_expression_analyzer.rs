@@ -178,6 +178,11 @@ pub fn analyze_expression(
                     }
                 }
                 ParsedExpressionKind::Sizeof(_) => {}
+                ParsedExpressionKind::Tuple(elements) => {
+                    for element in elements.iter().rev() {
+                        stack.push((element, false, in_loop, None));
+                    }
+                }
             }
         } else {
             let (ty, analyzed) = match &stack_expr.value {
@@ -915,6 +920,23 @@ pub fn analyze_expression(
                         AnalyzedExpressionKind::Sizeof(resolved_type),
                     )
                 }
+                ParsedExpressionKind::Tuple(elements) => {
+                    let analyzed_elements = output.split_off(output.len() - elements.len());
+                    let element_types = analyzed_elements
+                        .iter()
+                        .map(|x| x.ty.clone())
+                        .collect::<Vec<_>>();
+                    (
+                        context.types.get_tuple_type(&element_types),
+                        AnalyzedExpressionKind::StructInstance {
+                            fields: analyzed_elements
+                                .into_iter()
+                                .enumerate()
+                                .map(|(i, x)| (format!("item{}", i), x))
+                                .collect(),
+                        },
+                    )
+                }
             };
             output.push(AnalyzedExpression {
                 kind: analyzed,
@@ -1106,6 +1128,7 @@ pub fn check_matches_try_find_generic_args(
     arg_ty: &AnalyzedTypeId,
     param_ty: &AnalyzedTypeId,
     generic_arg_map: &mut HashMap<GenericId, AnalyzedTypeId>,
+    location: &Location,
 ) -> AnalyzerResult<()> {
     match (arg_ty, param_ty) {
         (ty, AnalyzedTypeId::GenericType(generic_id)) => {
@@ -1114,14 +1137,15 @@ pub fn check_matches_try_find_generic_args(
                 .is_some_and(|x| x != *ty)
             {
                 return Err(anyhow::anyhow!(
-                    "Ambiguous generic argument '{}'.",
-                    generic_id
+                    "Ambiguous generic argument '{}' at {}",
+                    generic_id,
+                    location
                 ));
             }
             Ok(())
         }
         (AnalyzedTypeId::Pointer(inner), AnalyzedTypeId::Pointer(inner2)) => {
-            check_matches_try_find_generic_args(inner, inner2, generic_arg_map)
+            check_matches_try_find_generic_args(inner, inner2, generic_arg_map, location)
         }
         (AnalyzedTypeId::StructType(struct_ref), AnalyzedTypeId::StructType(struct_ref2)) => {
             for (arg, arg2) in struct_ref
@@ -1129,7 +1153,7 @@ pub fn check_matches_try_find_generic_args(
                 .iter()
                 .zip(struct_ref2.generic_args.iter())
             {
-                check_matches_try_find_generic_args(arg, arg2, generic_arg_map)?
+                check_matches_try_find_generic_args(arg, arg2, generic_arg_map, location)?
             }
             Ok(())
         }
@@ -1138,18 +1162,24 @@ pub fn check_matches_try_find_generic_args(
             AnalyzedTypeId::FunctionType(return_type2, params2),
         ) => {
             for (param, param2) in params.iter().zip(params2.iter()) {
-                check_matches_try_find_generic_args(param, param2, generic_arg_map)?;
+                check_matches_try_find_generic_args(param, param2, generic_arg_map, location)?;
             }
-            check_matches_try_find_generic_args(return_type, return_type2, generic_arg_map)
+            check_matches_try_find_generic_args(
+                return_type,
+                return_type2,
+                generic_arg_map,
+                location,
+            )
         }
         (ty, ty2) => {
             if ty == ty2 {
                 Ok(())
             } else {
                 Err(anyhow::anyhow!(
-                    "Type '{}' does not match expected type '{}'.",
+                    "Type '{}' does not match expected type '{}' at {}",
                     ty,
-                    ty2
+                    ty2,
+                    location
                 ))
             }
         }
@@ -1318,7 +1348,7 @@ fn determine_function_call(
         let default_generic_args = Vec::new();
         let generic_args = id.generic_args.as_ref().unwrap_or(&default_generic_args);
         let analyzed_generic_args = analyze_generic_args(context, &generic_args)?;
-        let mut function_ref_res = context.functions.map_function_id(
+        let function_ref_res = context.functions.map_function_id(
             &id.id,
             arg_types.clone(),
             analyzed_generic_args,

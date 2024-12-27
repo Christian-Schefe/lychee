@@ -238,5 +238,13 @@ fn print_expression(printer: &mut Printer, expr: &ParsedExpression) {
             }
             printer.dedent();
         }
+        ParsedExpressionKind::Tuple(elements) => {
+            printer.add_line("Tuple".to_string());
+            printer.indent();
+            for expr in elements {
+                print_expression(printer, expr);
+            }
+            printer.dedent();
+        }
     }
 }

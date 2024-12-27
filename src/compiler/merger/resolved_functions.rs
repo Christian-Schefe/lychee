@@ -130,6 +130,7 @@ impl ResolvedFunctions {
                         arg_type,
                         param_type,
                         &mut resolved_generic_map,
+                        location
                     )?;
                 }
 
@@ -177,7 +178,7 @@ impl ResolvedFunctions {
                     matching_param_types.pop().unwrap()?;
                 }
                 return Err(anyhow::anyhow!(
-                    "Function {} doesn't have matching parameters {} or generic args at {}",
+                    "Function {} with parameters '{}' doesn't match any function signature at {}",
                     function_id.item_id,
                     arg_types
                         .iter()

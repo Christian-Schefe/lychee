@@ -34,11 +34,12 @@ fn compute_type_sizes(
     struct_sizes: &mut HashMap<String, usize>,
 ) {
     for (id, _) in structs {
-        let mut visited = HashSet::new();
+        let mut visiting = HashSet::new();
         let size = compute_type_size(
             &UnwrappedTypeId::StructType(id.clone()),
             structs,
-            &mut visited,
+            &mut visiting,
+            struct_sizes,
         )
         .unwrap();
         struct_sizes.insert(id.clone(), size);
@@ -48,19 +49,25 @@ fn compute_type_sizes(
 fn compute_type_size(
     type_id: &UnwrappedTypeId,
     structs: &HashMap<String, UnwrappedStruct>,
-    visited: &mut HashSet<String>,
+    visiting: &mut HashSet<String>,
+    visited: &mut HashMap<String, usize>,
 ) -> AnalyzerResult<usize> {
     match type_id {
         UnwrappedTypeId::StructType(id) => {
-            if !visited.insert(id.clone()) {
+            if let Some(size) = visited.get(id) {
+                return Ok(*size);
+            }
+            if !visiting.insert(id.clone()) {
                 return Err(anyhow::anyhow!("Type cycle detected: {:?}", type_id));
             }
             let resolved_struct = structs.get(id).unwrap();
             let mut size = 0;
             for field_name in &resolved_struct.field_order {
                 let field_type = resolved_struct.field_types.get(field_name).unwrap();
-                size += compute_type_size(&field_type, structs, visited)?;
+                size += compute_type_size(&field_type, structs, visiting, visited)?;
             }
+            visiting.remove(id);
+            visited.insert(id.clone(), size);
             Ok(size)
         }
         UnwrappedTypeId::Pointer(_) => Ok(8),

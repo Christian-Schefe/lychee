@@ -1,4 +1,5 @@
 use crate::compiler::analyzer::analyzed_type::{AnalyzedTypeId, GenericParams};
+use crate::compiler::builtin;
 use crate::compiler::merger::merged_expression::{StructId, StructRef};
 use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::item_id::{ItemId, ParsedScopeId};
@@ -14,6 +15,7 @@ pub struct CollectedTypeData {
     pub imported_type_aliases: HashMap<ModuleIdentifier, HashMap<String, ParsedType>>,
     pub enums: HashMap<ModuleIdentifier, HashMap<String, ItemId>>,
     pub enum_imports: HashMap<ModuleIdentifier, HashMap<String, ItemId>>,
+    pub builtin_structs: HashMap<String, HashSet<StructId>>,
 }
 
 impl CollectedTypeData {
@@ -36,6 +38,13 @@ impl CollectedTypeData {
         if id.is_module_local {
             if let Some(struct_ids) = imported_structs.get(&id.item_id.item_name) {
                 for struct_id in struct_ids {
+                    if struct_id.generic_count == generic_count {
+                        matching.push(struct_id.clone());
+                    }
+                }
+            }
+            if let Some(builtin_struct_ids) = self.builtin_structs.get(&id.item_id.item_name) {
+                for struct_id in builtin_struct_ids {
                     if struct_id.generic_count == generic_count {
                         matching.push(struct_id.clone());
                     }
@@ -144,6 +153,7 @@ pub fn collect_type_data(program: &ParsedProgram) -> MergerResult<CollectedTypeD
     let imported_type_aliases = collect_type_alias_imports(program, &type_aliases)?;
     let enums = collect_enums(program)?;
     let enum_imports = collect_enum_imports(program, &enums)?;
+    let builtin_structs = builtin::BuiltinStruct::get_builtin_struct_ids();
     Ok(CollectedTypeData {
         structs,
         struct_imports,
@@ -151,6 +161,7 @@ pub fn collect_type_data(program: &ParsedProgram) -> MergerResult<CollectedTypeD
         imported_type_aliases,
         enums,
         enum_imports,
+        builtin_structs,
     })
 }
 
