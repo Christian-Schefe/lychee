@@ -19,4 +19,4 @@ unit memset<T>(&T pointer, int value, int size) {
 
 unit memcopy<T>(&T dest, &T src, int size) {
     memcopy(dest as &unit, src as &unit, size * sizeof(T));
-}
+} 

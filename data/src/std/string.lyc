@@ -71,14 +71,6 @@ unit read_string(&String str) {
     read(str.data, str.size);
 }
 
-char get(&String str, int index) {
-    return str.data[index];
-}
-
-unit set(&String str, int index, char value) {
-    str.data[index] = value;
-}
-
 int parse_int(&String str) {
     let int i = 0;
     let int num = 0;

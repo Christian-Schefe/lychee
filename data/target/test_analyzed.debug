@@ -1,4 +1,57 @@
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "partial_generic_function" }, body_index: 15, param_count: 1, generic_count: 1 }) }>(test::generic_test::partial_generic_function<_>(_))
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "small_test", path: [] }, item_name: "add" }, body_index: 72, param_count: 2, generic_count: 0 }) }>(small_test::::add(_,_))
+  b: int
+  a: int
+-> int
+Expr type: int
+Block (returns: true) {
+  Expr type: int
+  Binary(Math(Add))
+    Expr type: int
+    ValueOfAssignable
+      LocalVariable(a)
+    Expr type: int
+    ValueOfAssignable
+      LocalVariable(b)
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "set" }, body_index: 29, param_count: 3, generic_count: 1 }) }>(test::std::vec::set<_>(_,_,_))
+  this: test::std::vec::Vec<<0> of test::std::vec::set<_>(_,_,_)>
+  value: <0> of test::std::vec::set<_>(_,_,_)
+  index: int
+-> unit
+Expr type: unit
+Block (returns: true) {
+  Expr type: unit
+  FunctionCall
+    Function(test::std::vec::set<<0> of test::std::vec::set<_>(_,_,_)>(&test::std::vec::Vec<<0> of test::std::vec::set<_>(_,_,_)>,int,<0> of test::std::vec::set<_>(_,_,_)))
+    Expr type: &test::std::vec::Vec<<0> of test::std::vec::set<_>(_,_,_)>
+    Borrow
+      LocalVariable(this)
+    Expr type: int
+    ValueOfAssignable
+      LocalVariable(index)
+    Expr type: <0> of test::std::vec::set<_>(_,_,_)
+    ValueOfAssignable
+      LocalVariable(value)
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "malloc" }, body_index: 57, param_count: 1, generic_count: 1 }) }>(test::std::mem::malloc<_>(_))
+  size: int
+-> &<0> of test::std::mem::malloc<_>(_)
+Expr type: &<0> of test::std::mem::malloc<_>(_)
+Block (returns: true) {
+  Expr type: &<0> of test::std::mem::malloc<_>(_)
+  Unary(Cast)
+    Expr type: &unit
+    FunctionCall
+      Function(builtin::::malloc(int))
+      Expr type: int
+      Binary(Math(Mul))
+        Expr type: int
+        ValueOfAssignable
+          LocalVariable(size)
+        Expr type: int
+        Sizeof(GenericType(GenericId { kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "malloc" }, body_index: 57, param_count: 1, generic_count: 1 }), index: 0 }))
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "partial_generic_function" }, body_index: 14, param_count: 1, generic_count: 1 }) }>(test::generic_test::partial_generic_function<_>(_))
   x: <0> of test::generic_test::partial_generic_function<_>(_)
 -> test::generic_test::TwoGenerics<<0> of test::generic_test::partial_generic_function<_>(_),test::generic_test::Option<<0> of test::generic_test::partial_generic_function<_>(_)>>
 Expr type: test::generic_test::TwoGenerics<<0> of test::generic_test::partial_generic_function<_>(_),test::generic_test::Option<<0> of test::generic_test::partial_generic_function<_>(_)>>
@@ -17,80 +70,205 @@ Block (returns: true) {
       ValueOfAssignable
         LocalVariable(x)
 }
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "get" }, body_index: 25, param_count: 2, generic_count: 0 }) }>(test::std::string::get(_,_))
-  str: &test::std::vec::Vec<char>
-  index: int
--> char
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "print" }, body_index: 18, param_count: 1, generic_count: 0 }) }>(test::std::string::print(_))
+  this: test::std::vec::Vec<char>
+-> unit
 Expr type: unit
 Block (returns: false) {
   Expr type: unit
-  Return {
-    Expr type: char
-    ValueOfAssignable
-      ArrayIndex
-        Expr type: &char
-        ValueOfAssignable
-          PointerFieldAccess(data, 1)
-            Expr type: &test::std::vec::Vec<char>
-            ValueOfAssignable
-              LocalVariable(str)
-        Expr type: int
-        ValueOfAssignable
-          LocalVariable(index)
-  }
+  FunctionCall
+    Function(builtin::::write(&char,int))
+    Expr type: &char
+    FieldAccess(data)
+      Expr type: test::std::vec::Vec<char>
+      ValueOfAssignable
+        LocalVariable(this)
+    Expr type: int
+    FieldAccess(size)
+      Expr type: test::std::vec::Vec<char>
+      ValueOfAssignable
+        LocalVariable(this)
 }
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "tuple_test" }, body_index: 56, param_count: 2, generic_count: 1 }) }>(test::::tuple_test<_>(_,_))
-  b: int
-  a: <0> of test::::tuple_test<_>(_,_)
--> builtin::::$tuple<<0> of test::::tuple_test<_>(_,_),int>
-Expr type: builtin::::$tuple<<0> of test::::tuple_test<_>(_,_),int>
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "add1" }, body_index: 15, param_count: 1, generic_count: 0 }) }>(test::generic_test::add1(_))
+  x: int
+-> int
+Expr type: int
 Block (returns: true) {
-  Expr type: builtin::::$tuple<<0> of test::::tuple_test<_>(_,_),int>
-  Struct
-    item0: 
-    Expr type: <0> of test::::tuple_test<_>(_,_)
-    ValueOfAssignable
-      LocalVariable(a)
-    item1: 
+  Expr type: int
+  Binary(Math(Add))
     Expr type: int
     ValueOfAssignable
-      LocalVariable(b)
+      LocalVariable(x)
+    Expr type: int
+    Literal(Integer(1))
 }
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "unit_test" }, body_index: 51, param_count: 2, generic_count: 0 }) }>(test::::unit_test(_,_))
-  a: unit
-  b: unit
--> unit
-Expr type: unit
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "create_sized_string" }, body_index: 17, param_count: 1, generic_count: 0 }) }>(test::std::string::create_sized_string(_))
+  size: int
+-> test::std::vec::Vec<char>
+Expr type: test::std::vec::Vec<char>
 Block (returns: true) {
   Expr type: unit
+  Declaration(str)
+    Expr type: test::std::vec::Vec<char>
+    FunctionCall
+      Function(test::std::vec::create_sized_vec<char>(int))
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(size)
+  Expr type: test::std::vec::Vec<char>
   ValueOfAssignable
-    LocalVariable(a)
+    LocalVariable(str)
 }
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "set" }, body_index: 1, param_count: 3, generic_count: 1 }) }>(test::std::array::set<_>(_,_,_))
-  value: <0> of test::std::array::set<_>(_,_,_)
-  this: test::std::array::Array<<0> of test::std::array::set<_>(_,_,_)>
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "get" }, body_index: 27, param_count: 2, generic_count: 1 }) }>(test::std::vec::get<_>(_,_))
+  this: test::std::vec::Vec<<0> of test::std::vec::get<_>(_,_)>
   index: int
+-> <0> of test::std::vec::get<_>(_,_)
+Expr type: <0> of test::std::vec::get<_>(_,_)
+Block (returns: true) {
+  Expr type: <0> of test::std::vec::get<_>(_,_)
+  FunctionCall
+    Function(test::std::vec::get<<0> of test::std::vec::get<_>(_,_)>(&test::std::vec::Vec<<0> of test::std::vec::get<_>(_,_)>,int))
+    Expr type: &test::std::vec::Vec<<0> of test::std::vec::get<_>(_,_)>
+    Borrow
+      LocalVariable(this)
+    Expr type: int
+    ValueOfAssignable
+      LocalVariable(index)
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "print"] }, item_name: "println" }, body_index: 54, param_count: 1, generic_count: 0 }) }>(test::std::print::println(_))
+  num: int
 -> unit
 Expr type: unit
 Block (returns: false) {
-  Expr type: <0> of test::std::array::set<_>(_,_,_)
-  Assign(Assign)
-    ArrayIndex
-      Expr type: &<0> of test::std::array::set<_>(_,_,_)
-      FieldAccess(data)
-        Expr type: test::std::array::Array<<0> of test::std::array::set<_>(_,_,_)>
-        ValueOfAssignable
-          LocalVariable(this)
-      Expr type: int
+  Expr type: unit
+  FunctionCall
+    Function(test::std::print::print(int))
+    Expr type: int
+    ValueOfAssignable
+      LocalVariable(num)
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::write_char(char))
+    Expr type: char
+    Literal(Char(10))
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "memset" }, body_index: 59, param_count: 3, generic_count: 1 }) }>(test::std::mem::memset<_>(_,_,_))
+  size: int
+  value: int
+  pointer: &<0> of test::std::mem::memset<_>(_,_,_)
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::memset(&unit,int,int))
+    Expr type: &unit
+    Unary(Cast)
+      Expr type: &<0> of test::std::mem::memset<_>(_,_,_)
       ValueOfAssignable
-        LocalVariable(index)
-    Expr type: <0> of test::std::array::set<_>(_,_,_)
+        LocalVariable(pointer)
+    Expr type: int
     ValueOfAssignable
       LocalVariable(value)
+    Expr type: int
+    Binary(Math(Mul))
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(size)
+      Expr type: int
+      Sizeof(GenericType(GenericId { kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "memset" }, body_index: 59, param_count: 3, generic_count: 1 }), index: 0 }))
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "filter" }, body_index: 7, param_count: 2, generic_count: 1 }) }>(test::std::array::filter<_>(_,_))
+  this: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
+  fn: fn(<0> of test::std::array::filter<_>(_,_))->bool
+-> test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
+Expr type: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
+Block (returns: true) {
+  Expr type: unit
+  Declaration(arr)
+    Expr type: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
+    FunctionCall
+      Function(test::std::array::create_array<<0> of test::std::array::filter<_>(_,_)>(int))
+      Expr type: int
+      FieldAccess(size)
+        Expr type: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
+        ValueOfAssignable
+          LocalVariable(this)
+  Expr type: unit
+  Declaration(i)
+    Expr type: int
+    Literal(Integer(0))
+  Expr type: unit
+  Declaration(j)
+    Expr type: int
+    Literal(Integer(0))
+  Expr type: unit
+  Loop {
+    Expr type: bool
+    Binary(Comparison(Less))
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(i)
+      Expr type: int
+      FieldAccess(size)
+        Expr type: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
+        ValueOfAssignable
+          LocalVariable(this)
+    Expr type: unit
+    Block (returns: false) {
+      Expr type: unit
+      If {
+        Expr type: bool
+        FunctionCall
+          Expr type: fn(<0> of test::std::array::filter<_>(_,_))->bool
+          ValueOfAssignable
+            LocalVariable(fn)
+          Expr type: <0> of test::std::array::filter<_>(_,_)
+          FunctionCall
+            Function(test::std::array::get<<0> of test::std::array::filter<_>(_,_)>(test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>,int))
+            Expr type: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
+            ValueOfAssignable
+              LocalVariable(this)
+            Expr type: int
+            ValueOfAssignable
+              LocalVariable(i)
+        Expr type: unit
+        Block (returns: false) {
+          Expr type: unit
+          FunctionCall
+            Function(test::std::array::set<<0> of test::std::array::filter<_>(_,_)>(test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>,int,<0> of test::std::array::filter<_>(_,_)))
+            Expr type: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
+            ValueOfAssignable
+              LocalVariable(arr)
+            Expr type: int
+            ValueOfAssignable
+              LocalVariable(j)
+            Expr type: <0> of test::std::array::filter<_>(_,_)
+            FunctionCall
+              Function(test::std::array::get<<0> of test::std::array::filter<_>(_,_)>(test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>,int))
+              Expr type: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
+              ValueOfAssignable
+                LocalVariable(this)
+              Expr type: int
+              ValueOfAssignable
+                LocalVariable(i)
+          Expr type: int
+          Increment(false)
+            LocalVariable(j)
+        }
+      }
+      Expr type: int
+      Increment(false)
+        LocalVariable(i)
+    }
+  }
+  Expr type: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
+  ValueOfAssignable
+    LocalVariable(arr)
 }
 Function<GenericParams { mapping: {"T": 0, "K": 1}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "map" }, body_index: 6, param_count: 2, generic_count: 2 }) }>(test::std::array::map<_,_>(_,_))
-  fn: fn(<0> of test::std::array::map<_,_>(_,_))-><1> of test::std::array::map<_,_>(_,_)
   this: test::std::array::Array<<0> of test::std::array::map<_,_>(_,_)>
+  fn: fn(<0> of test::std::array::map<_,_>(_,_))-><1> of test::std::array::map<_,_>(_,_)
 -> test::std::array::Array<<1> of test::std::array::map<_,_>(_,_)>
 Expr type: test::std::array::Array<<1> of test::std::array::map<_,_>(_,_)>
 Block (returns: true) {
@@ -154,20 +332,626 @@ Block (returns: true) {
   ValueOfAssignable
     LocalVariable(arr)
 }
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "add1" }, body_index: 16, param_count: 1, generic_count: 0 }) }>(test::generic_test::add1(_))
-  x: int
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "tuple_test" }, body_index: 70, param_count: 2, generic_count: 1 }) }>(test::::tuple_test<_>(_,_))
+  b: int
+  a: <0> of test::::tuple_test<_>(_,_)
+-> builtin::::$tuple<<0> of test::::tuple_test<_>(_,_),int>
+Expr type: builtin::::$tuple<<0> of test::::tuple_test<_>(_,_),int>
+Block (returns: true) {
+  Expr type: builtin::::$tuple<<0> of test::::tuple_test<_>(_,_),int>
+  Struct
+    item0: 
+    Expr type: <0> of test::::tuple_test<_>(_,_)
+    ValueOfAssignable
+      LocalVariable(a)
+    item1: 
+    Expr type: int
+    ValueOfAssignable
+      LocalVariable(b)
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "mul3" }, body_index: 67, param_count: 1, generic_count: 0 }) }>(test::::mul3(_))
+  a: char
+-> char
+Expr type: char
+Block (returns: true) {
+  Expr type: char
+  ValueOfAssignable
+    LocalVariable(a)
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, item_name: "write_file" }, body_index: 45, param_count: 2, generic_count: 0 }) }>(test::std::io::write_file(_,_))
+  this: test::std::io::File
+  string: &test::std::vec::Vec<char>
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::fwrite(&char,int,int))
+    Expr type: &char
+    ValueOfAssignable
+      PointerFieldAccess(data, 1)
+        Expr type: &test::std::vec::Vec<char>
+        ValueOfAssignable
+          LocalVariable(string)
+    Expr type: int
+    ValueOfAssignable
+      PointerFieldAccess(size, 1)
+        Expr type: &test::std::vec::Vec<char>
+        ValueOfAssignable
+          LocalVariable(string)
+    Expr type: int
+    FieldAccess(file)
+      Expr type: test::std::io::File
+      ValueOfAssignable
+        LocalVariable(this)
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "read_string" }, body_index: 23, param_count: 1, generic_count: 0 }) }>(test::std::string::read_string(_))
+  str: &test::std::vec::Vec<char>
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::read(&char,int))
+    Expr type: &char
+    ValueOfAssignable
+      PointerFieldAccess(data, 1)
+        Expr type: &test::std::vec::Vec<char>
+        ValueOfAssignable
+          LocalVariable(str)
+    Expr type: int
+    ValueOfAssignable
+      PointerFieldAccess(size, 1)
+        Expr type: &test::std::vec::Vec<char>
+        ValueOfAssignable
+          LocalVariable(str)
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "generic_sizeof_test" }, body_index: 63, param_count: 0, generic_count: 1 }) }>(test::::generic_sizeof_test<_>())
 -> int
 Expr type: int
 Block (returns: true) {
   Expr type: int
-  Binary(Math(Add))
+  Sizeof(GenericType(GenericId { kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "generic_sizeof_test" }, body_index: 63, param_count: 0, generic_count: 1 }), index: 0 }))
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "create_string" }, body_index: 16, param_count: 1, generic_count: 0 }) }>(test::std::string::create_string(_))
+  capacity: int
+-> test::std::vec::Vec<char>
+Expr type: test::std::vec::Vec<char>
+Block (returns: true) {
+  Expr type: unit
+  Declaration(str)
+    Expr type: test::std::vec::Vec<char>
+    FunctionCall
+      Function(test::std::vec::create_vec<char>(int))
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(capacity)
+  Expr type: test::std::vec::Vec<char>
+  ValueOfAssignable
+    LocalVariable(str)
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "clone" }, body_index: 37, param_count: 1, generic_count: 1 }) }>(test::std::vec::clone<_>(_))
+  this: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
+-> test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
+Expr type: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
+Block (returns: true) {
+  Expr type: unit
+  Declaration(new_vec)
+    Expr type: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
+    FunctionCall
+      Function(test::std::vec::create_vec<<0> of test::std::vec::clone<_>(_)>(int))
+      Expr type: int
+      FieldAccess(capacity)
+        Expr type: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
+        ValueOfAssignable
+          LocalVariable(this)
+  Expr type: unit
+  FunctionCall
+    Function(test::std::mem::memcopy<<0> of test::std::vec::clone<_>(_)>(&<0> of test::std::vec::clone<_>(_),&<0> of test::std::vec::clone<_>(_),int))
+    Expr type: &<0> of test::std::vec::clone<_>(_)
+    FieldAccess(data)
+      Expr type: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
+      ValueOfAssignable
+        LocalVariable(this)
+    Expr type: &<0> of test::std::vec::clone<_>(_)
+    FieldAccess(data)
+      Expr type: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
+      ValueOfAssignable
+        LocalVariable(new_vec)
+    Expr type: int
+    FieldAccess(size)
+      Expr type: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
+      ValueOfAssignable
+        LocalVariable(this)
+  Expr type: int
+  Assign(Assign)
+    FieldAccess(size)
+      LocalVariable(new_vec)
+    Expr type: int
+    FieldAccess(size)
+      Expr type: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
+      ValueOfAssignable
+        LocalVariable(this)
+  Expr type: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
+  ValueOfAssignable
+    LocalVariable(new_vec)
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "get" }, body_index: 26, param_count: 2, generic_count: 1 }) }>(test::std::vec::get<_>(_,_))
+  index: int
+  this: &test::std::vec::Vec<<0> of test::std::vec::get<_>(_,_)>
+-> <0> of test::std::vec::get<_>(_,_)
+Expr type: <0> of test::std::vec::get<_>(_,_)
+Block (returns: true) {
+  Expr type: unit
+  If {
+    Expr type: bool
+    Binary(Logical(Or))
+      Expr type: bool
+      Binary(Comparison(Less))
+        Expr type: int
+        ValueOfAssignable
+          LocalVariable(index)
+        Expr type: int
+        Literal(Integer(0))
+      Expr type: bool
+      Binary(Comparison(GreaterEquals))
+        Expr type: int
+        ValueOfAssignable
+          LocalVariable(index)
+        Expr type: int
+        ValueOfAssignable
+          PointerFieldAccess(size, 1)
+            Expr type: &test::std::vec::Vec<<0> of test::std::vec::get<_>(_,_)>
+            ValueOfAssignable
+              LocalVariable(this)
+    Expr type: unit
+    Block (returns: false) {
+      Expr type: unit
+      FunctionCall
+        Function(test::std::panic::panic(&char))
+        Expr type: &char
+        ConstantPointer(String([73, 110, 100, 101, 120, 32, 111, 117, 116, 32, 111, 102, 32, 98, 111, 117, 110, 100, 115, 0]))
+    }
+  }
+  Expr type: <0> of test::std::vec::get<_>(_,_)
+  ValueOfAssignable
+    ArrayIndex
+      Expr type: &<0> of test::std::vec::get<_>(_,_)
+      ValueOfAssignable
+        PointerFieldAccess(data, 1)
+          Expr type: &test::std::vec::Vec<<0> of test::std::vec::get<_>(_,_)>
+          ValueOfAssignable
+            LocalVariable(this)
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(index)
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, item_name: "print_file" }, body_index: 46, param_count: 1, generic_count: 0 }) }>(test::std::io::print_file(_))
+  this: test::std::io::File
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::write_char(char))
+    Expr type: char
+    Literal(Char(91))
+  Expr type: unit
+  FunctionCall
+    Function(test::std::print::print(int))
+    Expr type: int
+    FieldAccess(file)
+      Expr type: test::std::io::File
+      ValueOfAssignable
+        LocalVariable(this)
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::write_char(char))
+    Expr type: char
+    Literal(Char(93))
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "from_literal" }, body_index: 20, param_count: 1, generic_count: 0 }) }>(test::std::string::from_literal(_))
+  literal: &char
+-> test::std::vec::Vec<char>
+Expr type: test::std::vec::Vec<char>
+Block (returns: true) {
+  Expr type: unit
+  Declaration(size)
+    Expr type: int
+    Literal(Integer(0))
+  Expr type: unit
+  Loop {
+    Expr type: bool
+    Binary(Comparison(NotEquals))
+      Expr type: char
+      ValueOfAssignable
+        ArrayIndex
+          Expr type: &char
+          ValueOfAssignable
+            LocalVariable(literal)
+          Expr type: int
+          ValueOfAssignable
+            LocalVariable(size)
+      Expr type: char
+      Literal(Char(0))
+    Expr type: unit
+    Block (returns: false) {
+      Expr type: int
+      Increment(false)
+        LocalVariable(size)
+    }
+  }
+  Expr type: unit
+  Declaration(str)
+    Expr type: test::std::vec::Vec<char>
+    FunctionCall
+      Function(test::std::string::create_string(int))
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(size)
+  Expr type: unit
+  Declaration(i)
+    Expr type: int
+    Literal(Integer(0))
+  Expr type: unit
+  Loop {
+    Expr type: bool
+    Binary(Comparison(Less))
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(i)
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(size)
+    Expr type: unit
+    Block (returns: false) {
+      Expr type: unit
+      FunctionCall
+        Function(test::std::vec::set<char>(&test::std::vec::Vec<char>,int,char))
+        Expr type: &test::std::vec::Vec<char>
+        Borrow
+          LocalVariable(str)
+        Expr type: int
+        ValueOfAssignable
+          LocalVariable(i)
+        Expr type: char
+        ValueOfAssignable
+          ArrayIndex
+            Expr type: &char
+            ValueOfAssignable
+              LocalVariable(literal)
+            Expr type: int
+            ValueOfAssignable
+              LocalVariable(i)
+      Expr type: int
+      Increment(false)
+        LocalVariable(i)
+    }
+  }
+  Expr type: test::std::vec::Vec<char>
+  ValueOfAssignable
+    LocalVariable(str)
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, item_name: "open_file" }, body_index: 41, param_count: 1, generic_count: 0 }) }>(test::std::io::open_file(_))
+  path: &char
+-> test::std::io::File
+Expr type: test::std::io::File
+Block (returns: true) {
+  Expr type: unit
+  Declaration(file)
+    Expr type: int
+    FunctionCall
+      Function(builtin::::fopen(&char))
+      Expr type: &char
+      ValueOfAssignable
+        LocalVariable(path)
+  Expr type: test::std::io::File
+  Struct
+    file: 
     Expr type: int
     ValueOfAssignable
-      LocalVariable(x)
+      LocalVariable(file)
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "do_nothing" }, body_index: 8, param_count: 1, generic_count: 1 }) }>(test::generic_test::do_nothing<_>(_))
+  x: <0> of test::generic_test::do_nothing<_>(_)
+-> <0> of test::generic_test::do_nothing<_>(_)
+Expr type: <0> of test::generic_test::do_nothing<_>(_)
+Block (returns: true) {
+  Expr type: <0> of test::generic_test::do_nothing<_>(_)
+  ValueOfAssignable
+    LocalVariable(x)
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "free" }, body_index: 34, param_count: 1, generic_count: 1 }) }>(test::std::vec::free<_>(_))
+  this: test::std::vec::Vec<<0> of test::std::vec::free<_>(_)>
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  FunctionCall
+    Function(test::std::mem::free<<0> of test::std::vec::free<_>(_)>(&<0> of test::std::vec::free<_>(_)))
+    Expr type: &<0> of test::std::vec::free<_>(_)
+    FieldAccess(data)
+      Expr type: test::std::vec::Vec<<0> of test::std::vec::free<_>(_)>
+      ValueOfAssignable
+        LocalVariable(this)
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, item_name: "read" }, body_index: 43, param_count: 2, generic_count: 0 }) }>(test::std::io::read(_,_))
+  this: test::std::io::File
+  string: &test::std::vec::Vec<char>
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: int
+  FunctionCall
+    Function(builtin::::fread(&char,int,int))
+    Expr type: &char
+    ValueOfAssignable
+      PointerFieldAccess(data, 1)
+        Expr type: &test::std::vec::Vec<char>
+        ValueOfAssignable
+          LocalVariable(string)
+    Expr type: int
+    ValueOfAssignable
+      PointerFieldAccess(size, 1)
+        Expr type: &test::std::vec::Vec<char>
+        ValueOfAssignable
+          LocalVariable(string)
+    Expr type: int
+    FieldAccess(file)
+      Expr type: test::std::io::File
+      ValueOfAssignable
+        LocalVariable(this)
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "panic"] }, item_name: "panic" }, body_index: 55, param_count: 1, generic_count: 0 }) }>(test::std::panic::panic(_))
+  message: &char
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  FunctionCall
+    Function(test::std::print::println(&char))
+    Expr type: &char
+    ConstantPointer(String([80, 65, 78, 73, 67, 58, 0]))
+  Expr type: unit
+  FunctionCall
+    Function(test::std::print::println(&char))
+    Expr type: &char
+    ValueOfAssignable
+      LocalVariable(message)
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::exit(int))
     Expr type: int
     Literal(Integer(1))
 }
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "push" }, body_index: 42, param_count: 2, generic_count: 1 }) }>(test::std::vec::push<_>(_,_))
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, item_name: "close" }, body_index: 42, param_count: 1, generic_count: 0 }) }>(test::std::io::close(_))
+  this: test::std::io::File
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::fclose(int))
+    Expr type: int
+    FieldAccess(file)
+      Expr type: test::std::io::File
+      ValueOfAssignable
+        LocalVariable(this)
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "get" }, body_index: 0, param_count: 2, generic_count: 1 }) }>(test::std::array::get<_>(_,_))
+  index: int
+  this: test::std::array::Array<<0> of test::std::array::get<_>(_,_)>
+-> <0> of test::std::array::get<_>(_,_)
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  Return {
+    Expr type: <0> of test::std::array::get<_>(_,_)
+    ValueOfAssignable
+      ArrayIndex
+        Expr type: &<0> of test::std::array::get<_>(_,_)
+        FieldAccess(data)
+          Expr type: test::std::array::Array<<0> of test::std::array::get<_>(_,_)>
+          ValueOfAssignable
+            LocalVariable(this)
+        Expr type: int
+        ValueOfAssignable
+          LocalVariable(index)
+  }
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "print" }, body_index: 31, param_count: 1, generic_count: 0 }) }>(test::std::vec::print(_))
+  this: test::std::vec::Vec<int>
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  Declaration(i)
+    Expr type: int
+    Literal(Integer(0))
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::write_char(char))
+    Expr type: char
+    Literal(Char(91))
+  Expr type: unit
+  Loop {
+    Expr type: bool
+    Binary(Comparison(Less))
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(i)
+      Expr type: int
+      FieldAccess(size)
+        Expr type: test::std::vec::Vec<int>
+        ValueOfAssignable
+          LocalVariable(this)
+    Expr type: unit
+    Block (returns: false) {
+      Expr type: unit
+      If {
+        Expr type: bool
+        Binary(Comparison(Greater))
+          Expr type: int
+          ValueOfAssignable
+            LocalVariable(i)
+          Expr type: int
+          Literal(Integer(0))
+        Expr type: unit
+        Block (returns: false) {
+          Expr type: unit
+          FunctionCall
+            Function(builtin::::write_char(char))
+            Expr type: char
+            Literal(Char(44))
+          Expr type: unit
+          FunctionCall
+            Function(builtin::::write_char(char))
+            Expr type: char
+            Literal(Char(32))
+        }
+      }
+      Expr type: unit
+      FunctionCall
+        Function(test::std::print::print(int))
+        Expr type: int
+        ValueOfAssignable
+          ArrayIndex
+            Expr type: &int
+            FieldAccess(data)
+              Expr type: test::std::vec::Vec<int>
+              ValueOfAssignable
+                LocalVariable(this)
+            Expr type: int
+            ValueOfAssignable
+              LocalVariable(i)
+      Expr type: int
+      Increment(false)
+        LocalVariable(i)
+    }
+  }
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::write_char(char))
+    Expr type: char
+    Literal(Char(93))
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::write_char(char))
+    Expr type: char
+    Literal(Char(10))
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "print" }, body_index: 3, param_count: 1, generic_count: 0 }) }>(test::std::array::print(_))
+  this: test::std::array::Array<int>
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  Declaration(i)
+    Expr type: int
+    Literal(Integer(0))
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::write_char(char))
+    Expr type: char
+    Literal(Char(91))
+  Expr type: unit
+  Loop {
+    Expr type: bool
+    Binary(Comparison(Less))
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(i)
+      Expr type: int
+      FieldAccess(size)
+        Expr type: test::std::array::Array<int>
+        ValueOfAssignable
+          LocalVariable(this)
+    Expr type: unit
+    Block (returns: false) {
+      Expr type: unit
+      If {
+        Expr type: bool
+        Binary(Comparison(Greater))
+          Expr type: int
+          ValueOfAssignable
+            LocalVariable(i)
+          Expr type: int
+          Literal(Integer(0))
+        Expr type: unit
+        Block (returns: false) {
+          Expr type: unit
+          FunctionCall
+            Function(builtin::::write_char(char))
+            Expr type: char
+            Literal(Char(44))
+          Expr type: unit
+          FunctionCall
+            Function(builtin::::write_char(char))
+            Expr type: char
+            Literal(Char(32))
+        }
+      }
+      Expr type: unit
+      FunctionCall
+        Function(test::std::print::print(int))
+        Expr type: int
+        ValueOfAssignable
+          ArrayIndex
+            Expr type: &int
+            FieldAccess(data)
+              Expr type: test::std::array::Array<int>
+              ValueOfAssignable
+                LocalVariable(this)
+            Expr type: int
+            ValueOfAssignable
+              LocalVariable(i)
+      Expr type: int
+      Increment(false)
+        LocalVariable(i)
+    }
+  }
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::write_char(char))
+    Expr type: char
+    Literal(Char(93))
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::write_char(char))
+    Expr type: char
+    Literal(Char(10))
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "generic_call_test" }, body_index: 69, param_count: 2, generic_count: 1 }) }>(test::::generic_call_test<_>(_,_))
+  val: <0> of test::::generic_call_test<_>(_,_)
+  fn: fn(<0> of test::::generic_call_test<_>(_,_))-><0> of test::::generic_call_test<_>(_,_)
+-> <0> of test::::generic_call_test<_>(_,_)
+Expr type: <0> of test::::generic_call_test<_>(_,_)
+Block (returns: true) {
+  Expr type: <0> of test::::generic_call_test<_>(_,_)
+  FunctionCall
+    Expr type: fn(<0> of test::::generic_call_test<_>(_,_))-><0> of test::::generic_call_test<_>(_,_)
+    ValueOfAssignable
+      LocalVariable(fn)
+    Expr type: <0> of test::::generic_call_test<_>(_,_)
+    ValueOfAssignable
+      LocalVariable(val)
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "call_test_fn" }, body_index: 68, param_count: 2, generic_count: 0 }) }>(test::::call_test_fn(_,_))
+  fn: fn(int)->int
+  val: int
+-> int
+Expr type: int
+Block (returns: true) {
+  Expr type: int
+  FunctionCall
+    Expr type: fn(int)->int
+    ValueOfAssignable
+      LocalVariable(fn)
+    Expr type: int
+    ValueOfAssignable
+      LocalVariable(val)
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "push" }, body_index: 35, param_count: 2, generic_count: 1 }) }>(test::std::vec::push<_>(_,_))
   this: &test::std::vec::Vec<<0> of test::std::vec::push<_>(_,_)>
   value: <0> of test::std::vec::push<_>(_,_)
 -> unit
@@ -270,140 +1054,12 @@ Block (returns: false) {
       ValueOfAssignable
         LocalVariable(this)
 }
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "create_sized_string" }, body_index: 18, param_count: 1, generic_count: 0 }) }>(test::std::string::create_sized_string(_))
-  size: int
--> test::std::vec::Vec<char>
-Expr type: test::std::vec::Vec<char>
-Block (returns: true) {
-  Expr type: unit
-  Declaration(str)
-    Expr type: test::std::vec::Vec<char>
-    FunctionCall
-      Function(test::std::vec::create_sized_vec<char>(int))
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(size)
-  Expr type: test::std::vec::Vec<char>
-  ValueOfAssignable
-    LocalVariable(str)
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, item_name: "close" }, body_index: 30, param_count: 1, generic_count: 0 }) }>(test::std::io::close(_))
-  this: test::std::io::File
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "foreach" }, body_index: 39, param_count: 2, generic_count: 1 }) }>(test::std::vec::foreach<_>(_,_))
+  this: test::std::vec::Vec<<0> of test::std::vec::foreach<_>(_,_)>
+  fn: fn(<0> of test::std::vec::foreach<_>(_,_))->unit
 -> unit
 Expr type: unit
 Block (returns: false) {
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::fclose(int))
-    Expr type: int
-    FieldAccess(file)
-      Expr type: test::std::io::File
-      ValueOfAssignable
-        LocalVariable(this)
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "generic_call_test" }, body_index: 55, param_count: 2, generic_count: 1 }) }>(test::::generic_call_test<_>(_,_))
-  val: <0> of test::::generic_call_test<_>(_,_)
-  fn: fn(<0> of test::::generic_call_test<_>(_,_))-><0> of test::::generic_call_test<_>(_,_)
--> <0> of test::::generic_call_test<_>(_,_)
-Expr type: <0> of test::::generic_call_test<_>(_,_)
-Block (returns: true) {
-  Expr type: <0> of test::::generic_call_test<_>(_,_)
-  FunctionCall
-    Expr type: fn(<0> of test::::generic_call_test<_>(_,_))-><0> of test::::generic_call_test<_>(_,_)
-    ValueOfAssignable
-      LocalVariable(fn)
-    Expr type: <0> of test::::generic_call_test<_>(_,_)
-    ValueOfAssignable
-      LocalVariable(val)
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "print"] }, item_name: "println" }, body_index: 58, param_count: 1, generic_count: 0 }) }>(test::std::print::println(_))
-  literal: &char
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  FunctionCall
-    Function(test::std::print::print(&char))
-    Expr type: &char
-    ValueOfAssignable
-      LocalVariable(literal)
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::write_char(char))
-    Expr type: char
-    Literal(Char(10))
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "clone" }, body_index: 44, param_count: 1, generic_count: 1 }) }>(test::std::vec::clone<_>(_))
-  this: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
--> test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
-Expr type: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
-Block (returns: true) {
-  Expr type: unit
-  Declaration(new_vec)
-    Expr type: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
-    FunctionCall
-      Function(test::std::vec::create_vec<<0> of test::std::vec::clone<_>(_)>(int))
-      Expr type: int
-      FieldAccess(capacity)
-        Expr type: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
-        ValueOfAssignable
-          LocalVariable(this)
-  Expr type: unit
-  FunctionCall
-    Function(test::std::mem::memcopy<<0> of test::std::vec::clone<_>(_)>(&<0> of test::std::vec::clone<_>(_),&<0> of test::std::vec::clone<_>(_),int))
-    Expr type: &<0> of test::std::vec::clone<_>(_)
-    FieldAccess(data)
-      Expr type: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
-      ValueOfAssignable
-        LocalVariable(this)
-    Expr type: &<0> of test::std::vec::clone<_>(_)
-    FieldAccess(data)
-      Expr type: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
-      ValueOfAssignable
-        LocalVariable(new_vec)
-    Expr type: int
-    FieldAccess(size)
-      Expr type: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
-      ValueOfAssignable
-        LocalVariable(this)
-  Expr type: int
-  Assign(Assign)
-    FieldAccess(size)
-      LocalVariable(new_vec)
-    Expr type: int
-    FieldAccess(size)
-      Expr type: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
-      ValueOfAssignable
-        LocalVariable(this)
-  Expr type: test::std::vec::Vec<<0> of test::std::vec::clone<_>(_)>
-  ValueOfAssignable
-    LocalVariable(new_vec)
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "realloc" }, body_index: 70, param_count: 2, generic_count: 1 }) }>(test::std::mem::realloc<_>(_,_))
-  pointer: &<0> of test::std::mem::realloc<_>(_,_)
-  size: int
--> &<0> of test::std::mem::realloc<_>(_,_)
-Expr type: &<0> of test::std::mem::realloc<_>(_,_)
-Block (returns: true) {
-  Expr type: unit
-  FunctionCall
-    Function(test::std::mem::free<<0> of test::std::mem::realloc<_>(_,_)>(&<0> of test::std::mem::realloc<_>(_,_)))
-    Expr type: &<0> of test::std::mem::realloc<_>(_,_)
-    ValueOfAssignable
-      LocalVariable(pointer)
-  Expr type: &<0> of test::std::mem::realloc<_>(_,_)
-  FunctionCall
-    Function(test::std::mem::malloc<<0> of test::std::mem::realloc<_>(_,_)>(int))
-    Expr type: int
-    ValueOfAssignable
-      LocalVariable(size)
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "fill" }, body_index: 37, param_count: 2, generic_count: 1 }) }>(test::std::vec::fill<_>(_,_))
-  value: <0> of test::std::vec::fill<_>(_,_)
-  this: test::std::vec::Vec<<0> of test::std::vec::fill<_>(_,_)>
--> unit
-Expr type: unit
-Block (returns: true) {
   Expr type: unit
   Declaration(i)
     Expr type: int
@@ -417,572 +1073,143 @@ Block (returns: true) {
         LocalVariable(i)
       Expr type: int
       FieldAccess(size)
-        Expr type: test::std::vec::Vec<<0> of test::std::vec::fill<_>(_,_)>
+        Expr type: test::std::vec::Vec<<0> of test::std::vec::foreach<_>(_,_)>
         ValueOfAssignable
           LocalVariable(this)
     Expr type: unit
     Block (returns: false) {
-      Expr type: <0> of test::std::vec::fill<_>(_,_)
-      Assign(Assign)
-        ArrayIndex
-          Expr type: &<0> of test::std::vec::fill<_>(_,_)
-          FieldAccess(data)
-            Expr type: test::std::vec::Vec<<0> of test::std::vec::fill<_>(_,_)>
-            ValueOfAssignable
-              LocalVariable(this)
+      Expr type: unit
+      FunctionCall
+        Expr type: fn(<0> of test::std::vec::foreach<_>(_,_))->unit
+        ValueOfAssignable
+          LocalVariable(fn)
+        Expr type: <0> of test::std::vec::foreach<_>(_,_)
+        FunctionCall
+          Function(test::std::vec::get<<0> of test::std::vec::foreach<_>(_,_)>(test::std::vec::Vec<<0> of test::std::vec::foreach<_>(_,_)>,int))
+          Expr type: test::std::vec::Vec<<0> of test::std::vec::foreach<_>(_,_)>
+          ValueOfAssignable
+            LocalVariable(this)
           Expr type: int
           ValueOfAssignable
             LocalVariable(i)
-        Expr type: <0> of test::std::vec::fill<_>(_,_)
-        ValueOfAssignable
-          LocalVariable(value)
       Expr type: int
       Increment(false)
         LocalVariable(i)
     }
   }
 }
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, item_name: "read_chars" }, body_index: 32, param_count: 2, generic_count: 0 }) }>(test::std::io::read_chars(_,_))
-  this: test::std::io::File
-  amount: int
--> test::std::vec::Vec<char>
-Expr type: test::std::vec::Vec<char>
-Block (returns: true) {
-  Expr type: unit
-  Declaration(str)
-    Expr type: test::std::vec::Vec<char>
-    FunctionCall
-      Function(test::std::string::create_sized_string(int))
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(amount)
-  Expr type: int
-  FunctionCall
-    Function(builtin::::fread(&char,int,int))
-    Expr type: &char
-    FieldAccess(data)
-      Expr type: test::std::vec::Vec<char>
-      ValueOfAssignable
-        LocalVariable(str)
-    Expr type: int
-    FieldAccess(size)
-      Expr type: test::std::vec::Vec<char>
-      ValueOfAssignable
-        LocalVariable(str)
-    Expr type: int
-    FieldAccess(file)
-      Expr type: test::std::io::File
-      ValueOfAssignable
-        LocalVariable(this)
-  Expr type: test::std::vec::Vec<char>
-  ValueOfAssignable
-    LocalVariable(str)
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "from_literal" }, body_index: 21, param_count: 1, generic_count: 0 }) }>(test::std::string::from_literal(_))
-  literal: &char
--> test::std::vec::Vec<char>
-Expr type: test::std::vec::Vec<char>
-Block (returns: true) {
-  Expr type: unit
-  Declaration(size)
-    Expr type: int
-    Literal(Integer(0))
-  Expr type: unit
-  Loop {
-    Expr type: bool
-    Binary(Comparison(NotEquals))
-      Expr type: char
-      ValueOfAssignable
-        ArrayIndex
-          Expr type: &char
-          ValueOfAssignable
-            LocalVariable(literal)
-          Expr type: int
-          ValueOfAssignable
-            LocalVariable(size)
-      Expr type: char
-      Literal(Char(0))
-    Expr type: unit
-    Block (returns: false) {
-      Expr type: int
-      Increment(false)
-        LocalVariable(size)
-    }
-  }
-  Expr type: unit
-  Declaration(str)
-    Expr type: test::std::vec::Vec<char>
-    FunctionCall
-      Function(test::std::string::create_string(int))
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(size)
-  Expr type: unit
-  Declaration(i)
-    Expr type: int
-    Literal(Integer(0))
-  Expr type: unit
-  Loop {
-    Expr type: bool
-    Binary(Comparison(Less))
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(i)
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(size)
-    Expr type: unit
-    Block (returns: false) {
-      Expr type: unit
-      FunctionCall
-        Function(test::std::string::set(&test::std::vec::Vec<char>,int,char))
-        Expr type: &test::std::vec::Vec<char>
-        Borrow
-          LocalVariable(str)
-        Expr type: int
-        ValueOfAssignable
-          LocalVariable(i)
-        Expr type: char
-        ValueOfAssignable
-          ArrayIndex
-            Expr type: &char
-            ValueOfAssignable
-              LocalVariable(literal)
-            Expr type: int
-            ValueOfAssignable
-              LocalVariable(i)
-      Expr type: int
-      Increment(false)
-        LocalVariable(i)
-    }
-  }
-  Expr type: test::std::vec::Vec<char>
-  ValueOfAssignable
-    LocalVariable(str)
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "small_test", path: [] }, item_name: "main" }, body_index: 65, param_count: 0, generic_count: 0 }) }>(small_test::::main())
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "test" }, body_index: 10, param_count: 0, generic_count: 0 }) }>(test::generic_test::test())
 -> int
 Expr type: int
 Block (returns: true) {
   Expr type: unit
-  Declaration(s)
-    Expr type: small_test::::Simple
+  Declaration(x)
+    Expr type: test::generic_test::Option<int>
     Struct
-      a: 
+      value: 
       Expr type: int
-      Literal(Integer(1))
-      b: 
-      Expr type: int
-      Literal(Integer(2))
-  Expr type: int
+      Literal(Integer(10))
+  Expr type: test::generic_test::Option<int>
   FunctionCall
-    Function(small_test::::add(int,int))
-    Expr type: int
-    FieldAccess(a)
-      Expr type: small_test::::Simple
-      ValueOfAssignable
-        LocalVariable(s)
-    Expr type: int
-    FieldAccess(b)
-      Expr type: small_test::::Simple
-      ValueOfAssignable
-        LocalVariable(s)
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "create_array" }, body_index: 4, param_count: 1, generic_count: 1 }) }>(test::std::array::create_array<_>(_))
-  size: int
--> test::std::array::Array<<0> of test::std::array::create_array<_>(_)>
-Expr type: test::std::array::Array<<0> of test::std::array::create_array<_>(_)>
-Block (returns: true) {
+    Function(test::generic_test::do_nothing<test::generic_test::Option<int>>(test::generic_test::Option<int>))
+    Expr type: test::generic_test::Option<int>
+    ValueOfAssignable
+      LocalVariable(x)
   Expr type: unit
-  Declaration(arr)
-    Expr type: test::std::array::Array<<0> of test::std::array::create_array<_>(_)>
+  Declaration(my_struct)
+    Expr type: test::generic_test::MyStruct<int,int>
+    FunctionCall
+      Function(test::generic_test::createStruct<int,int>(int,int,int))
+      Expr type: int
+      Literal(Integer(10))
+      Expr type: int
+      Literal(Integer(20))
+      Expr type: int
+      Literal(Integer(30))
+  Expr type: unit
+  Declaration(my_struct2)
+    Expr type: &test::generic_test::MyStruct<int,int>
+    Borrow
+      LocalVariable(my_struct)
+  Expr type: unit
+  Declaration(y)
+    Expr type: test::generic_test::Option<int>
+    ValueOfAssignable
+      LocalVariable(x)
+  Expr type: unit
+  Declaration(z)
+    Expr type: test::generic_test::TwoGenerics<int,int>
     Struct
-      data: 
-      Expr type: &<0> of test::std::array::create_array<_>(_)
-      FunctionCall
-        Function(test::std::mem::malloc<<0> of test::std::array::create_array<_>(_)>(int))
-        Expr type: int
+      value: 
+      Expr type: int
+      Literal(Integer(10))
+      value2: 
+      Expr type: int
+      Literal(Integer(20))
+  Expr type: unit
+  Declaration(w)
+    Expr type: test::generic_test::NestedGeneric<int>
+    Struct
+      value: 
+      Expr type: test::generic_test::Option<int>
+      ValueOfAssignable
+        LocalVariable(x)
+  Expr type: unit
+  Declaration(a)
+    Expr type: int
+    FunctionCall
+      Function(test::generic_test::generic_function<int>(int))
+      Expr type: int
+      Literal(Integer(10))
+  Expr type: unit
+  Declaration(b)
+    Expr type: test::generic_test::Option<int>
+    FunctionCall
+      Function(test::generic_test::generic_function2<int>(test::generic_test::Option<int>))
+      Expr type: test::generic_test::Option<int>
+      ValueOfAssignable
+        LocalVariable(x)
+  Expr type: unit
+  Declaration(b2)
+    Expr type: test::generic_test::Option<test::generic_test::Option<int>>
+    FunctionCall
+      Function(test::generic_test::generic_function2<test::generic_test::Option<int>>(test::generic_test::Option<test::generic_test::Option<int>>))
+      Expr type: test::generic_test::Option<test::generic_test::Option<int>>
+      Struct
+        value: 
+        Expr type: test::generic_test::Option<int>
         ValueOfAssignable
-          LocalVariable(size)
-      size: 
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(size)
+          LocalVariable(x)
   Expr type: unit
-  FunctionCall
-    Function(test::std::mem::memset<<0> of test::std::array::create_array<_>(_)>(&<0> of test::std::array::create_array<_>(_),int,int))
-    Expr type: &<0> of test::std::array::create_array<_>(_)
-    FieldAccess(data)
-      Expr type: test::std::array::Array<<0> of test::std::array::create_array<_>(_)>
-      ValueOfAssignable
-        LocalVariable(arr)
-    Expr type: int
-    Literal(Integer(0))
-    Expr type: int
-    ValueOfAssignable
-      LocalVariable(size)
-  Expr type: test::std::array::Array<<0> of test::std::array::create_array<_>(_)>
-  ValueOfAssignable
-    LocalVariable(arr)
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "generic_function" }, body_index: 12, param_count: 1, generic_count: 1 }) }>(test::generic_test::generic_function<_>(_))
-  x: <0> of test::generic_test::generic_function<_>(_)
--> <0> of test::generic_test::generic_function<_>(_)
-Expr type: <0> of test::generic_test::generic_function<_>(_)
-Block (returns: true) {
-  Expr type: <0> of test::generic_test::generic_function<_>(_)
-  ValueOfAssignable
-    LocalVariable(x)
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "free" }, body_index: 20, param_count: 1, generic_count: 0 }) }>(test::std::string::free(_))
-  this: test::std::vec::Vec<char>
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  FunctionCall
-    Function(test::std::mem::free<char>(&char))
-    Expr type: &char
-    FieldAccess(data)
-      Expr type: test::std::vec::Vec<char>
-      ValueOfAssignable
-        LocalVariable(this)
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "pop" }, body_index: 43, param_count: 1, generic_count: 1 }) }>(test::std::vec::pop<_>(_))
-  this: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
--> <0> of test::std::vec::pop<_>(_)
-Expr type: <0> of test::std::vec::pop<_>(_)
-Block (returns: true) {
-  Expr type: unit
-  If {
-    Expr type: bool
-    Binary(Comparison(Equals))
-      Expr type: int
-      ValueOfAssignable
-        PointerFieldAccess(size, 1)
-          Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
-          ValueOfAssignable
-            LocalVariable(this)
-      Expr type: int
-      Literal(Integer(0))
-    Expr type: unit
-    Block (returns: false) {
-      Expr type: unit
-      FunctionCall
-        Function(test::std::panic::panic(&char))
-        Expr type: &char
-        ConstantPointer(String([80, 111, 112, 32, 102, 114, 111, 109, 32, 101, 109, 112, 116, 121, 32, 86, 101, 99, 0]))
-    }
-  }
+  Declaration(c)
+    Expr type: test::generic_test::TwoGenerics<char,test::generic_test::Option<char>>
+    FunctionCall
+      Function(test::generic_test::partial_generic_function<char>(char))
+      Expr type: char
+      Literal(Char(99))
   Expr type: int
-  Decrement(false)
-    PointerFieldAccess(size, 1)
-      Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
-      ValueOfAssignable
-        LocalVariable(this)
-  Expr type: unit
-  Declaration(value)
-    Expr type: <0> of test::std::vec::pop<_>(_)
-    ValueOfAssignable
-      ArrayIndex
-        Expr type: &<0> of test::std::vec::pop<_>(_)
-        ValueOfAssignable
-          PointerFieldAccess(data, 1)
-            Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
-            ValueOfAssignable
-              LocalVariable(this)
-        Expr type: int
-        ValueOfAssignable
-          PointerFieldAccess(size, 1)
-            Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
-            ValueOfAssignable
-              LocalVariable(this)
-  Expr type: unit
-  If {
-    Expr type: bool
-    Binary(Comparison(Less))
+  Binary(Math(Add))
+    Expr type: int
+    FunctionCall
+      Function(test::generic_test::add1(int))
       Expr type: int
-      ValueOfAssignable
-        PointerFieldAccess(size, 1)
-          Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
-          ValueOfAssignable
-            LocalVariable(this)
-      Expr type: int
-      Binary(Math(Div))
+      FunctionCall
+        Function(test::generic_test::generic_function<int>(int))
         Expr type: int
-        ValueOfAssignable
-          PointerFieldAccess(capacity, 1)
-            Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
-            ValueOfAssignable
-              LocalVariable(this)
-        Expr type: int
-        Literal(Integer(2))
-    Expr type: unit
-    Block (returns: false) {
-      Expr type: int
-      Assign(MathAssign(Div))
-        PointerFieldAccess(capacity, 1)
-          Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
-          ValueOfAssignable
-            LocalVariable(this)
-        Expr type: int
-        Literal(Integer(2))
-      Expr type: unit
-      Declaration(new_data)
-        Expr type: &<0> of test::std::vec::pop<_>(_)
         FunctionCall
-          Function(test::std::mem::realloc<<0> of test::std::vec::pop<_>(_)>(&<0> of test::std::vec::pop<_>(_),int))
-          Expr type: &<0> of test::std::vec::pop<_>(_)
-          ValueOfAssignable
-            PointerFieldAccess(data, 1)
-              Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
-              ValueOfAssignable
-                LocalVariable(this)
+          Function(test::generic_test::add1(int))
           Expr type: int
-          ValueOfAssignable
-            PointerFieldAccess(capacity, 1)
-              Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
-              ValueOfAssignable
-                LocalVariable(this)
-      Expr type: unit
-      FunctionCall
-        Function(test::std::mem::memcopy<<0> of test::std::vec::pop<_>(_)>(&<0> of test::std::vec::pop<_>(_),&<0> of test::std::vec::pop<_>(_),int))
-        Expr type: &<0> of test::std::vec::pop<_>(_)
-        ValueOfAssignable
-          PointerFieldAccess(data, 1)
-            Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
+          FieldAccess(value)
+            Expr type: test::generic_test::Option<int>
             ValueOfAssignable
-              LocalVariable(this)
-        Expr type: &<0> of test::std::vec::pop<_>(_)
-        ValueOfAssignable
-          LocalVariable(new_data)
-        Expr type: int
-        ValueOfAssignable
-          PointerFieldAccess(size, 1)
-            Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
-            ValueOfAssignable
-              LocalVariable(this)
-      Expr type: &<0> of test::std::vec::pop<_>(_)
-      Assign(Assign)
-        PointerFieldAccess(data, 1)
-          Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
-          ValueOfAssignable
-            LocalVariable(this)
-        Expr type: &<0> of test::std::vec::pop<_>(_)
-        ValueOfAssignable
-          LocalVariable(new_data)
-    }
-  }
-  Expr type: <0> of test::std::vec::pop<_>(_)
-  ValueOfAssignable
-    LocalVariable(value)
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "mul2" }, body_index: 52, param_count: 1, generic_count: 0 }) }>(test::::mul2(_))
-  a: int
--> int
-Expr type: int
-Block (returns: true) {
-  Expr type: int
-  Binary(Math(Mul))
+              LocalVariable(x)
     Expr type: int
     ValueOfAssignable
       LocalVariable(a)
-    Expr type: int
-    Literal(Integer(2))
 }
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, item_name: "print_file" }, body_index: 34, param_count: 1, generic_count: 0 }) }>(test::std::io::print_file(_))
-  this: test::std::io::File
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::write_char(char))
-    Expr type: char
-    Literal(Char(91))
-  Expr type: unit
-  FunctionCall
-    Function(test::std::print::print(int))
-    Expr type: int
-    FieldAccess(file)
-      Expr type: test::std::io::File
-      ValueOfAssignable
-        LocalVariable(this)
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::write_char(char))
-    Expr type: char
-    Literal(Char(93))
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "print" }, body_index: 38, param_count: 1, generic_count: 0 }) }>(test::std::vec::print(_))
-  this: test::std::vec::Vec<int>
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  Declaration(i)
-    Expr type: int
-    Literal(Integer(0))
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::write_char(char))
-    Expr type: char
-    Literal(Char(91))
-  Expr type: unit
-  Loop {
-    Expr type: bool
-    Binary(Comparison(Less))
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(i)
-      Expr type: int
-      FieldAccess(size)
-        Expr type: test::std::vec::Vec<int>
-        ValueOfAssignable
-          LocalVariable(this)
-    Expr type: unit
-    Block (returns: false) {
-      Expr type: unit
-      If {
-        Expr type: bool
-        Binary(Comparison(Greater))
-          Expr type: int
-          ValueOfAssignable
-            LocalVariable(i)
-          Expr type: int
-          Literal(Integer(0))
-        Expr type: unit
-        Block (returns: false) {
-          Expr type: unit
-          FunctionCall
-            Function(builtin::::write_char(char))
-            Expr type: char
-            Literal(Char(44))
-          Expr type: unit
-          FunctionCall
-            Function(builtin::::write_char(char))
-            Expr type: char
-            Literal(Char(32))
-        }
-      }
-      Expr type: unit
-      FunctionCall
-        Function(test::std::print::print(int))
-        Expr type: int
-        ValueOfAssignable
-          ArrayIndex
-            Expr type: &int
-            FieldAccess(data)
-              Expr type: test::std::vec::Vec<int>
-              ValueOfAssignable
-                LocalVariable(this)
-            Expr type: int
-            ValueOfAssignable
-              LocalVariable(i)
-      Expr type: int
-      Increment(false)
-        LocalVariable(i)
-    }
-  }
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::write_char(char))
-    Expr type: char
-    Literal(Char(93))
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::write_char(char))
-    Expr type: char
-    Literal(Char(10))
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "memset" }, body_index: 71, param_count: 3, generic_count: 1 }) }>(test::std::mem::memset<_>(_,_,_))
-  size: int
-  value: int
-  pointer: &<0> of test::std::mem::memset<_>(_,_,_)
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::memset(&unit,int,int))
-    Expr type: &unit
-    Unary(Cast)
-      Expr type: &<0> of test::std::mem::memset<_>(_,_,_)
-      ValueOfAssignable
-        LocalVariable(pointer)
-    Expr type: int
-    ValueOfAssignable
-      LocalVariable(value)
-    Expr type: int
-    Binary(Math(Mul))
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(size)
-      Expr type: int
-      Sizeof(GenericType(GenericId { kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "memset" }, body_index: 71, param_count: 3, generic_count: 1 }), index: 0 }))
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "set" }, body_index: 26, param_count: 3, generic_count: 0 }) }>(test::std::string::set(_,_,_))
-  str: &test::std::vec::Vec<char>
-  value: char
-  index: int
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: char
-  Assign(Assign)
-    ArrayIndex
-      Expr type: &char
-      ValueOfAssignable
-        PointerFieldAccess(data, 1)
-          Expr type: &test::std::vec::Vec<char>
-          ValueOfAssignable
-            LocalVariable(str)
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(index)
-    Expr type: char
-    ValueOfAssignable
-      LocalVariable(value)
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "free" }, body_index: 41, param_count: 1, generic_count: 1 }) }>(test::std::vec::free<_>(_))
-  this: test::std::vec::Vec<<0> of test::std::vec::free<_>(_)>
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  FunctionCall
-    Function(test::std::mem::free<<0> of test::std::vec::free<_>(_)>(&<0> of test::std::vec::free<_>(_)))
-    Expr type: &<0> of test::std::vec::free<_>(_)
-    FieldAccess(data)
-      Expr type: test::std::vec::Vec<<0> of test::std::vec::free<_>(_)>
-      ValueOfAssignable
-        LocalVariable(this)
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "panic"] }, item_name: "panic" }, body_index: 67, param_count: 1, generic_count: 0 }) }>(test::std::panic::panic(_))
-  message: &char
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  FunctionCall
-    Function(test::std::print::println(&char))
-    Expr type: &char
-    ConstantPointer(String([80, 65, 78, 73, 67, 58, 0]))
-  Expr type: unit
-  FunctionCall
-    Function(test::std::print::println(&char))
-    Expr type: &char
-    ValueOfAssignable
-      LocalVariable(message)
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::exit(int))
-    Expr type: int
-    Literal(Integer(1))
-}
-Function<GenericParams { mapping: {"T": 0, "K": 1}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "map" }, body_index: 45, param_count: 2, generic_count: 2 }) }>(test::std::vec::map<_,_>(_,_))
-  this: test::std::vec::Vec<<0> of test::std::vec::map<_,_>(_,_)>
+Function<GenericParams { mapping: {"K": 1, "T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "map" }, body_index: 38, param_count: 2, generic_count: 2 }) }>(test::std::vec::map<_,_>(_,_))
   fn: fn(<0> of test::std::vec::map<_,_>(_,_))-><1> of test::std::vec::map<_,_>(_,_)
+  this: test::std::vec::Vec<<0> of test::std::vec::map<_,_>(_,_)>
 -> test::std::vec::Vec<<1> of test::std::vec::map<_,_>(_,_)>
 Expr type: test::std::vec::Vec<<1> of test::std::vec::map<_,_>(_,_)>
 Block (returns: true) {
@@ -1043,54 +1270,10 @@ Block (returns: true) {
   ValueOfAssignable
     LocalVariable(arr)
 }
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "foreach" }, body_index: 46, param_count: 2, generic_count: 1 }) }>(test::std::vec::foreach<_>(_,_))
-  this: test::std::vec::Vec<<0> of test::std::vec::foreach<_>(_,_)>
-  fn: fn(<0> of test::std::vec::foreach<_>(_,_))->unit
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  Declaration(i)
-    Expr type: int
-    Literal(Integer(0))
-  Expr type: unit
-  Loop {
-    Expr type: bool
-    Binary(Comparison(Less))
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(i)
-      Expr type: int
-      FieldAccess(size)
-        Expr type: test::std::vec::Vec<<0> of test::std::vec::foreach<_>(_,_)>
-        ValueOfAssignable
-          LocalVariable(this)
-    Expr type: unit
-    Block (returns: false) {
-      Expr type: unit
-      FunctionCall
-        Expr type: fn(<0> of test::std::vec::foreach<_>(_,_))->unit
-        ValueOfAssignable
-          LocalVariable(fn)
-        Expr type: <0> of test::std::vec::foreach<_>(_,_)
-        FunctionCall
-          Function(test::std::vec::get<<0> of test::std::vec::foreach<_>(_,_)>(test::std::vec::Vec<<0> of test::std::vec::foreach<_>(_,_)>,int))
-          Expr type: test::std::vec::Vec<<0> of test::std::vec::foreach<_>(_,_)>
-          ValueOfAssignable
-            LocalVariable(this)
-          Expr type: int
-          ValueOfAssignable
-            LocalVariable(i)
-      Expr type: int
-      Increment(false)
-        LocalVariable(i)
-    }
-  }
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "set" }, body_index: 36, param_count: 3, generic_count: 1 }) }>(test::std::vec::set<_>(_,_,_))
-  index: int
-  this: test::std::vec::Vec<<0> of test::std::vec::set<_>(_,_,_)>
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "set" }, body_index: 28, param_count: 3, generic_count: 1 }) }>(test::std::vec::set<_>(_,_,_))
+  this: &test::std::vec::Vec<<0> of test::std::vec::set<_>(_,_,_)>
   value: <0> of test::std::vec::set<_>(_,_,_)
+  index: int
 -> unit
 Expr type: unit
 Block (returns: false) {
@@ -1111,10 +1294,11 @@ Block (returns: false) {
         ValueOfAssignable
           LocalVariable(index)
         Expr type: int
-        FieldAccess(size)
-          Expr type: test::std::vec::Vec<<0> of test::std::vec::set<_>(_,_,_)>
-          ValueOfAssignable
-            LocalVariable(this)
+        ValueOfAssignable
+          PointerFieldAccess(size, 1)
+            Expr type: &test::std::vec::Vec<<0> of test::std::vec::set<_>(_,_,_)>
+            ValueOfAssignable
+              LocalVariable(this)
     Expr type: unit
     Block (returns: false) {
       Expr type: unit
@@ -1128,10 +1312,11 @@ Block (returns: false) {
   Assign(Assign)
     ArrayIndex
       Expr type: &<0> of test::std::vec::set<_>(_,_,_)
-      FieldAccess(data)
-        Expr type: test::std::vec::Vec<<0> of test::std::vec::set<_>(_,_,_)>
-        ValueOfAssignable
-          LocalVariable(this)
+      ValueOfAssignable
+        PointerFieldAccess(data, 1)
+          Expr type: &test::std::vec::Vec<<0> of test::std::vec::set<_>(_,_,_)>
+          ValueOfAssignable
+            LocalVariable(this)
       Expr type: int
       ValueOfAssignable
         LocalVariable(index)
@@ -1139,212 +1324,48 @@ Block (returns: false) {
     ValueOfAssignable
       LocalVariable(value)
 }
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "malloc" }, body_index: 69, param_count: 1, generic_count: 1 }) }>(test::std::mem::malloc<_>(_))
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "create_sized_vec" }, body_index: 33, param_count: 1, generic_count: 1 }) }>(test::std::vec::create_sized_vec<_>(_))
   size: int
--> &<0> of test::std::mem::malloc<_>(_)
-Expr type: &<0> of test::std::mem::malloc<_>(_)
+-> test::std::vec::Vec<<0> of test::std::vec::create_sized_vec<_>(_)>
+Expr type: test::std::vec::Vec<<0> of test::std::vec::create_sized_vec<_>(_)>
 Block (returns: true) {
-  Expr type: &<0> of test::std::mem::malloc<_>(_)
-  Unary(Cast)
-    Expr type: &unit
-    FunctionCall
-      Function(builtin::::malloc(int))
-      Expr type: int
-      Binary(Math(Mul))
+  Expr type: unit
+  Declaration(arr)
+    Expr type: test::std::vec::Vec<<0> of test::std::vec::create_sized_vec<_>(_)>
+    Struct
+      data: 
+      Expr type: &<0> of test::std::vec::create_sized_vec<_>(_)
+      FunctionCall
+        Function(test::std::mem::malloc<<0> of test::std::vec::create_sized_vec<_>(_)>(int))
         Expr type: int
         ValueOfAssignable
           LocalVariable(size)
-        Expr type: int
-        Sizeof(GenericType(GenericId { kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "malloc" }, body_index: 69, param_count: 1, generic_count: 1 }), index: 0 }))
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "concat" }, body_index: 23, param_count: 2, generic_count: 0 }) }>(test::std::string::concat(_,_))
-  str1: &test::std::vec::Vec<char>
-  str2: &test::std::vec::Vec<char>
--> test::std::vec::Vec<char>
-Expr type: test::std::vec::Vec<char>
-Block (returns: true) {
-  Expr type: unit
-  Declaration(str)
-    Expr type: test::std::vec::Vec<char>
-    FunctionCall
-      Function(test::std::string::create_string(int))
+      size: 
       Expr type: int
-      Binary(Math(Add))
-        Expr type: int
-        ValueOfAssignable
-          PointerFieldAccess(size, 1)
-            Expr type: &test::std::vec::Vec<char>
-            ValueOfAssignable
-              LocalVariable(str1)
-        Expr type: int
-        ValueOfAssignable
-          PointerFieldAccess(size, 1)
-            Expr type: &test::std::vec::Vec<char>
-            ValueOfAssignable
-              LocalVariable(str2)
+      ValueOfAssignable
+        LocalVariable(size)
+      capacity: 
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(size)
   Expr type: unit
-  Declaration(i)
+  FunctionCall
+    Function(test::std::mem::memset<<0> of test::std::vec::create_sized_vec<_>(_)>(&<0> of test::std::vec::create_sized_vec<_>(_),int,int))
+    Expr type: &<0> of test::std::vec::create_sized_vec<_>(_)
+    FieldAccess(data)
+      Expr type: test::std::vec::Vec<<0> of test::std::vec::create_sized_vec<_>(_)>
+      ValueOfAssignable
+        LocalVariable(arr)
     Expr type: int
     Literal(Integer(0))
-  Expr type: unit
-  Loop {
-    Expr type: bool
-    Binary(Comparison(Less))
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(i)
-      Expr type: int
-      ValueOfAssignable
-        PointerFieldAccess(size, 1)
-          Expr type: &test::std::vec::Vec<char>
-          ValueOfAssignable
-            LocalVariable(str1)
-    Expr type: unit
-    Block (returns: false) {
-      Expr type: unit
-      FunctionCall
-        Function(test::std::string::set(&test::std::vec::Vec<char>,int,char))
-        Expr type: &test::std::vec::Vec<char>
-        Borrow
-          LocalVariable(str)
-        Expr type: int
-        ValueOfAssignable
-          LocalVariable(i)
-        Expr type: char
-        FunctionCall
-          Function(test::std::string::get(&test::std::vec::Vec<char>,int))
-          Expr type: &test::std::vec::Vec<char>
-          ValueOfAssignable
-            LocalVariable(str1)
-          Expr type: int
-          ValueOfAssignable
-            LocalVariable(i)
-      Expr type: int
-      Increment(false)
-        LocalVariable(i)
-    }
-  }
-  Expr type: unit
-  Declaration(j)
     Expr type: int
-    Literal(Integer(0))
-  Expr type: unit
-  Loop {
-    Expr type: bool
-    Binary(Comparison(Less))
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(j)
-      Expr type: int
-      ValueOfAssignable
-        PointerFieldAccess(size, 1)
-          Expr type: &test::std::vec::Vec<char>
-          ValueOfAssignable
-            LocalVariable(str2)
-    Expr type: unit
-    Block (returns: false) {
-      Expr type: unit
-      FunctionCall
-        Function(test::std::string::set(&test::std::vec::Vec<char>,int,char))
-        Expr type: &test::std::vec::Vec<char>
-        Borrow
-          LocalVariable(str)
-        Expr type: int
-        ValueOfAssignable
-          LocalVariable(i)
-        Expr type: char
-        FunctionCall
-          Function(test::std::string::get(&test::std::vec::Vec<char>,int))
-          Expr type: &test::std::vec::Vec<char>
-          ValueOfAssignable
-            LocalVariable(str2)
-          Expr type: int
-          ValueOfAssignable
-            LocalVariable(j)
-      Expr type: int
-      Increment(false)
-        LocalVariable(i)
-      Expr type: int
-      Increment(false)
-        LocalVariable(j)
-    }
-  }
-  Expr type: test::std::vec::Vec<char>
+    ValueOfAssignable
+      LocalVariable(size)
+  Expr type: test::std::vec::Vec<<0> of test::std::vec::create_sized_vec<_>(_)>
   ValueOfAssignable
-    LocalVariable(str)
+    LocalVariable(arr)
 }
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "print"] }, item_name: "print" }, body_index: 61, param_count: 1, generic_count: 0 }) }>(test::std::print::print(_))
-  b: bool
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  If {
-    Expr type: bool
-    ValueOfAssignable
-      LocalVariable(b)
-    Expr type: unit
-    Block (returns: false) {
-      Expr type: unit
-      FunctionCall
-        Function(test::std::print::print(&char))
-        Expr type: &char
-        ConstantPointer(String([116, 114, 117, 101, 0]))
-    }
-    Expr type: unit
-    Block (returns: false) {
-      Expr type: unit
-      FunctionCall
-        Function(test::std::print::print(&char))
-        Expr type: &char
-        ConstantPointer(String([102, 97, 108, 115, 101, 0]))
-    }
-  }
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "free" }, body_index: 68, param_count: 1, generic_count: 1 }) }>(test::std::mem::free<_>(_))
-  this: &<0> of test::std::mem::free<_>(_)
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::free(&unit))
-    Expr type: &unit
-    Unary(Cast)
-      Expr type: &<0> of test::std::mem::free<_>(_)
-      ValueOfAssignable
-        LocalVariable(this)
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "print"] }, item_name: "println" }, body_index: 64, param_count: 1, generic_count: 0 }) }>(test::std::print::println(_))
-  num: int
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  FunctionCall
-    Function(test::std::print::print(int))
-    Expr type: int
-    ValueOfAssignable
-      LocalVariable(num)
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::write_char(char))
-    Expr type: char
-    Literal(Char(10))
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "my_println" }, body_index: 48, param_count: 1, generic_count: 0 }) }>(test::::my_println(_))
-  a: int
--> unit
-Expr type: unit
-Block (returns: true) {
-  Expr type: unit
-  FunctionCall
-    Function(test::std::print::println(int))
-    Expr type: int
-    ValueOfAssignable
-      LocalVariable(a)
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, item_name: "file_test" }, body_index: 28, param_count: 0, generic_count: 0 }) }>(test::std::io::file_test())
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, item_name: "file_test" }, body_index: 40, param_count: 0, generic_count: 0 }) }>(test::std::io::file_test())
 -> unit
 Expr type: unit
 Block (returns: false) {
@@ -1423,30 +1444,350 @@ Block (returns: false) {
     ValueOfAssignable
       LocalVariable(str)
 }
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "print"] }, item_name: "print" }, body_index: 59, param_count: 1, generic_count: 0 }) }>(test::std::print::print(_))
-  c: char
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, item_name: "enum_test" }, body_index: 25, param_count: 0, generic_count: 0 }) }>(test::enum_test::enum_test())
 -> unit
 Expr type: unit
 Block (returns: false) {
   Expr type: unit
   FunctionCall
+    Function(test::std::print::println(&char))
+    Expr type: &char
+    ConstantPointer(String([69, 78, 85, 77, 32, 84, 69, 83, 84, 0]))
+  Expr type: unit
+  Declaration(dir)
+    Expr type: test::enum_test::Direction
+    Literal(Integer(1))
+  Expr type: unit
+  FunctionCall
+    Function(test::std::print::println(int))
+    Expr type: int
+    Unary(Cast)
+      Expr type: test::enum_test::Direction
+      ValueOfAssignable
+        LocalVariable(dir)
+  Expr type: unit
+  FunctionCall
+    Function(test::std::print::println(bool))
+    Expr type: bool
+    Binary(Comparison(Equals))
+      Expr type: test::enum_test::Direction
+      Literal(Integer(2))
+      Expr type: test::enum_test::Direction
+      Literal(Integer(3))
+  Expr type: unit
+  FunctionCall
+    Function(test::std::print::println(&char))
+    Expr type: &char
+    ConstantPointer(String([104, 105, 0]))
+  Expr type: unit
+  FunctionCall
+    Function(test::std::print::println(int))
+    Expr type: int
+    Unary(Cast)
+      Expr type: test::enum_test::Direction
+      Literal(Integer(2147483647))
+  Expr type: unit
+  Declaration(from_int)
+    Expr type: test::enum_test::Direction
+    Unary(Cast)
+      Expr type: int
+      Sizeof(EnumType(ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, item_name: "Direction" }))
+  Expr type: unit
+  FunctionCall
+    Function(test::std::print::println(int))
+    Expr type: int
+    Unary(Cast)
+      Expr type: test::enum_test::Direction
+      ValueOfAssignable
+        LocalVariable(from_int)
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "set" }, body_index: 1, param_count: 3, generic_count: 1 }) }>(test::std::array::set<_>(_,_,_))
+  index: int
+  value: <0> of test::std::array::set<_>(_,_,_)
+  this: test::std::array::Array<<0> of test::std::array::set<_>(_,_,_)>
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: <0> of test::std::array::set<_>(_,_,_)
+  Assign(Assign)
+    ArrayIndex
+      Expr type: &<0> of test::std::array::set<_>(_,_,_)
+      FieldAccess(data)
+        Expr type: test::std::array::Array<<0> of test::std::array::set<_>(_,_,_)>
+        ValueOfAssignable
+          LocalVariable(this)
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(index)
+    Expr type: <0> of test::std::array::set<_>(_,_,_)
+    ValueOfAssignable
+      LocalVariable(value)
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "fill" }, body_index: 2, param_count: 2, generic_count: 1 }) }>(test::std::array::fill<_>(_,_))
+  value: <0> of test::std::array::fill<_>(_,_)
+  this: test::std::array::Array<<0> of test::std::array::fill<_>(_,_)>
+-> unit
+Expr type: unit
+Block (returns: true) {
+  Expr type: unit
+  Declaration(i)
+    Expr type: int
+    Literal(Integer(0))
+  Expr type: unit
+  Loop {
+    Expr type: bool
+    Binary(Comparison(Less))
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(i)
+      Expr type: int
+      FieldAccess(size)
+        Expr type: test::std::array::Array<<0> of test::std::array::fill<_>(_,_)>
+        ValueOfAssignable
+          LocalVariable(this)
+    Expr type: unit
+    Block (returns: false) {
+      Expr type: <0> of test::std::array::fill<_>(_,_)
+      Assign(Assign)
+        ArrayIndex
+          Expr type: &<0> of test::std::array::fill<_>(_,_)
+          FieldAccess(data)
+            Expr type: test::std::array::Array<<0> of test::std::array::fill<_>(_,_)>
+            ValueOfAssignable
+              LocalVariable(this)
+          Expr type: int
+          ValueOfAssignable
+            LocalVariable(i)
+        Expr type: <0> of test::std::array::fill<_>(_,_)
+        ValueOfAssignable
+          LocalVariable(value)
+      Expr type: int
+      Increment(false)
+        LocalVariable(i)
+    }
+  }
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "concat" }, body_index: 22, param_count: 2, generic_count: 0 }) }>(test::std::string::concat(_,_))
+  str1: &test::std::vec::Vec<char>
+  str2: &test::std::vec::Vec<char>
+-> test::std::vec::Vec<char>
+Expr type: test::std::vec::Vec<char>
+Block (returns: true) {
+  Expr type: unit
+  Declaration(str)
+    Expr type: test::std::vec::Vec<char>
+    FunctionCall
+      Function(test::std::string::create_string(int))
+      Expr type: int
+      Binary(Math(Add))
+        Expr type: int
+        ValueOfAssignable
+          PointerFieldAccess(size, 1)
+            Expr type: &test::std::vec::Vec<char>
+            ValueOfAssignable
+              LocalVariable(str1)
+        Expr type: int
+        ValueOfAssignable
+          PointerFieldAccess(size, 1)
+            Expr type: &test::std::vec::Vec<char>
+            ValueOfAssignable
+              LocalVariable(str2)
+  Expr type: unit
+  Declaration(i)
+    Expr type: int
+    Literal(Integer(0))
+  Expr type: unit
+  Loop {
+    Expr type: bool
+    Binary(Comparison(Less))
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(i)
+      Expr type: int
+      ValueOfAssignable
+        PointerFieldAccess(size, 1)
+          Expr type: &test::std::vec::Vec<char>
+          ValueOfAssignable
+            LocalVariable(str1)
+    Expr type: unit
+    Block (returns: false) {
+      Expr type: unit
+      FunctionCall
+        Function(test::std::vec::set<char>(&test::std::vec::Vec<char>,int,char))
+        Expr type: &test::std::vec::Vec<char>
+        Borrow
+          LocalVariable(str)
+        Expr type: int
+        ValueOfAssignable
+          LocalVariable(i)
+        Expr type: char
+        FunctionCall
+          Function(test::std::vec::get<char>(&test::std::vec::Vec<char>,int))
+          Expr type: &test::std::vec::Vec<char>
+          ValueOfAssignable
+            LocalVariable(str1)
+          Expr type: int
+          ValueOfAssignable
+            LocalVariable(i)
+      Expr type: int
+      Increment(false)
+        LocalVariable(i)
+    }
+  }
+  Expr type: unit
+  Declaration(j)
+    Expr type: int
+    Literal(Integer(0))
+  Expr type: unit
+  Loop {
+    Expr type: bool
+    Binary(Comparison(Less))
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(j)
+      Expr type: int
+      ValueOfAssignable
+        PointerFieldAccess(size, 1)
+          Expr type: &test::std::vec::Vec<char>
+          ValueOfAssignable
+            LocalVariable(str2)
+    Expr type: unit
+    Block (returns: false) {
+      Expr type: unit
+      FunctionCall
+        Function(test::std::vec::set<char>(&test::std::vec::Vec<char>,int,char))
+        Expr type: &test::std::vec::Vec<char>
+        Borrow
+          LocalVariable(str)
+        Expr type: int
+        ValueOfAssignable
+          LocalVariable(i)
+        Expr type: char
+        FunctionCall
+          Function(test::std::vec::get<char>(&test::std::vec::Vec<char>,int))
+          Expr type: &test::std::vec::Vec<char>
+          ValueOfAssignable
+            LocalVariable(str2)
+          Expr type: int
+          ValueOfAssignable
+            LocalVariable(j)
+      Expr type: int
+      Increment(false)
+        LocalVariable(i)
+      Expr type: int
+      Increment(false)
+        LocalVariable(j)
+    }
+  }
+  Expr type: test::std::vec::Vec<char>
+  ValueOfAssignable
+    LocalVariable(str)
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "read_line" }, body_index: 21, param_count: 0, generic_count: 0 }) }>(test::std::string::read_line())
+-> test::std::vec::Vec<char>
+Expr type: test::std::vec::Vec<char>
+Block (returns: true) {
+  Expr type: unit
+  Declaration(str)
+    Expr type: test::std::vec::Vec<char>
+    FunctionCall
+      Function(test::std::string::create_string(int))
+      Expr type: int
+      Literal(Integer(100))
+  Expr type: unit
+  Declaration(i)
+    Expr type: int
+    Literal(Integer(0))
+  Expr type: unit
+  Loop {
+    Expr type: bool
+    Binary(Comparison(Less))
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(i)
+      Expr type: int
+      FieldAccess(size)
+        Expr type: test::std::vec::Vec<char>
+        ValueOfAssignable
+          LocalVariable(str)
+    Expr type: unit
+    Block (returns: false) {
+      Expr type: unit
+      Declaration(c)
+        Expr type: char
+        FunctionCall
+          Function(builtin::::read_char())
+      Expr type: unit
+      If {
+        Expr type: bool
+        Binary(Logical(Or))
+          Expr type: bool
+          Binary(Comparison(Equals))
+            Expr type: char
+            ValueOfAssignable
+              LocalVariable(c)
+            Expr type: char
+            Literal(Char(10))
+          Expr type: bool
+          Binary(Comparison(Equals))
+            Expr type: char
+            ValueOfAssignable
+              LocalVariable(c)
+            Expr type: char
+            Literal(Char(13))
+        Expr type: unit
+        Block (returns: false) {
+          Expr type: unit
+          Break {
+          }
+        }
+      }
+      Expr type: unit
+      FunctionCall
+        Function(test::std::vec::set<char>(&test::std::vec::Vec<char>,int,char))
+        Expr type: &test::std::vec::Vec<char>
+        Borrow
+          LocalVariable(str)
+        Expr type: int
+        ValueOfAssignable
+          LocalVariable(i)
+        Expr type: char
+        ValueOfAssignable
+          LocalVariable(c)
+      Expr type: int
+      Increment(false)
+        LocalVariable(i)
+    }
+  }
+  Expr type: int
+  Assign(Assign)
+    FieldAccess(size)
+      LocalVariable(str)
+    Expr type: int
+    ValueOfAssignable
+      LocalVariable(i)
+  Expr type: test::std::vec::Vec<char>
+  ValueOfAssignable
+    LocalVariable(str)
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "print"] }, item_name: "println" }, body_index: 52, param_count: 1, generic_count: 0 }) }>(test::std::print::println(_))
+  b: bool
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  FunctionCall
+    Function(test::std::print::print(bool))
+    Expr type: bool
+    ValueOfAssignable
+      LocalVariable(b)
+  Expr type: unit
+  FunctionCall
     Function(builtin::::write_char(char))
     Expr type: char
-    ValueOfAssignable
-      LocalVariable(c)
+    Literal(Char(10))
 }
-Function<GenericParams { mapping: {"T": 0, "K": 1}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "generic_sizeof_test" }, body_index: 50, param_count: 0, generic_count: 2 }) }>(test::::generic_sizeof_test<_,_>())
--> int
-Expr type: int
-Block (returns: true) {
-  Expr type: int
-  Binary(Math(Mul))
-    Expr type: int
-    Sizeof(GenericType(GenericId { kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "generic_sizeof_test" }, body_index: 50, param_count: 0, generic_count: 2 }), index: 0 }))
-    Expr type: int
-    Sizeof(GenericType(GenericId { kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "generic_sizeof_test" }, body_index: 50, param_count: 0, generic_count: 2 }), index: 1 }))
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "print"] }, item_name: "print" }, body_index: 63, param_count: 1, generic_count: 0 }) }>(test::std::print::print(_))
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "print"] }, item_name: "print" }, body_index: 53, param_count: 1, generic_count: 0 }) }>(test::std::print::print(_))
   num: int
 -> unit
 Expr type: unit
@@ -1587,172 +1928,31 @@ Block (returns: false) {
     }
   }
 }
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "do_nothing" }, body_index: 9, param_count: 1, generic_count: 1 }) }>(test::generic_test::do_nothing<_>(_))
-  x: <0> of test::generic_test::do_nothing<_>(_)
--> <0> of test::generic_test::do_nothing<_>(_)
-Expr type: <0> of test::generic_test::do_nothing<_>(_)
-Block (returns: true) {
-  Expr type: <0> of test::generic_test::do_nothing<_>(_)
-  ValueOfAssignable
-    LocalVariable(x)
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "free" }, body_index: 5, param_count: 1, generic_count: 1 }) }>(test::std::array::free<_>(_))
-  this: test::std::array::Array<<0> of test::std::array::free<_>(_)>
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "unit_test" }, body_index: 65, param_count: 2, generic_count: 0 }) }>(test::::unit_test(_,_))
+  a: unit
+  b: unit
 -> unit
 Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  FunctionCall
-    Function(test::std::mem::free<unit>(&unit))
-    Expr type: &unit
-    Unary(Cast)
-      Expr type: &<0> of test::std::array::free<_>(_)
-      FieldAccess(data)
-        Expr type: test::std::array::Array<<0> of test::std::array::free<_>(_)>
-        ValueOfAssignable
-          LocalVariable(this)
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "print"] }, item_name: "print" }, body_index: 57, param_count: 1, generic_count: 0 }) }>(test::std::print::print(_))
-  literal: &char
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  Declaration(i)
-    Expr type: int
-    Literal(Integer(0))
-  Expr type: unit
-  Loop {
-    Expr type: bool
-    Binary(Comparison(NotEquals))
-      Expr type: char
-      ValueOfAssignable
-        ArrayIndex
-          Expr type: &char
-          ValueOfAssignable
-            LocalVariable(literal)
-          Expr type: int
-          ValueOfAssignable
-            LocalVariable(i)
-      Expr type: char
-      Literal(Char(0))
-    Expr type: unit
-    Block (returns: false) {
-      Expr type: int
-      Increment(false)
-        LocalVariable(i)
-    }
-  }
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::write(&char,int))
-    Expr type: &char
-    ValueOfAssignable
-      LocalVariable(literal)
-    Expr type: int
-    ValueOfAssignable
-      LocalVariable(i)
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "filter" }, body_index: 7, param_count: 2, generic_count: 1 }) }>(test::std::array::filter<_>(_,_))
-  this: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
-  fn: fn(<0> of test::std::array::filter<_>(_,_))->bool
--> test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
-Expr type: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
 Block (returns: true) {
   Expr type: unit
-  Declaration(arr)
-    Expr type: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
-    FunctionCall
-      Function(test::std::array::create_array<<0> of test::std::array::filter<_>(_,_)>(int))
-      Expr type: int
-      FieldAccess(size)
-        Expr type: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
-        ValueOfAssignable
-          LocalVariable(this)
-  Expr type: unit
-  Declaration(i)
-    Expr type: int
-    Literal(Integer(0))
-  Expr type: unit
-  Declaration(j)
-    Expr type: int
-    Literal(Integer(0))
-  Expr type: unit
-  Loop {
-    Expr type: bool
-    Binary(Comparison(Less))
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(i)
-      Expr type: int
-      FieldAccess(size)
-        Expr type: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
-        ValueOfAssignable
-          LocalVariable(this)
-    Expr type: unit
-    Block (returns: false) {
-      Expr type: unit
-      If {
-        Expr type: bool
-        FunctionCall
-          Expr type: fn(<0> of test::std::array::filter<_>(_,_))->bool
-          ValueOfAssignable
-            LocalVariable(fn)
-          Expr type: <0> of test::std::array::filter<_>(_,_)
-          FunctionCall
-            Function(test::std::array::get<<0> of test::std::array::filter<_>(_,_)>(test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>,int))
-            Expr type: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
-            ValueOfAssignable
-              LocalVariable(this)
-            Expr type: int
-            ValueOfAssignable
-              LocalVariable(i)
-        Expr type: unit
-        Block (returns: false) {
-          Expr type: unit
-          FunctionCall
-            Function(test::std::array::set<<0> of test::std::array::filter<_>(_,_)>(test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>,int,<0> of test::std::array::filter<_>(_,_)))
-            Expr type: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
-            ValueOfAssignable
-              LocalVariable(arr)
-            Expr type: int
-            ValueOfAssignable
-              LocalVariable(j)
-            Expr type: <0> of test::std::array::filter<_>(_,_)
-            FunctionCall
-              Function(test::std::array::get<<0> of test::std::array::filter<_>(_,_)>(test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>,int))
-              Expr type: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
-              ValueOfAssignable
-                LocalVariable(this)
-              Expr type: int
-              ValueOfAssignable
-                LocalVariable(i)
-          Expr type: int
-          Increment(false)
-            LocalVariable(j)
-        }
-      }
-      Expr type: int
-      Increment(false)
-        LocalVariable(i)
-    }
-  }
-  Expr type: test::std::array::Array<<0> of test::std::array::filter<_>(_,_)>
   ValueOfAssignable
-    LocalVariable(arr)
+    LocalVariable(a)
 }
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "create_vec" }, body_index: 39, param_count: 1, generic_count: 1 }) }>(test::std::vec::create_vec<_>(_))
-  initial_capacity: int
--> test::std::vec::Vec<<0> of test::std::vec::create_vec<_>(_)>
-Expr type: test::std::vec::Vec<<0> of test::std::vec::create_vec<_>(_)>
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "pop" }, body_index: 36, param_count: 1, generic_count: 1 }) }>(test::std::vec::pop<_>(_))
+  this: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
+-> <0> of test::std::vec::pop<_>(_)
+Expr type: <0> of test::std::vec::pop<_>(_)
 Block (returns: true) {
   Expr type: unit
   If {
     Expr type: bool
-    Binary(Comparison(LessEquals))
+    Binary(Comparison(Equals))
       Expr type: int
       ValueOfAssignable
-        LocalVariable(initial_capacity)
+        PointerFieldAccess(size, 1)
+          Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
+          ValueOfAssignable
+            LocalVariable(this)
       Expr type: int
       Literal(Integer(0))
     Expr type: unit
@@ -1761,97 +1961,151 @@ Block (returns: true) {
       FunctionCall
         Function(test::std::panic::panic(&char))
         Expr type: &char
-        ConstantPointer(String([73, 110, 105, 116, 105, 97, 108, 32, 99, 97, 112, 97, 99, 105, 116, 121, 32, 109, 117, 115, 116, 32, 98, 101, 32, 103, 114, 101, 97, 116, 101, 114, 32, 116, 104, 97, 110, 32, 48, 0]))
+        ConstantPointer(String([80, 111, 112, 32, 102, 114, 111, 109, 32, 101, 109, 112, 116, 121, 32, 86, 101, 99, 0]))
     }
   }
+  Expr type: int
+  Decrement(false)
+    PointerFieldAccess(size, 1)
+      Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
+      ValueOfAssignable
+        LocalVariable(this)
   Expr type: unit
-  Declaration(arr)
-    Expr type: test::std::vec::Vec<<0> of test::std::vec::create_vec<_>(_)>
-    Struct
-      data: 
-      Expr type: &<0> of test::std::vec::create_vec<_>(_)
-      FunctionCall
-        Function(test::std::mem::malloc<<0> of test::std::vec::create_vec<_>(_)>(int))
+  Declaration(value)
+    Expr type: <0> of test::std::vec::pop<_>(_)
+    ValueOfAssignable
+      ArrayIndex
+        Expr type: &<0> of test::std::vec::pop<_>(_)
+        ValueOfAssignable
+          PointerFieldAccess(data, 1)
+            Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
+            ValueOfAssignable
+              LocalVariable(this)
         Expr type: int
         ValueOfAssignable
-          LocalVariable(initial_capacity)
-      size: 
-      Expr type: int
-      Literal(Integer(0))
-      capacity: 
+          PointerFieldAccess(size, 1)
+            Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
+            ValueOfAssignable
+              LocalVariable(this)
+  Expr type: unit
+  If {
+    Expr type: bool
+    Binary(Comparison(Less))
       Expr type: int
       ValueOfAssignable
-        LocalVariable(initial_capacity)
-  Expr type: test::std::vec::Vec<<0> of test::std::vec::create_vec<_>(_)>
-  ValueOfAssignable
-    LocalVariable(arr)
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "read_string" }, body_index: 24, param_count: 1, generic_count: 0 }) }>(test::std::string::read_string(_))
-  str: &test::std::vec::Vec<char>
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::read(&char,int))
-    Expr type: &char
-    ValueOfAssignable
-      PointerFieldAccess(data, 1)
-        Expr type: &test::std::vec::Vec<char>
+        PointerFieldAccess(size, 1)
+          Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
+          ValueOfAssignable
+            LocalVariable(this)
+      Expr type: int
+      Binary(Math(Div))
+        Expr type: int
         ValueOfAssignable
-          LocalVariable(str)
-    Expr type: int
-    ValueOfAssignable
-      PointerFieldAccess(size, 1)
-        Expr type: &test::std::vec::Vec<char>
+          PointerFieldAccess(capacity, 1)
+            Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
+            ValueOfAssignable
+              LocalVariable(this)
+        Expr type: int
+        Literal(Integer(2))
+    Expr type: unit
+    Block (returns: false) {
+      Expr type: int
+      Assign(MathAssign(Div))
+        PointerFieldAccess(capacity, 1)
+          Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
+          ValueOfAssignable
+            LocalVariable(this)
+        Expr type: int
+        Literal(Integer(2))
+      Expr type: unit
+      Declaration(new_data)
+        Expr type: &<0> of test::std::vec::pop<_>(_)
+        FunctionCall
+          Function(test::std::mem::realloc<<0> of test::std::vec::pop<_>(_)>(&<0> of test::std::vec::pop<_>(_),int))
+          Expr type: &<0> of test::std::vec::pop<_>(_)
+          ValueOfAssignable
+            PointerFieldAccess(data, 1)
+              Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
+              ValueOfAssignable
+                LocalVariable(this)
+          Expr type: int
+          ValueOfAssignable
+            PointerFieldAccess(capacity, 1)
+              Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
+              ValueOfAssignable
+                LocalVariable(this)
+      Expr type: unit
+      FunctionCall
+        Function(test::std::mem::memcopy<<0> of test::std::vec::pop<_>(_)>(&<0> of test::std::vec::pop<_>(_),&<0> of test::std::vec::pop<_>(_),int))
+        Expr type: &<0> of test::std::vec::pop<_>(_)
         ValueOfAssignable
-          LocalVariable(str)
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "mul3" }, body_index: 53, param_count: 1, generic_count: 0 }) }>(test::::mul3(_))
-  a: char
--> char
-Expr type: char
-Block (returns: true) {
-  Expr type: char
+          PointerFieldAccess(data, 1)
+            Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
+            ValueOfAssignable
+              LocalVariable(this)
+        Expr type: &<0> of test::std::vec::pop<_>(_)
+        ValueOfAssignable
+          LocalVariable(new_data)
+        Expr type: int
+        ValueOfAssignable
+          PointerFieldAccess(size, 1)
+            Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
+            ValueOfAssignable
+              LocalVariable(this)
+      Expr type: &<0> of test::std::vec::pop<_>(_)
+      Assign(Assign)
+        PointerFieldAccess(data, 1)
+          Expr type: &test::std::vec::Vec<<0> of test::std::vec::pop<_>(_)>
+          ValueOfAssignable
+            LocalVariable(this)
+        Expr type: &<0> of test::std::vec::pop<_>(_)
+        ValueOfAssignable
+          LocalVariable(new_data)
+    }
+  }
+  Expr type: <0> of test::std::vec::pop<_>(_)
   ValueOfAssignable
-    LocalVariable(a)
+    LocalVariable(value)
 }
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "print"] }, item_name: "println" }, body_index: 62, param_count: 1, generic_count: 0 }) }>(test::std::print::println(_))
-  b: bool
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  FunctionCall
-    Function(test::std::print::print(bool))
-    Expr type: bool
-    ValueOfAssignable
-      LocalVariable(b)
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::write_char(char))
-    Expr type: char
-    Literal(Char(10))
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "small_test", path: [] }, item_name: "add" }, body_index: 66, param_count: 2, generic_count: 0 }) }>(small_test::::add(_,_))
-  b: int
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "my_println" }, body_index: 62, param_count: 1, generic_count: 0 }) }>(test::::my_println(_))
   a: int
--> int
-Expr type: int
+-> unit
+Expr type: unit
 Block (returns: true) {
-  Expr type: int
-  Binary(Math(Add))
+  Expr type: unit
+  FunctionCall
+    Function(test::std::print::println(int))
     Expr type: int
     ValueOfAssignable
       LocalVariable(a)
-    Expr type: int
-    ValueOfAssignable
-      LocalVariable(b)
 }
-Function<GenericParams { mapping: {"T2": 1, "T1": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "createStruct" }, body_index: 10, param_count: 3, generic_count: 2 }) }>(test::generic_test::createStruct<_,_>(_,_,_))
-  val3: int
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "free" }, body_index: 56, param_count: 1, generic_count: 1 }) }>(test::std::mem::free<_>(_))
+  this: &<0> of test::std::mem::free<_>(_)
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::free(&unit))
+    Expr type: &unit
+    Unary(Cast)
+      Expr type: &<0> of test::std::mem::free<_>(_)
+      ValueOfAssignable
+        LocalVariable(this)
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "generic_function2" }, body_index: 12, param_count: 1, generic_count: 1 }) }>(test::generic_test::generic_function2<_>(_))
+  x: test::generic_test::Option<<0> of test::generic_test::generic_function2<_>(_)>
+-> test::generic_test::Option<<0> of test::generic_test::generic_function2<_>(_)>
+Expr type: test::generic_test::Option<<0> of test::generic_test::generic_function2<_>(_)>
+Block (returns: true) {
+  Expr type: test::generic_test::Option<<0> of test::generic_test::generic_function2<_>(_)>
+  ValueOfAssignable
+    LocalVariable(x)
+}
+Function<GenericParams { mapping: {"T2": 1, "T1": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "createStruct" }, body_index: 9, param_count: 3, generic_count: 2 }) }>(test::generic_test::createStruct<_,_>(_,_,_))
   val: <0> of test::generic_test::createStruct<_,_>(_,_,_)
   val2: <1> of test::generic_test::createStruct<_,_>(_,_,_)
+  val3: int
 -> test::generic_test::MyStruct<<0> of test::generic_test::createStruct<_,_>(_,_,_),<1> of test::generic_test::createStruct<_,_>(_,_,_)>
 Expr type: test::generic_test::MyStruct<<0> of test::generic_test::createStruct<_,_>(_,_,_),<1> of test::generic_test::createStruct<_,_>(_,_,_)>
 Block (returns: true) {
@@ -1890,317 +2144,43 @@ Block (returns: true) {
   ValueOfAssignable
     LocalVariable(my_struct)
 }
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, item_name: "read" }, body_index: 31, param_count: 2, generic_count: 0 }) }>(test::std::io::read(_,_))
-  this: test::std::io::File
-  string: &test::std::vec::Vec<char>
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: int
-  FunctionCall
-    Function(builtin::::fread(&char,int,int))
-    Expr type: &char
-    ValueOfAssignable
-      PointerFieldAccess(data, 1)
-        Expr type: &test::std::vec::Vec<char>
-        ValueOfAssignable
-          LocalVariable(string)
-    Expr type: int
-    ValueOfAssignable
-      PointerFieldAccess(size, 1)
-        Expr type: &test::std::vec::Vec<char>
-        ValueOfAssignable
-          LocalVariable(string)
-    Expr type: int
-    FieldAccess(file)
-      Expr type: test::std::io::File
-      ValueOfAssignable
-        LocalVariable(this)
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "create_sized_vec" }, body_index: 40, param_count: 1, generic_count: 1 }) }>(test::std::vec::create_sized_vec<_>(_))
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "realloc" }, body_index: 58, param_count: 2, generic_count: 1 }) }>(test::std::mem::realloc<_>(_,_))
+  pointer: &<0> of test::std::mem::realloc<_>(_,_)
   size: int
--> test::std::vec::Vec<<0> of test::std::vec::create_sized_vec<_>(_)>
-Expr type: test::std::vec::Vec<<0> of test::std::vec::create_sized_vec<_>(_)>
+-> &<0> of test::std::mem::realloc<_>(_,_)
+Expr type: &<0> of test::std::mem::realloc<_>(_,_)
 Block (returns: true) {
   Expr type: unit
-  Declaration(arr)
-    Expr type: test::std::vec::Vec<<0> of test::std::vec::create_sized_vec<_>(_)>
-    Struct
-      data: 
-      Expr type: &<0> of test::std::vec::create_sized_vec<_>(_)
-      FunctionCall
-        Function(test::std::mem::malloc<<0> of test::std::vec::create_sized_vec<_>(_)>(int))
-        Expr type: int
-        ValueOfAssignable
-          LocalVariable(size)
-      size: 
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(size)
-      capacity: 
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(size)
-  Expr type: unit
   FunctionCall
-    Function(test::std::mem::memset<<0> of test::std::vec::create_sized_vec<_>(_)>(&<0> of test::std::vec::create_sized_vec<_>(_),int,int))
-    Expr type: &<0> of test::std::vec::create_sized_vec<_>(_)
-    FieldAccess(data)
-      Expr type: test::std::vec::Vec<<0> of test::std::vec::create_sized_vec<_>(_)>
-      ValueOfAssignable
-        LocalVariable(arr)
-    Expr type: int
-    Literal(Integer(0))
+    Function(test::std::mem::free<<0> of test::std::mem::realloc<_>(_,_)>(&<0> of test::std::mem::realloc<_>(_,_)))
+    Expr type: &<0> of test::std::mem::realloc<_>(_,_)
+    ValueOfAssignable
+      LocalVariable(pointer)
+  Expr type: &<0> of test::std::mem::realloc<_>(_,_)
+  FunctionCall
+    Function(test::std::mem::malloc<<0> of test::std::mem::realloc<_>(_,_)>(int))
     Expr type: int
     ValueOfAssignable
       LocalVariable(size)
-  Expr type: test::std::vec::Vec<<0> of test::std::vec::create_sized_vec<_>(_)>
-  ValueOfAssignable
-    LocalVariable(arr)
 }
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "generic_sizeof_test" }, body_index: 49, param_count: 0, generic_count: 1 }) }>(test::::generic_sizeof_test<_>())
--> int
-Expr type: int
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "nested_generic_function" }, body_index: 13, param_count: 1, generic_count: 1 }) }>(test::generic_test::nested_generic_function<_>(_))
+  x: <0> of test::generic_test::nested_generic_function<_>(_)
+-> <0> of test::generic_test::nested_generic_function<_>(_)
+Expr type: <0> of test::generic_test::nested_generic_function<_>(_)
 Block (returns: true) {
   Expr type: int
-  Sizeof(GenericType(GenericId { kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "generic_sizeof_test" }, body_index: 49, param_count: 0, generic_count: 1 }), index: 0 }))
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "memcopy" }, body_index: 72, param_count: 3, generic_count: 1 }) }>(test::std::mem::memcopy<_>(_,_,_))
-  dest: &<0> of test::std::mem::memcopy<_>(_,_,_)
-  size: int
-  src: &<0> of test::std::mem::memcopy<_>(_,_,_)
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
   FunctionCall
-    Function(builtin::::memcopy(&unit,&unit,int))
-    Expr type: &unit
-    Unary(Cast)
-      Expr type: &<0> of test::std::mem::memcopy<_>(_,_,_)
-      ValueOfAssignable
-        LocalVariable(dest)
-    Expr type: &unit
-    Unary(Cast)
-      Expr type: &<0> of test::std::mem::memcopy<_>(_,_,_)
-      ValueOfAssignable
-        LocalVariable(src)
+    Function(test::generic_test::generic_function<int>(int))
     Expr type: int
-    Binary(Math(Mul))
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(size)
-      Expr type: int
-      Sizeof(GenericType(GenericId { kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "memcopy" }, body_index: 72, param_count: 3, generic_count: 1 }), index: 0 }))
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, item_name: "enum_test" }, body_index: 8, param_count: 0, generic_count: 0 }) }>(test::enum_test::enum_test())
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
+    Literal(Integer(5))
+  Expr type: <0> of test::generic_test::nested_generic_function<_>(_)
   FunctionCall
-    Function(test::std::print::println(&char))
-    Expr type: &char
-    ConstantPointer(String([69, 78, 85, 77, 32, 84, 69, 83, 84, 0]))
-  Expr type: unit
-  Declaration(dir)
-    Expr type: test::enum_test::Direction
-    Literal(Integer(1))
-  Expr type: unit
-  FunctionCall
-    Function(test::std::print::println(int))
-    Expr type: int
-    Unary(Cast)
-      Expr type: test::enum_test::Direction
-      ValueOfAssignable
-        LocalVariable(dir)
-  Expr type: unit
-  FunctionCall
-    Function(test::std::print::println(bool))
-    Expr type: bool
-    Binary(Comparison(Equals))
-      Expr type: test::enum_test::Direction
-      Literal(Integer(2))
-      Expr type: test::enum_test::Direction
-      Literal(Integer(3))
-  Expr type: unit
-  FunctionCall
-    Function(test::std::print::println(&char))
-    Expr type: &char
-    ConstantPointer(String([104, 105, 0]))
-  Expr type: unit
-  FunctionCall
-    Function(test::std::print::println(int))
-    Expr type: int
-    Unary(Cast)
-      Expr type: test::enum_test::Direction
-      Literal(Integer(2147483647))
-  Expr type: unit
-  Declaration(from_int)
-    Expr type: test::enum_test::Direction
-    Unary(Cast)
-      Expr type: int
-      Sizeof(EnumType(ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, item_name: "Direction" }))
-  Expr type: unit
-  FunctionCall
-    Function(test::std::print::println(int))
-    Expr type: int
-    Unary(Cast)
-      Expr type: test::enum_test::Direction
-      ValueOfAssignable
-        LocalVariable(from_int)
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "get" }, body_index: 0, param_count: 2, generic_count: 1 }) }>(test::std::array::get<_>(_,_))
-  index: int
-  this: test::std::array::Array<<0> of test::std::array::get<_>(_,_)>
--> <0> of test::std::array::get<_>(_,_)
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  Return {
-    Expr type: <0> of test::std::array::get<_>(_,_)
-    ValueOfAssignable
-      ArrayIndex
-        Expr type: &<0> of test::std::array::get<_>(_,_)
-        FieldAccess(data)
-          Expr type: test::std::array::Array<<0> of test::std::array::get<_>(_,_)>
-          ValueOfAssignable
-            LocalVariable(this)
-        Expr type: int
-        ValueOfAssignable
-          LocalVariable(index)
-  }
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "test" }, body_index: 11, param_count: 0, generic_count: 0 }) }>(test::generic_test::test())
--> int
-Expr type: int
-Block (returns: true) {
-  Expr type: unit
-  Declaration(x)
-    Expr type: test::generic_test::Option<int>
-    Struct
-      value: 
-      Expr type: int
-      Literal(Integer(10))
-  Expr type: test::generic_test::Option<int>
-  FunctionCall
-    Function(test::generic_test::do_nothing<test::generic_test::Option<int>>(test::generic_test::Option<int>))
-    Expr type: test::generic_test::Option<int>
+    Function(test::generic_test::generic_function<<0> of test::generic_test::nested_generic_function<_>(_)>(<0> of test::generic_test::nested_generic_function<_>(_)))
+    Expr type: <0> of test::generic_test::nested_generic_function<_>(_)
     ValueOfAssignable
       LocalVariable(x)
-  Expr type: unit
-  Declaration(my_struct)
-    Expr type: test::generic_test::MyStruct<int,int>
-    FunctionCall
-      Function(test::generic_test::createStruct<int,int>(int,int,int))
-      Expr type: int
-      Literal(Integer(10))
-      Expr type: int
-      Literal(Integer(20))
-      Expr type: int
-      Literal(Integer(30))
-  Expr type: unit
-  Declaration(my_struct2)
-    Expr type: &test::generic_test::MyStruct<int,int>
-    Borrow
-      LocalVariable(my_struct)
-  Expr type: unit
-  Declaration(y)
-    Expr type: test::generic_test::Option<int>
-    ValueOfAssignable
-      LocalVariable(x)
-  Expr type: unit
-  Declaration(z)
-    Expr type: test::generic_test::TwoGenerics<int,int>
-    Struct
-      value: 
-      Expr type: int
-      Literal(Integer(10))
-      value2: 
-      Expr type: int
-      Literal(Integer(20))
-  Expr type: unit
-  Declaration(w)
-    Expr type: test::generic_test::NestedGeneric<int>
-    Struct
-      value: 
-      Expr type: test::generic_test::Option<int>
-      ValueOfAssignable
-        LocalVariable(x)
-  Expr type: unit
-  Declaration(a)
-    Expr type: int
-    FunctionCall
-      Function(test::generic_test::generic_function<int>(int))
-      Expr type: int
-      Literal(Integer(10))
-  Expr type: unit
-  Declaration(b)
-    Expr type: test::generic_test::Option<int>
-    FunctionCall
-      Function(test::generic_test::generic_function2<int>(test::generic_test::Option<int>))
-      Expr type: test::generic_test::Option<int>
-      ValueOfAssignable
-        LocalVariable(x)
-  Expr type: unit
-  Declaration(b2)
-    Expr type: test::generic_test::Option<test::generic_test::Option<int>>
-    FunctionCall
-      Function(test::generic_test::generic_function2<test::generic_test::Option<int>>(test::generic_test::Option<test::generic_test::Option<int>>))
-      Expr type: test::generic_test::Option<test::generic_test::Option<int>>
-      Struct
-        value: 
-        Expr type: test::generic_test::Option<int>
-        ValueOfAssignable
-          LocalVariable(x)
-  Expr type: unit
-  Declaration(c)
-    Expr type: test::generic_test::TwoGenerics<char,test::generic_test::Option<char>>
-    FunctionCall
-      Function(test::generic_test::partial_generic_function<char>(char))
-      Expr type: char
-      Literal(Char(99))
-  Expr type: int
-  Binary(Math(Add))
-    Expr type: int
-    FunctionCall
-      Function(test::generic_test::add1(int))
-      Expr type: int
-      FunctionCall
-        Function(test::generic_test::generic_function<int>(int))
-        Expr type: int
-        FunctionCall
-          Function(test::generic_test::add1(int))
-          Expr type: int
-          FieldAccess(value)
-            Expr type: test::generic_test::Option<int>
-            ValueOfAssignable
-              LocalVariable(x)
-    Expr type: int
-    ValueOfAssignable
-      LocalVariable(a)
 }
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, item_name: "open_file" }, body_index: 29, param_count: 1, generic_count: 0 }) }>(test::std::io::open_file(_))
-  path: &char
--> test::std::io::File
-Expr type: test::std::io::File
-Block (returns: true) {
-  Expr type: unit
-  Declaration(file)
-    Expr type: int
-    FunctionCall
-      Function(builtin::::fopen(&char))
-      Expr type: &char
-      ValueOfAssignable
-        LocalVariable(path)
-  Expr type: test::std::io::File
-  Struct
-    file: 
-    Expr type: int
-    ValueOfAssignable
-      LocalVariable(file)
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "main" }, body_index: 47, param_count: 0, generic_count: 0 }) }>(test::::main())
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "main" }, body_index: 61, param_count: 0, generic_count: 0 }) }>(test::::main())
 -> int
 Expr type: int
 Block (returns: true) {
@@ -2807,391 +2787,95 @@ Block (returns: true) {
       Expr type: int
       Literal(Integer(9))
 }
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, item_name: "write_file" }, body_index: 33, param_count: 2, generic_count: 0 }) }>(test::std::io::write_file(_,_))
-  string: &test::std::vec::Vec<char>
-  this: test::std::io::File
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::fwrite(&char,int,int))
-    Expr type: &char
-    ValueOfAssignable
-      PointerFieldAccess(data, 1)
-        Expr type: &test::std::vec::Vec<char>
-        ValueOfAssignable
-          LocalVariable(string)
-    Expr type: int
-    ValueOfAssignable
-      PointerFieldAccess(size, 1)
-        Expr type: &test::std::vec::Vec<char>
-        ValueOfAssignable
-          LocalVariable(string)
-    Expr type: int
-    FieldAccess(file)
-      Expr type: test::std::io::File
-      ValueOfAssignable
-        LocalVariable(this)
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "read_line" }, body_index: 22, param_count: 0, generic_count: 0 }) }>(test::std::string::read_line())
--> test::std::vec::Vec<char>
-Expr type: test::std::vec::Vec<char>
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "small_test", path: [] }, item_name: "main" }, body_index: 71, param_count: 0, generic_count: 0 }) }>(small_test::::main())
+-> int
+Expr type: int
 Block (returns: true) {
   Expr type: unit
-  Declaration(str)
-    Expr type: test::std::vec::Vec<char>
-    FunctionCall
-      Function(test::std::string::create_string(int))
+  Declaration(s)
+    Expr type: small_test::::Simple
+    Struct
+      a: 
       Expr type: int
-      Literal(Integer(100))
-  Expr type: unit
-  Declaration(i)
+      Literal(Integer(1))
+      b: 
+      Expr type: int
+      Literal(Integer(2))
+  Expr type: int
+  FunctionCall
+    Function(small_test::::add(int,int))
     Expr type: int
-    Literal(Integer(0))
-  Expr type: unit
-  Loop {
-    Expr type: bool
-    Binary(Comparison(Less))
-      Expr type: int
+    FieldAccess(a)
+      Expr type: small_test::::Simple
       ValueOfAssignable
-        LocalVariable(i)
-      Expr type: int
-      FieldAccess(size)
-        Expr type: test::std::vec::Vec<char>
-        ValueOfAssignable
-          LocalVariable(str)
-    Expr type: unit
-    Block (returns: false) {
-      Expr type: unit
-      Declaration(c)
-        Expr type: char
-        FunctionCall
-          Function(builtin::::read_char())
-      Expr type: unit
-      If {
-        Expr type: bool
-        Binary(Logical(Or))
-          Expr type: bool
-          Binary(Comparison(Equals))
-            Expr type: char
-            ValueOfAssignable
-              LocalVariable(c)
-            Expr type: char
-            Literal(Char(10))
-          Expr type: bool
-          Binary(Comparison(Equals))
-            Expr type: char
-            ValueOfAssignable
-              LocalVariable(c)
-            Expr type: char
-            Literal(Char(13))
-        Expr type: unit
-        Block (returns: false) {
-          Expr type: unit
-          Break {
-          }
-        }
-      }
-      Expr type: unit
+        LocalVariable(s)
+    Expr type: int
+    FieldAccess(b)
+      Expr type: small_test::::Simple
+      ValueOfAssignable
+        LocalVariable(s)
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "generic_function" }, body_index: 11, param_count: 1, generic_count: 1 }) }>(test::generic_test::generic_function<_>(_))
+  x: <0> of test::generic_test::generic_function<_>(_)
+-> <0> of test::generic_test::generic_function<_>(_)
+Expr type: <0> of test::generic_test::generic_function<_>(_)
+Block (returns: true) {
+  Expr type: <0> of test::generic_test::generic_function<_>(_)
+  ValueOfAssignable
+    LocalVariable(x)
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "create_array" }, body_index: 4, param_count: 1, generic_count: 1 }) }>(test::std::array::create_array<_>(_))
+  size: int
+-> test::std::array::Array<<0> of test::std::array::create_array<_>(_)>
+Expr type: test::std::array::Array<<0> of test::std::array::create_array<_>(_)>
+Block (returns: true) {
+  Expr type: unit
+  Declaration(arr)
+    Expr type: test::std::array::Array<<0> of test::std::array::create_array<_>(_)>
+    Struct
+      data: 
+      Expr type: &<0> of test::std::array::create_array<_>(_)
       FunctionCall
-        Function(test::std::string::set(&test::std::vec::Vec<char>,int,char))
-        Expr type: &test::std::vec::Vec<char>
-        Borrow
-          LocalVariable(str)
+        Function(test::std::mem::malloc<<0> of test::std::array::create_array<_>(_)>(int))
         Expr type: int
         ValueOfAssignable
-          LocalVariable(i)
-        Expr type: char
-        ValueOfAssignable
-          LocalVariable(c)
+          LocalVariable(size)
+      size: 
       Expr type: int
-      Increment(false)
-        LocalVariable(i)
-    }
-  }
-  Expr type: int
-  Assign(Assign)
-    FieldAccess(size)
-      LocalVariable(str)
+      ValueOfAssignable
+        LocalVariable(size)
+  Expr type: unit
+  FunctionCall
+    Function(test::std::mem::memset<<0> of test::std::array::create_array<_>(_)>(&<0> of test::std::array::create_array<_>(_),int,int))
+    Expr type: &<0> of test::std::array::create_array<_>(_)
+    FieldAccess(data)
+      Expr type: test::std::array::Array<<0> of test::std::array::create_array<_>(_)>
+      ValueOfAssignable
+        LocalVariable(arr)
+    Expr type: int
+    Literal(Integer(0))
     Expr type: int
     ValueOfAssignable
-      LocalVariable(i)
-  Expr type: test::std::vec::Vec<char>
+      LocalVariable(size)
+  Expr type: test::std::array::Array<<0> of test::std::array::create_array<_>(_)>
   ValueOfAssignable
-    LocalVariable(str)
+    LocalVariable(arr)
 }
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "print" }, body_index: 19, param_count: 1, generic_count: 0 }) }>(test::std::string::print(_))
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "free" }, body_index: 19, param_count: 1, generic_count: 0 }) }>(test::std::string::free(_))
   this: test::std::vec::Vec<char>
 -> unit
 Expr type: unit
 Block (returns: false) {
   Expr type: unit
   FunctionCall
-    Function(builtin::::write(&char,int))
+    Function(test::std::mem::free<char>(&char))
     Expr type: &char
     FieldAccess(data)
       Expr type: test::std::vec::Vec<char>
       ValueOfAssignable
         LocalVariable(this)
-    Expr type: int
-    FieldAccess(size)
-      Expr type: test::std::vec::Vec<char>
-      ValueOfAssignable
-        LocalVariable(this)
 }
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "print" }, body_index: 3, param_count: 1, generic_count: 0 }) }>(test::std::array::print(_))
-  this: test::std::array::Array<int>
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  Declaration(i)
-    Expr type: int
-    Literal(Integer(0))
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::write_char(char))
-    Expr type: char
-    Literal(Char(91))
-  Expr type: unit
-  Loop {
-    Expr type: bool
-    Binary(Comparison(Less))
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(i)
-      Expr type: int
-      FieldAccess(size)
-        Expr type: test::std::array::Array<int>
-        ValueOfAssignable
-          LocalVariable(this)
-    Expr type: unit
-    Block (returns: false) {
-      Expr type: unit
-      If {
-        Expr type: bool
-        Binary(Comparison(Greater))
-          Expr type: int
-          ValueOfAssignable
-            LocalVariable(i)
-          Expr type: int
-          Literal(Integer(0))
-        Expr type: unit
-        Block (returns: false) {
-          Expr type: unit
-          FunctionCall
-            Function(builtin::::write_char(char))
-            Expr type: char
-            Literal(Char(44))
-          Expr type: unit
-          FunctionCall
-            Function(builtin::::write_char(char))
-            Expr type: char
-            Literal(Char(32))
-        }
-      }
-      Expr type: unit
-      FunctionCall
-        Function(test::std::print::print(int))
-        Expr type: int
-        ValueOfAssignable
-          ArrayIndex
-            Expr type: &int
-            FieldAccess(data)
-              Expr type: test::std::array::Array<int>
-              ValueOfAssignable
-                LocalVariable(this)
-            Expr type: int
-            ValueOfAssignable
-              LocalVariable(i)
-      Expr type: int
-      Increment(false)
-        LocalVariable(i)
-    }
-  }
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::write_char(char))
-    Expr type: char
-    Literal(Char(93))
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::write_char(char))
-    Expr type: char
-    Literal(Char(10))
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "print"] }, item_name: "println" }, body_index: 60, param_count: 1, generic_count: 0 }) }>(test::std::print::println(_))
-  c: char
--> unit
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::write_char(char))
-    Expr type: char
-    ValueOfAssignable
-      LocalVariable(c)
-  Expr type: unit
-  FunctionCall
-    Function(builtin::::write_char(char))
-    Expr type: char
-    Literal(Char(10))
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "create_string" }, body_index: 17, param_count: 1, generic_count: 0 }) }>(test::std::string::create_string(_))
-  capacity: int
--> test::std::vec::Vec<char>
-Expr type: test::std::vec::Vec<char>
-Block (returns: true) {
-  Expr type: unit
-  Declaration(str)
-    Expr type: test::std::vec::Vec<char>
-    FunctionCall
-      Function(test::std::vec::create_vec<char>(int))
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(capacity)
-  Expr type: test::std::vec::Vec<char>
-  ValueOfAssignable
-    LocalVariable(str)
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "call_test_fn" }, body_index: 54, param_count: 2, generic_count: 0 }) }>(test::::call_test_fn(_,_))
-  fn: fn(int)->int
-  val: int
--> int
-Expr type: int
-Block (returns: true) {
-  Expr type: int
-  FunctionCall
-    Expr type: fn(int)->int
-    ValueOfAssignable
-      LocalVariable(fn)
-    Expr type: int
-    ValueOfAssignable
-      LocalVariable(val)
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "generic_function2" }, body_index: 13, param_count: 1, generic_count: 1 }) }>(test::generic_test::generic_function2<_>(_))
-  x: test::generic_test::Option<<0> of test::generic_test::generic_function2<_>(_)>
--> test::generic_test::Option<<0> of test::generic_test::generic_function2<_>(_)>
-Expr type: test::generic_test::Option<<0> of test::generic_test::generic_function2<_>(_)>
-Block (returns: true) {
-  Expr type: test::generic_test::Option<<0> of test::generic_test::generic_function2<_>(_)>
-  ValueOfAssignable
-    LocalVariable(x)
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "get" }, body_index: 35, param_count: 2, generic_count: 1 }) }>(test::std::vec::get<_>(_,_))
-  index: int
-  this: test::std::vec::Vec<<0> of test::std::vec::get<_>(_,_)>
--> <0> of test::std::vec::get<_>(_,_)
-Expr type: unit
-Block (returns: false) {
-  Expr type: unit
-  If {
-    Expr type: bool
-    Binary(Logical(Or))
-      Expr type: bool
-      Binary(Comparison(Less))
-        Expr type: int
-        ValueOfAssignable
-          LocalVariable(index)
-        Expr type: int
-        Literal(Integer(0))
-      Expr type: bool
-      Binary(Comparison(GreaterEquals))
-        Expr type: int
-        ValueOfAssignable
-          LocalVariable(index)
-        Expr type: int
-        FieldAccess(size)
-          Expr type: test::std::vec::Vec<<0> of test::std::vec::get<_>(_,_)>
-          ValueOfAssignable
-            LocalVariable(this)
-    Expr type: unit
-    Block (returns: false) {
-      Expr type: unit
-      FunctionCall
-        Function(test::std::panic::panic(&char))
-        Expr type: &char
-        ConstantPointer(String([73, 110, 100, 101, 120, 32, 111, 117, 116, 32, 111, 102, 32, 98, 111, 117, 110, 100, 115, 0]))
-    }
-  }
-  Expr type: unit
-  Return {
-    Expr type: <0> of test::std::vec::get<_>(_,_)
-    ValueOfAssignable
-      ArrayIndex
-        Expr type: &<0> of test::std::vec::get<_>(_,_)
-        FieldAccess(data)
-          Expr type: test::std::vec::Vec<<0> of test::std::vec::get<_>(_,_)>
-          ValueOfAssignable
-            LocalVariable(this)
-        Expr type: int
-        ValueOfAssignable
-          LocalVariable(index)
-  }
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "fill" }, body_index: 2, param_count: 2, generic_count: 1 }) }>(test::std::array::fill<_>(_,_))
-  value: <0> of test::std::array::fill<_>(_,_)
-  this: test::std::array::Array<<0> of test::std::array::fill<_>(_,_)>
--> unit
-Expr type: unit
-Block (returns: true) {
-  Expr type: unit
-  Declaration(i)
-    Expr type: int
-    Literal(Integer(0))
-  Expr type: unit
-  Loop {
-    Expr type: bool
-    Binary(Comparison(Less))
-      Expr type: int
-      ValueOfAssignable
-        LocalVariable(i)
-      Expr type: int
-      FieldAccess(size)
-        Expr type: test::std::array::Array<<0> of test::std::array::fill<_>(_,_)>
-        ValueOfAssignable
-          LocalVariable(this)
-    Expr type: unit
-    Block (returns: false) {
-      Expr type: <0> of test::std::array::fill<_>(_,_)
-      Assign(Assign)
-        ArrayIndex
-          Expr type: &<0> of test::std::array::fill<_>(_,_)
-          FieldAccess(data)
-            Expr type: test::std::array::Array<<0> of test::std::array::fill<_>(_,_)>
-            ValueOfAssignable
-              LocalVariable(this)
-          Expr type: int
-          ValueOfAssignable
-            LocalVariable(i)
-        Expr type: <0> of test::std::array::fill<_>(_,_)
-        ValueOfAssignable
-          LocalVariable(value)
-      Expr type: int
-      Increment(false)
-        LocalVariable(i)
-    }
-  }
-}
-Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "nested_generic_function" }, body_index: 14, param_count: 1, generic_count: 1 }) }>(test::generic_test::nested_generic_function<_>(_))
-  x: <0> of test::generic_test::nested_generic_function<_>(_)
--> <0> of test::generic_test::nested_generic_function<_>(_)
-Expr type: <0> of test::generic_test::nested_generic_function<_>(_)
-Block (returns: true) {
-  Expr type: int
-  FunctionCall
-    Function(test::generic_test::generic_function<int>(int))
-    Expr type: int
-    Literal(Integer(5))
-  Expr type: <0> of test::generic_test::nested_generic_function<_>(_)
-  FunctionCall
-    Function(test::generic_test::generic_function<<0> of test::generic_test::nested_generic_function<_>(_)>(<0> of test::generic_test::nested_generic_function<_>(_)))
-    Expr type: <0> of test::generic_test::nested_generic_function<_>(_)
-    ValueOfAssignable
-      LocalVariable(x)
-}
-Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "parse_int" }, body_index: 27, param_count: 1, generic_count: 0 }) }>(test::std::string::parse_int(_))
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "parse_int" }, body_index: 24, param_count: 1, generic_count: 0 }) }>(test::std::string::parse_int(_))
   str: &test::std::vec::Vec<char>
 -> int
 Expr type: int
@@ -3214,7 +2898,7 @@ Block (returns: true) {
     Binary(Comparison(Equals))
       Expr type: char
       FunctionCall
-        Function(test::std::string::get(&test::std::vec::Vec<char>,int))
+        Function(test::std::vec::get<char>(&test::std::vec::Vec<char>,int))
         Expr type: &test::std::vec::Vec<char>
         ValueOfAssignable
           LocalVariable(str)
@@ -3267,7 +2951,7 @@ Block (returns: true) {
             Unary(Cast)
               Expr type: char
               FunctionCall
-                Function(test::std::string::get(&test::std::vec::Vec<char>,int))
+                Function(test::std::vec::get<char>(&test::std::vec::Vec<char>,int))
                 Expr type: &test::std::vec::Vec<char>
                 ValueOfAssignable
                   LocalVariable(str)
@@ -3291,4 +2975,312 @@ Block (returns: true) {
     Expr type: int
     ValueOfAssignable
       LocalVariable(sign)
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "memcopy" }, body_index: 60, param_count: 3, generic_count: 1 }) }>(test::std::mem::memcopy<_>(_,_,_))
+  size: int
+  src: &<0> of test::std::mem::memcopy<_>(_,_,_)
+  dest: &<0> of test::std::mem::memcopy<_>(_,_,_)
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::memcopy(&unit,&unit,int))
+    Expr type: &unit
+    Unary(Cast)
+      Expr type: &<0> of test::std::mem::memcopy<_>(_,_,_)
+      ValueOfAssignable
+        LocalVariable(dest)
+    Expr type: &unit
+    Unary(Cast)
+      Expr type: &<0> of test::std::mem::memcopy<_>(_,_,_)
+      ValueOfAssignable
+        LocalVariable(src)
+    Expr type: int
+    Binary(Math(Mul))
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(size)
+      Expr type: int
+      Sizeof(GenericType(GenericId { kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "memcopy" }, body_index: 60, param_count: 3, generic_count: 1 }), index: 0 }))
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "fill" }, body_index: 30, param_count: 2, generic_count: 1 }) }>(test::std::vec::fill<_>(_,_))
+  value: <0> of test::std::vec::fill<_>(_,_)
+  this: test::std::vec::Vec<<0> of test::std::vec::fill<_>(_,_)>
+-> unit
+Expr type: unit
+Block (returns: true) {
+  Expr type: unit
+  Declaration(i)
+    Expr type: int
+    Literal(Integer(0))
+  Expr type: unit
+  Loop {
+    Expr type: bool
+    Binary(Comparison(Less))
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(i)
+      Expr type: int
+      FieldAccess(size)
+        Expr type: test::std::vec::Vec<<0> of test::std::vec::fill<_>(_,_)>
+        ValueOfAssignable
+          LocalVariable(this)
+    Expr type: unit
+    Block (returns: false) {
+      Expr type: <0> of test::std::vec::fill<_>(_,_)
+      Assign(Assign)
+        ArrayIndex
+          Expr type: &<0> of test::std::vec::fill<_>(_,_)
+          FieldAccess(data)
+            Expr type: test::std::vec::Vec<<0> of test::std::vec::fill<_>(_,_)>
+            ValueOfAssignable
+              LocalVariable(this)
+          Expr type: int
+          ValueOfAssignable
+            LocalVariable(i)
+        Expr type: <0> of test::std::vec::fill<_>(_,_)
+        ValueOfAssignable
+          LocalVariable(value)
+      Expr type: int
+      Increment(false)
+        LocalVariable(i)
+    }
+  }
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "free" }, body_index: 5, param_count: 1, generic_count: 1 }) }>(test::std::array::free<_>(_))
+  this: test::std::array::Array<<0> of test::std::array::free<_>(_)>
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  FunctionCall
+    Function(test::std::mem::free<unit>(&unit))
+    Expr type: &unit
+    Unary(Cast)
+      Expr type: &<0> of test::std::array::free<_>(_)
+      FieldAccess(data)
+        Expr type: test::std::array::Array<<0> of test::std::array::free<_>(_)>
+        ValueOfAssignable
+          LocalVariable(this)
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "print"] }, item_name: "print" }, body_index: 47, param_count: 1, generic_count: 0 }) }>(test::std::print::print(_))
+  literal: &char
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  Declaration(i)
+    Expr type: int
+    Literal(Integer(0))
+  Expr type: unit
+  Loop {
+    Expr type: bool
+    Binary(Comparison(NotEquals))
+      Expr type: char
+      ValueOfAssignable
+        ArrayIndex
+          Expr type: &char
+          ValueOfAssignable
+            LocalVariable(literal)
+          Expr type: int
+          ValueOfAssignable
+            LocalVariable(i)
+      Expr type: char
+      Literal(Char(0))
+    Expr type: unit
+    Block (returns: false) {
+      Expr type: int
+      Increment(false)
+        LocalVariable(i)
+    }
+  }
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::write(&char,int))
+    Expr type: &char
+    ValueOfAssignable
+      LocalVariable(literal)
+    Expr type: int
+    ValueOfAssignable
+      LocalVariable(i)
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "print"] }, item_name: "print" }, body_index: 49, param_count: 1, generic_count: 0 }) }>(test::std::print::print(_))
+  c: char
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::write_char(char))
+    Expr type: char
+    ValueOfAssignable
+      LocalVariable(c)
+}
+Function<GenericParams { mapping: {"T": 0}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "create_vec" }, body_index: 32, param_count: 1, generic_count: 1 }) }>(test::std::vec::create_vec<_>(_))
+  initial_capacity: int
+-> test::std::vec::Vec<<0> of test::std::vec::create_vec<_>(_)>
+Expr type: test::std::vec::Vec<<0> of test::std::vec::create_vec<_>(_)>
+Block (returns: true) {
+  Expr type: unit
+  If {
+    Expr type: bool
+    Binary(Comparison(LessEquals))
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(initial_capacity)
+      Expr type: int
+      Literal(Integer(0))
+    Expr type: unit
+    Block (returns: false) {
+      Expr type: unit
+      FunctionCall
+        Function(test::std::panic::panic(&char))
+        Expr type: &char
+        ConstantPointer(String([73, 110, 105, 116, 105, 97, 108, 32, 99, 97, 112, 97, 99, 105, 116, 121, 32, 109, 117, 115, 116, 32, 98, 101, 32, 103, 114, 101, 97, 116, 101, 114, 32, 116, 104, 97, 110, 32, 48, 0]))
+    }
+  }
+  Expr type: unit
+  Declaration(arr)
+    Expr type: test::std::vec::Vec<<0> of test::std::vec::create_vec<_>(_)>
+    Struct
+      data: 
+      Expr type: &<0> of test::std::vec::create_vec<_>(_)
+      FunctionCall
+        Function(test::std::mem::malloc<<0> of test::std::vec::create_vec<_>(_)>(int))
+        Expr type: int
+        ValueOfAssignable
+          LocalVariable(initial_capacity)
+      size: 
+      Expr type: int
+      Literal(Integer(0))
+      capacity: 
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(initial_capacity)
+  Expr type: test::std::vec::Vec<<0> of test::std::vec::create_vec<_>(_)>
+  ValueOfAssignable
+    LocalVariable(arr)
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "print"] }, item_name: "println" }, body_index: 50, param_count: 1, generic_count: 0 }) }>(test::std::print::println(_))
+  c: char
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::write_char(char))
+    Expr type: char
+    ValueOfAssignable
+      LocalVariable(c)
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::write_char(char))
+    Expr type: char
+    Literal(Char(10))
+}
+Function<GenericParams { mapping: {"T": 0, "K": 1}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "generic_sizeof_test" }, body_index: 64, param_count: 0, generic_count: 2 }) }>(test::::generic_sizeof_test<_,_>())
+-> int
+Expr type: int
+Block (returns: true) {
+  Expr type: int
+  Binary(Math(Mul))
+    Expr type: int
+    Sizeof(GenericType(GenericId { kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "generic_sizeof_test" }, body_index: 64, param_count: 0, generic_count: 2 }), index: 0 }))
+    Expr type: int
+    Sizeof(GenericType(GenericId { kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "generic_sizeof_test" }, body_index: 64, param_count: 0, generic_count: 2 }), index: 1 }))
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "print"] }, item_name: "print" }, body_index: 51, param_count: 1, generic_count: 0 }) }>(test::std::print::print(_))
+  b: bool
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  If {
+    Expr type: bool
+    ValueOfAssignable
+      LocalVariable(b)
+    Expr type: unit
+    Block (returns: false) {
+      Expr type: unit
+      FunctionCall
+        Function(test::std::print::print(&char))
+        Expr type: &char
+        ConstantPointer(String([116, 114, 117, 101, 0]))
+    }
+    Expr type: unit
+    Block (returns: false) {
+      Expr type: unit
+      FunctionCall
+        Function(test::std::print::print(&char))
+        Expr type: &char
+        ConstantPointer(String([102, 97, 108, 115, 101, 0]))
+    }
+  }
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, item_name: "read_chars" }, body_index: 44, param_count: 2, generic_count: 0 }) }>(test::std::io::read_chars(_,_))
+  amount: int
+  this: test::std::io::File
+-> test::std::vec::Vec<char>
+Expr type: test::std::vec::Vec<char>
+Block (returns: true) {
+  Expr type: unit
+  Declaration(str)
+    Expr type: test::std::vec::Vec<char>
+    FunctionCall
+      Function(test::std::string::create_sized_string(int))
+      Expr type: int
+      ValueOfAssignable
+        LocalVariable(amount)
+  Expr type: int
+  FunctionCall
+    Function(builtin::::fread(&char,int,int))
+    Expr type: &char
+    FieldAccess(data)
+      Expr type: test::std::vec::Vec<char>
+      ValueOfAssignable
+        LocalVariable(str)
+    Expr type: int
+    FieldAccess(size)
+      Expr type: test::std::vec::Vec<char>
+      ValueOfAssignable
+        LocalVariable(str)
+    Expr type: int
+    FieldAccess(file)
+      Expr type: test::std::io::File
+      ValueOfAssignable
+        LocalVariable(this)
+  Expr type: test::std::vec::Vec<char>
+  ValueOfAssignable
+    LocalVariable(str)
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "print"] }, item_name: "println" }, body_index: 48, param_count: 1, generic_count: 0 }) }>(test::std::print::println(_))
+  literal: &char
+-> unit
+Expr type: unit
+Block (returns: false) {
+  Expr type: unit
+  FunctionCall
+    Function(test::std::print::print(&char))
+    Expr type: &char
+    ValueOfAssignable
+      LocalVariable(literal)
+  Expr type: unit
+  FunctionCall
+    Function(builtin::::write_char(char))
+    Expr type: char
+    Literal(Char(10))
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "mul2" }, body_index: 66, param_count: 1, generic_count: 0 }) }>(test::::mul2(_))
+  a: int
+-> int
+Expr type: int
+Block (returns: true) {
+  Expr type: int
+  Binary(Math(Mul))
+    Expr type: int
+    ValueOfAssignable
+      LocalVariable(a)
+    Expr type: int
+    Literal(Integer(2))
 }

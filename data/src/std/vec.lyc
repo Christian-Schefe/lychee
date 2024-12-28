@@ -9,18 +9,26 @@ struct Vec<T> {
     int capacity;
 }
 
-T get<T>(Vec<T> this, int index) {
+T get<T>(&Vec<T> this, int index) {
     if index < 0 || index >= this.size {
         panic("Index out of bounds");
     };
-    return this.data[index];
+    this.data[index]
 }
 
-unit set<T>(Vec<T> this, int index, T value) {
+T get<T>(Vec<T> this, int index) {
+    get::<T>(&this, index)
+}
+
+unit set<T>(&Vec<T> this, int index, T value) {
     if index < 0 || index >= this.size {
         panic("Index out of bounds");
     };
     this.data[index] = value;
+}
+
+unit set<T>(Vec<T> this, int index, T value) {
+    set::<T>(&this, index, value)
 }
 
 unit fill<T>(Vec<T> this, T value) {
