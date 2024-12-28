@@ -3,5 +3,5 @@ import root::std::print::*;
 unit panic(&char message) {
     println("PANIC:");
     println(message);
-    exit(1);
+    builtin::exit(1);
 }

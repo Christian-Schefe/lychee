@@ -178,13 +178,14 @@ impl ResolvedFunctions {
                     matching_param_types.pop().unwrap()?;
                 }
                 return Err(anyhow::anyhow!(
-                    "Function {} with parameters '{}' doesn't match any function signature at {}",
+                    "Function {} with parameters '{}' doesn't match any of {} function signatures at {}",
                     function_id.item_id,
                     arg_types
                         .iter()
                         .map(|x| x.to_string())
                         .collect::<Vec<_>>()
                         .join(","),
+                    matching_param_types.len(),
                     location
                 ));
             }

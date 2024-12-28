@@ -96,6 +96,11 @@ int main() {
     println("MEM TEST");
     let var vec3 = create_sized_vec::<int>(5);
     vec3.print();
+    vec3.free();
+
+    let var big_vec = create_sized_vec::<int>(100000);
+    big_vec.size.println();
+    big_vec.free();
 
     println("PANIC TEST");
     (&vec).pop().println();

@@ -1,4 +1,6 @@
 import root::std::vec::*;
+import builtin::{write, read_char, read};
+import root::std::mem::free;
 
 alias String = Vec<char>;
 
@@ -17,7 +19,7 @@ unit print(String this) {
 }
 
 unit free(String this) {
-    free(this.data as &unit);
+    free(this.data);
 }
 
 String from_literal(&char literal) {

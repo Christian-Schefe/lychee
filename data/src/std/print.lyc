@@ -1,3 +1,5 @@
+import builtin::{write_char, write};
+
 unit print(&char literal) {
     let int i = 0;
     while (literal[i] != '\0') {

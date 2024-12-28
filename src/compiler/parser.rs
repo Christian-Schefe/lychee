@@ -50,6 +50,13 @@ impl ModulePath {
 }
 
 impl ModuleIdentifier {
+    pub fn builtin() -> Self {
+        ModuleIdentifier {
+            root_name: "builtin".to_string(),
+            path: vec![],
+        }
+    }
+    
     pub fn get_identifier(&self) -> String {
         let path_str = self
             .path

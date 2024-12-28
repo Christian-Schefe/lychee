@@ -1,5 +1,7 @@
 import root::std::panic::*;
 import root::std::print::*;
+import root::std::mem::*;
+import builtin::{write_char};
 
 struct Vec<T> {
     &T data;
@@ -49,7 +51,7 @@ Vec<T> create_vec<T>(int initial_capacity) {
         panic("Initial capacity must be greater than 0");
     };
     let Vec<T> arr = new Vec<T> {
-        data: malloc(initial_capacity * sizeof(T)) as &T,
+        data: malloc::<T>(initial_capacity),
         size: 0,
         capacity: initial_capacity
     };
@@ -58,24 +60,24 @@ Vec<T> create_vec<T>(int initial_capacity) {
 
 Vec<T> create_sized_vec<T>(int size) {
     let Vec<T> arr = new Vec<T> {
-        data: malloc(size * sizeof(T)) as &T,
+        data: malloc::<T>(size),
         size: size,
         capacity: size
     };
-    memset(arr.data as &unit, 0, size * sizeof(T));
+    memset::<T>(arr.data, 0, size);
     arr
 }
 
 unit free<T>(Vec<T> this) {
-    free(this.data as &unit);
+    free::<T>(this.data);
 }
 
 unit push<T>(&Vec<T> this, T value) {
     if this.size == this.capacity {
         this.capacity *= 2;
-        let var new_data = reallocate(this.data as &unit, this.capacity * sizeof(T));
-        memcopy(this.data as &unit, new_data, this.size * sizeof(T));
-        this.data = new_data as &T;
+        let var new_data = realloc::<T>(this.data, this.capacity);
+        memcopy::<T>(this.data, new_data, this.size);
+        this.data = new_data;
     };
     this.data[this.size] = value;
     this.size++;
@@ -89,16 +91,16 @@ T pop<T>(&Vec<T> this) {
     let T value = this.data[this.size];
     if this.size < this.capacity / 2 {
         this.capacity /= 2;
-        let var new_data = reallocate(this.data as &unit, this.capacity * sizeof(T));
-        memcopy(this.data as &unit, new_data, this.size * sizeof(T));
-        this.data = new_data as &T;
+        let var new_data = realloc::<T>(this.data, this.capacity);
+        memcopy::<T>(this.data, new_data, this.size);
+        this.data = new_data;
     };
     value
 }
 
 Vec<T> clone<T>(Vec<T> this) {
     let Vec<T> new_vec = create_vec::<T>(this.capacity);
-    memcopy(this.data as &unit, new_vec.data as &unit, this.size * sizeof(T));
+    memcopy::<T>(this.data, new_vec.data, this.size);
     new_vec.size = this.size;
     new_vec
 }
@@ -119,9 +121,4 @@ unit foreach<T>(Vec<T> this, (T) -> unit fn) {
         fn(this.get(i));
         i++;
     };
-}
-
-&unit reallocate(&unit pointer, int bytes) {
-    free(pointer);
-    malloc(bytes)
 }

@@ -4,3 +4,4 @@ module io;
 module print;
 module vec;
 module panic;
+module mem;

@@ -56,10 +56,7 @@ impl ResolvedTypes {
     pub fn get_tuple_type(&self, element_types: &Vec<AnalyzedTypeId>) -> AnalyzedTypeId {
         let item_id = ItemId {
             item_name: "$tuple".to_string(),
-            module_id: ModuleIdentifier {
-                path: Vec::new(),
-                root_name: "".to_string(),
-            },
+            module_id: ModuleIdentifier::builtin(),
         };
         let struct_id = StructId {
             id: item_id,

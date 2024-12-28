@@ -1,0 +1,22 @@
+import builtin::*;
+
+unit free<T>(&T this) {
+    free(this as &unit);
+}
+
+&T malloc<T>(int size) {
+    malloc(size * sizeof(T)) as &T
+}
+
+&T realloc<T>(&T pointer, int size) {
+    free(pointer);
+    malloc::<T>(size)
+}
+
+unit memset<T>(&T pointer, int value, int size) {
+    memset(pointer as &unit, value, size * sizeof(T));
+}
+
+unit memcopy<T>(&T dest, &T src, int size) {
+    memcopy(dest as &unit, src as &unit, size * sizeof(T));
+}

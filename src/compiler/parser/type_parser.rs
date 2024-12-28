@@ -78,10 +78,10 @@ pub fn parse_type(tokens: &mut TokenStack) -> ParseResult<ParsedType> {
                         ParsedTypeKind::Struct(
                             ParsedScopeId {
                                 item_id: ItemId {
-                                    module_id: current_module,
+                                    module_id: ModuleIdentifier::builtin(),
                                     item_name: "$tuple".to_string(),
                                 },
-                                is_module_local: true,
+                                is_module_local: false,
                             },
                             elements,
                         ),
@@ -191,7 +191,7 @@ pub fn parse_scoped_id(
             break;
         }
     }
-    
+
     let is_relative = is_relative || path.len() == 1;
 
     let item_name = path.pop().unwrap();

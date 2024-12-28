@@ -10,7 +10,6 @@ use std::collections::{HashMap, HashSet};
 pub struct CollectedFunctionData {
     pub functions: HashMap<ModuleIdentifier, HashMap<String, HashSet<FunctionId>>>,
     pub function_imports: HashMap<ModuleIdentifier, HashMap<String, HashSet<FunctionId>>>,
-    pub builtin_functions: HashMap<String, FunctionId>,
 }
 
 impl CollectedFunctionData {
@@ -20,45 +19,35 @@ impl CollectedFunctionData {
         arg_count: Option<usize>,
         generic_count: Option<usize>,
     ) -> Vec<FunctionId> {
-        let empty_map = HashMap::new();
-        let module_functions = self
-            .functions
-            .get(&parsed_function_id.item_id.module_id)
-            .unwrap_or(&empty_map);
-        let module_function_imports = self
-            .function_imports
-            .get(&parsed_function_id.item_id.module_id)
-            .unwrap_or(&empty_map);
-
         let mut matching = Vec::new();
 
-        let maybe_add = |matching: &mut Vec<FunctionId>, id: &FunctionId| {
-            if generic_count.is_none_or(|x| x == id.generic_count)
-                && arg_count.is_none_or(|x| x == id.param_count)
-            {
-                matching.push(id.clone());
+        let maybe_add = |matching: &mut Vec<FunctionId>, ids: &HashSet<FunctionId>| {
+            for id in ids {
+                if generic_count.is_none_or(|x| x == id.generic_count)
+                    && arg_count.is_none_or(|x| x == id.param_count)
+                {
+                    matching.push(id.clone());
+                }
             }
         };
 
-        if let Some(function_ids) = module_functions.get(&parsed_function_id.item_id.item_name) {
-            for function_id in function_ids {
-                maybe_add(&mut matching, function_id);
+        if let Some(module_functions) = self.functions.get(&parsed_function_id.item_id.module_id) {
+            if let Some(function_ids) = module_functions.get(&parsed_function_id.item_id.item_name)
+            {
+                maybe_add(&mut matching, function_ids);
             }
         }
 
         if parsed_function_id.is_module_local {
-            if let Some(function_ids) =
-                module_function_imports.get(&parsed_function_id.item_id.item_name)
+            if let Some(module_function_imports) = self
+                .function_imports
+                .get(&parsed_function_id.item_id.module_id)
             {
-                for function_id in function_ids {
-                    maybe_add(&mut matching, function_id);
+                if let Some(function_ids) =
+                    module_function_imports.get(&parsed_function_id.item_id.item_name)
+                {
+                    maybe_add(&mut matching, function_ids);
                 }
-            }
-            if let Some(builtin_fn_id) = self
-                .builtin_functions
-                .get(&parsed_function_id.item_id.item_name)
-            {
-                maybe_add(&mut matching, builtin_fn_id);
             }
         }
 
@@ -72,15 +61,16 @@ pub fn collect_function_data(
     CollectedFunctionData,
     Vec<(FunctionId, Src<ParsedFunction>)>,
 )> {
-    let builtin_functions = crate::compiler::builtin::BuiltinFunction::get_builtin_function_ids();
     let mut function_bodies = Vec::new();
-    let functions = collect_functions(program, &mut function_bodies)?;
+    let mut functions = HashMap::new();
+
+    crate::compiler::builtin::BuiltinFunction::get_builtin_function_ids(&mut functions);
+    collect_functions(program, &mut functions, &mut function_bodies)?;
     let function_imports = collect_function_imports(program, &functions)?;
     Ok((
         CollectedFunctionData {
             functions,
             function_imports,
-            builtin_functions,
         },
         function_bodies,
     ))
@@ -88,9 +78,9 @@ pub fn collect_function_data(
 
 fn collect_functions(
     program: &ParsedProgram,
+    functions: &mut HashMap<ModuleIdentifier, HashMap<String, HashSet<FunctionId>>>,
     function_bodies: &mut Vec<(FunctionId, Src<ParsedFunction>)>,
-) -> MergerResult<HashMap<ModuleIdentifier, HashMap<String, HashSet<FunctionId>>>> {
-    let mut functions = HashMap::new();
+) -> MergerResult<()> {
     for (module_id, module) in &program.module_tree {
         let mut module_functions = HashMap::new();
         for function_def in &module.functions {
@@ -119,7 +109,7 @@ fn collect_functions(
         }
         functions.insert(module_id.clone(), module_functions);
     }
-    Ok(functions)
+    Ok(())
 }
 
 fn collect_function_imports(
@@ -130,7 +120,10 @@ fn collect_function_imports(
     for (module_id, module) in &program.module_tree {
         let mut module_function_imports = HashMap::new();
         for import in &module.imports {
-            let module_functions = functions.get(&import.value.module_id).unwrap();
+            let module_functions = match functions.get(&import.value.module_id) {
+                Some(f) => f,
+                None => continue,
+            };
             if let Some(objects) = &import.value.imported_objects {
                 for obj in objects {
                     let entry = module_function_imports

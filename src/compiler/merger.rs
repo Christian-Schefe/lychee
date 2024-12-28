@@ -10,6 +10,7 @@ pub mod resolved_functions;
 pub mod resolved_types;
 mod type_collector;
 mod type_resolver;
+mod import_validator;
 
 pub type MergerResult<T> = Result<T, Error>;
 

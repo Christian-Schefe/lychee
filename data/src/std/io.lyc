@@ -1,5 +1,6 @@
 import root::std::string::*;
 import root::std::print::*;
+import builtin::*;
 
 unit file_test() {
     let var in_file = open_file("data/input.txt");

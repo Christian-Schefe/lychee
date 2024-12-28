@@ -1,4 +1,6 @@
 import root::std::print::*;
+import root::std::mem::*;
+import builtin::write_char;
 
 struct Array<T> {
     &T data;
@@ -38,9 +40,10 @@ unit print(Array<int> this) {
 
 Array<T> create_array<T>(int size) {
     let Array<T> arr = new Array<T> {
-        data: malloc(size * sizeof(T)) as &T,
+        data: malloc::<T>(size),
         size: size
     };
+    memset::<T>(arr.data, 0, size);
     arr
 }
 

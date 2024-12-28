@@ -36,10 +36,7 @@ impl BuiltinFunction {
         UnwrappedFunctionRef {
             id: FunctionId {
                 id: ItemId {
-                    module_id: ModuleIdentifier {
-                        path: vec![],
-                        root_name: "".to_string(),
-                    },
+                    module_id: ModuleIdentifier::builtin(),
                     item_name: self.name.clone(),
                 },
                 param_count: self.parameters.len(),
@@ -314,13 +311,19 @@ impl BuiltinFunction {
         ]
     }
 
-    pub fn get_builtin_function_ids() -> HashMap<String, FunctionId> {
-        let mut function_ids = HashMap::new();
+    pub fn get_builtin_function_ids(
+        functions: &mut HashMap<ModuleIdentifier, HashMap<String, HashSet<FunctionId>>>,
+    ) {
         for function in BuiltinFunction::all_functions() {
             let function_ref = function.function_ref();
-            function_ids.insert(function.name.clone(), function_ref.id);
+            let entry = functions
+                .entry(function_ref.id.id.module_id.clone())
+                .or_insert(HashMap::new());
+            let name_entry = entry
+                .entry(function_ref.id.id.item_name.clone())
+                .or_insert(HashSet::new());
+            name_entry.insert(function_ref.id);
         }
-        function_ids
     }
 
     pub fn get_builtin_function_refs() -> Vec<UnwrappedFunctionRef> {
@@ -398,10 +401,7 @@ impl BuiltinStruct {
     fn tuple(size: usize) -> BuiltinStruct {
         let id = StructId {
             id: ItemId {
-                module_id: ModuleIdentifier {
-                    path: vec![],
-                    root_name: "".to_string(),
-                },
+                module_id: ModuleIdentifier::builtin(),
                 item_name: "$tuple".to_string(),
             },
             generic_count: size,
@@ -428,18 +428,21 @@ impl BuiltinStruct {
         structs
     }
 
-    pub fn get_builtin_struct_ids() -> HashMap<String, HashSet<StructId>> {
-        let mut struct_ids = HashMap::new();
+    pub fn get_builtin_struct_ids(
+        structs: &mut HashMap<ModuleIdentifier, HashMap<String, HashSet<StructId>>>,
+    ) {
         for struct_def in BuiltinStruct::all_structs() {
             let struct_id = struct_def.id.clone();
-            let entry = struct_ids
+            let module_entry = structs
+                .entry(struct_id.id.module_id.clone())
+                .or_insert(HashMap::new());
+            let entry = module_entry
                 .entry(struct_id.id.item_name.clone())
                 .or_insert(HashSet::new());
             if !entry.insert(struct_id.clone()) {
                 panic!("Duplicate struct id: {}", struct_id.id);
             }
         }
-        struct_ids
     }
 
     pub fn add_builtin_resolved_structs(structs: &mut HashMap<StructId, ResolvedStruct>) {
