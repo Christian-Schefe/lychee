@@ -6,12 +6,13 @@ use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::lexer::SrcToken;
 use crate::compiler::parser::binop_expr_parser::parse_binop_expression;
 use crate::compiler::parser::parsed_expression::{
-    ParsedEnumDefinition, ParsedExpression, ParsedExpressionKind, ParsedFunction, ParsedImport,
-    ParsedModule, ParsedStructDefinition, ParsedTypeAlias,
+    ParsedEnumDefinition, ParsedExpression, ParsedExpressionKind, ParsedFunction,
+    ParsedFunctionSignature, ParsedImport, ParsedModule, ParsedStructDefinition,
+    ParsedTraitDefinition, ParsedTraitImplementation, ParsedTypeAlias,
 };
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::primary_expr_parser::{parse_block_expression, parse_generic_params};
-use crate::compiler::parser::type_parser::{parse_import_id, parse_type};
+use crate::compiler::parser::type_parser::{parse_generic_id, parse_import_id, parse_type};
 use crate::compiler::parser::{ModuleIdentifier, ModulePath};
 use anyhow::Context;
 use std::collections::{HashMap, HashSet};
@@ -94,6 +95,8 @@ pub fn parse_module(
     let mut imports = Vec::new();
     let mut type_aliases = Vec::new();
     let mut enum_definitions = Vec::new();
+    let mut trait_definitions = Vec::new();
+    let mut trait_impls = Vec::new();
 
     while tokens.peek().value != Token::EOF {
         let token = tokens.peek().clone();
@@ -129,6 +132,21 @@ pub fn parse_module(
                 })?;
                 enum_definitions.push(enum_def);
             }
+            Token::Keyword(Keyword::Trait) => {
+                let trait_def = parse_trait(&mut tokens).with_context(|| {
+                    format!("Failed to parse trait definition at {}.", token.location)
+                })?;
+                trait_definitions.push(trait_def);
+            }
+            Token::Keyword(Keyword::Impl) => {
+                let trait_impl = parse_trait_impl(&mut tokens).with_context(|| {
+                    format!(
+                        "Failed to parse trait implementation at {}.",
+                        token.location
+                    )
+                })?;
+                trait_impls.push(trait_impl);
+            }
             _ => {
                 let func = parse_function(&mut tokens)
                     .with_context(|| format!("Failed to parse function at {}.", token.location))?;
@@ -141,12 +159,9 @@ pub fn parse_module(
 
     for (location, submodule) in submodule_declarations {
         let child_module = module_path.get_submodule_path(&submodule);
-        parse_module(
-            visited_paths,
-            module_tree,
-            child_module,
-        )
-        .with_context(|| format!("Failed to parse submodule '{}' at {}.", submodule, location))?;
+        parse_module(visited_paths, module_tree, child_module).with_context(|| {
+            format!("Failed to parse submodule '{}' at {}.", submodule, location)
+        })?;
         submodules.push(submodule);
     }
 
@@ -157,6 +172,8 @@ pub fn parse_module(
         type_aliases,
         imports,
         enums: enum_definitions,
+        trait_definitions,
+        trait_implementations: trait_impls,
     };
 
     module_tree.insert(module_path.id, module);
@@ -291,7 +308,9 @@ pub fn parse_struct_definition(
     ))
 }
 
-pub fn parse_function(tokens: &mut TokenStack) -> ParseResult<Src<ParsedFunction>> {
+pub fn parse_function_signature(
+    tokens: &mut TokenStack,
+) -> ParseResult<Src<ParsedFunctionSignature>> {
     let location = tokens.location().clone();
     let return_type = parse_type(tokens)
         .with_context(|| format!("Failed to parse return type at {}.", location))?;
@@ -326,19 +345,33 @@ pub fn parse_function(tokens: &mut TokenStack) -> ParseResult<Src<ParsedFunction
     }
     pop_expected(tokens, Token::Static(StaticToken::CloseParen))?;
 
+    let signature = ParsedFunctionSignature {
+        function_name,
+        return_type,
+        generic_params: generics,
+        params: args,
+    };
+    Ok(Src::new(signature, location))
+}
+
+pub fn parse_function(tokens: &mut TokenStack) -> ParseResult<Src<ParsedFunction>> {
+    let signature = parse_function_signature(tokens).with_context(|| {
+        format!(
+            "Failed to parse function signature at {}.",
+            tokens.location()
+        )
+    })?;
+
     let body_location = tokens.location().clone();
     let body = parse_block_expression(tokens)
         .with_context(|| format!("Failed to parse function body at {}.", body_location))?;
 
     Ok(Src::new(
         ParsedFunction {
-            function_name,
-            return_type,
-            generic_params: generics,
-            params: args,
+            signature: signature.value,
             body,
         },
-        location,
+        signature.location,
     ))
 }
 
@@ -357,6 +390,53 @@ fn parse_alias(tokens: &mut TokenStack) -> ParseResult<Src<ParsedTypeAlias>> {
         ParsedTypeAlias {
             alias,
             aliased_type,
+        },
+        location,
+    ))
+}
+
+fn parse_trait(tokens: &mut TokenStack) -> ParseResult<Src<ParsedTraitDefinition>> {
+    let location = pop_expected(tokens, Token::Keyword(Keyword::Trait))?.location;
+    let trait_name = parse_identifier(tokens)?.value;
+    let generics = parse_generic_params(tokens)?;
+    pop_expected(tokens, Token::Static(StaticToken::OpenBrace))?;
+    let mut functions = Vec::new();
+    while tokens.peek().value != Token::Static(StaticToken::CloseBrace) {
+        let function = parse_function_signature(tokens)
+            .with_context(|| format!("Failed to parse function at {}.", tokens.location()))?;
+        pop_expected(tokens, Token::Static(StaticToken::Semicolon))?;
+        functions.push(function);
+    }
+    pop_expected(tokens, Token::Static(StaticToken::CloseBrace))?;
+    Ok(Src::new(
+        ParsedTraitDefinition {
+            trait_name,
+            functions,
+            generics,
+        },
+        location,
+    ))
+}
+
+fn parse_trait_impl(tokens: &mut TokenStack) -> ParseResult<Src<ParsedTraitImplementation>> {
+    let location = pop_expected(tokens, Token::Keyword(Keyword::Impl))?.location;
+    let trait_id = parse_generic_id(tokens)?;
+    pop_expected(tokens, Token::Keyword(Keyword::For))?;
+    let for_type = parse_type(tokens)
+        .with_context(|| format!("Failed to parse type at {}.", tokens.location()))?;
+    pop_expected(tokens, Token::Static(StaticToken::OpenBrace))?;
+    let mut functions = Vec::new();
+    while tokens.peek().value != Token::Static(StaticToken::CloseBrace) {
+        let function = parse_function(tokens)
+            .with_context(|| format!("Failed to parse function at {}.", tokens.location()))?;
+        functions.push(function);
+    }
+    pop_expected(tokens, Token::Static(StaticToken::CloseBrace))?;
+    Ok(Src::new(
+        ParsedTraitImplementation {
+            trait_id,
+            for_type,
+            functions,
         },
         location,
     ))

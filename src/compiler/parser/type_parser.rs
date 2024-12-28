@@ -1,7 +1,7 @@
 use crate::compiler::lexer::lexer_error::LocationError;
 use crate::compiler::lexer::token::{StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
-use crate::compiler::parser::item_id::{ItemId, ParsedScopeId};
+use crate::compiler::parser::item_id::{ItemId, ParsedGenericId, ParsedScopeId};
 use crate::compiler::parser::parsed_expression::{ParsedImport, ParsedType, ParsedTypeKind};
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::parsing_utils::parse_seperated_elements;
@@ -33,7 +33,10 @@ pub fn parse_type(tokens: &mut TokenStack) -> ParseResult<ParsedType> {
             }
             let generic_args = parse_generic_args(tokens)?;
             Ok(ParsedType::new(
-                ParsedTypeKind::Struct(parsed_type_id, generic_args),
+                ParsedTypeKind::Struct(ParsedGenericId {
+                    id: parsed_type_id,
+                    generic_args,
+                }),
                 location,
             ))
         }
@@ -75,16 +78,16 @@ pub fn parse_type(tokens: &mut TokenStack) -> ParseResult<ParsedType> {
                     ))
                 } else {
                     Ok(ParsedType::new(
-                        ParsedTypeKind::Struct(
-                            ParsedScopeId {
+                        ParsedTypeKind::Struct(ParsedGenericId {
+                            id: ParsedScopeId {
                                 item_id: ItemId {
                                     module_id: ModuleIdentifier::builtin(),
                                     item_name: "$tuple".to_string(),
                                 },
                                 is_module_local: false,
                             },
-                            elements,
-                        ),
+                            generic_args: Some(elements),
+                        }),
                         loc,
                     ))
                 }
@@ -152,13 +155,19 @@ pub fn parse_import_id(
     })
 }
 
+pub fn parse_generic_id(tokens: &mut TokenStack) -> ParseResult<ParsedGenericId> {
+    let id = parse_scoped_id(tokens, &ModuleIdentifier::builtin())?;
+    let generic_args = parse_generic_scoped_id_extension(tokens)?;
+    Ok(ParsedGenericId { id, generic_args })
+}
+
 pub fn parse_generic_scoped_id_extension(
     tokens: &mut TokenStack,
 ) -> ParseResult<Option<Vec<ParsedType>>> {
     let generic_args = if tokens.peek().value == Token::Static(StaticToken::DoubleColon) {
         tokens.shift();
         if tokens.peek().value == Token::Static(StaticToken::LessThan) {
-            Some(parse_generic_args(tokens)?)
+            Some(parse_generic_args(tokens)?.unwrap())
         } else {
             tokens.reverse_shift();
             None

@@ -1,5 +1,5 @@
 use crate::compiler::lexer::location::Src;
-use crate::compiler::merger::merged_expression::FunctionId;
+use crate::compiler::merger::merged_expression::{FunctionId, TraitId};
 use crate::compiler::merger::MergerResult;
 use crate::compiler::parser::item_id::{ItemId, ParsedScopeId};
 use crate::compiler::parser::parsed_expression::{ParsedFunction, ParsedProgram};
@@ -10,6 +10,7 @@ use std::collections::{HashMap, HashSet};
 pub struct CollectedFunctionData {
     pub functions: HashMap<ModuleIdentifier, HashMap<String, HashSet<FunctionId>>>,
     pub function_imports: HashMap<ModuleIdentifier, HashMap<String, HashSet<FunctionId>>>,
+    pub traits: HashMap<ModuleIdentifier, HashMap<String, HashSet<TraitId>>>,
 }
 
 impl CollectedFunctionData {
@@ -67,10 +68,12 @@ pub fn collect_function_data(
     crate::compiler::builtin::BuiltinFunction::get_builtin_function_ids(&mut functions);
     collect_functions(program, &mut functions, &mut function_bodies)?;
     let function_imports = collect_function_imports(program, &functions)?;
+    let traits = HashMap::new();
     Ok((
         CollectedFunctionData {
             functions,
             function_imports,
+            traits,
         },
         function_bodies,
     ))
@@ -84,19 +87,20 @@ fn collect_functions(
     for (module_id, module) in &program.module_tree {
         let mut module_functions = HashMap::new();
         for function_def in &module.functions {
-            validate_function_name(&function_def.value.function_name)?;
+            let signature = &function_def.value.signature;
+            validate_function_name(&signature.function_name)?;
             let body_index = function_bodies.len();
             let id = FunctionId {
                 id: ItemId {
                     module_id: module_id.clone(),
-                    item_name: function_def.value.function_name.clone(),
+                    item_name: signature.function_name.clone(),
                 },
-                generic_count: function_def.value.generic_params.order.len(),
-                param_count: function_def.value.params.len(),
+                generic_count: signature.generic_params.order.len(),
+                param_count: signature.params.len(),
                 body_index: body_index as isize,
             };
             let entry = module_functions
-                .entry(function_def.value.function_name.clone())
+                .entry(signature.function_name.clone())
                 .or_insert(HashSet::new());
             if !entry.insert(id.clone()) {
                 Err(anyhow::anyhow!(

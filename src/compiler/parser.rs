@@ -2,7 +2,6 @@ use crate::compiler::config::ConfigData;
 use crate::compiler::parser::parsed_expression::ParsedProgram;
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::program_parser::parse_module;
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
@@ -19,7 +18,7 @@ mod program_parser;
 mod type_parser;
 mod unop_expr_parser;
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct ModuleIdentifier {
     pub root_name: String,
     pub path: Vec<String>,

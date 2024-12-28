@@ -1,6 +1,6 @@
 use crate::compiler::parser::parsed_expression::{
-    ParsedExpression, ParsedExpressionKind, ParsedFunction, ParsedModule, ParsedProgram,
-    ParsedStructDefinition,
+    ParsedExpression, ParsedExpressionKind, ParsedFunction, ParsedFunctionSignature, ParsedModule,
+    ParsedProgram, ParsedStructDefinition, ParsedTraitDefinition, ParsedTraitImplementation,
 };
 use std::fmt::Display;
 use std::path::PathBuf;
@@ -76,36 +76,80 @@ pub fn print_module(printer: &mut Printer, expr: &ParsedModule) {
     }
     for alias in &expr.type_aliases {
         printer.add_line(format!(
-            "TypeAlias({}, {:?})",
+            "TypeAlias({}, {})",
             alias.value.alias, alias.value.aliased_type.value
         ));
+    }
+    for enum_def in &expr.enums {
+        printer.add_line(format!("Enum({})", enum_def.value.enum_name));
+        printer.indent();
+        for (variant_name, variant_type) in &enum_def.value.variants {
+            printer.add_line(format!("{}: {:?}", variant_name, variant_type));
+        }
+        printer.dedent();
+    }
+    for trait_def in &expr.trait_definitions {
+        print_trait_definition(printer, &trait_def.value);
+    }
+    for trait_impl in &expr.trait_implementations {
+        print_trait_impl(printer, &trait_impl.value);
     }
     for function in &expr.functions {
         print_function(printer, &function.value);
     }
 }
 
-fn print_struct_definition(printer: &mut Printer, struct_def: &ParsedStructDefinition) {
-    printer.add_line(format!("struct {} {{", struct_def.struct_name));
+fn print_trait_definition(printer: &mut Printer, trait_def: &ParsedTraitDefinition) {
+    printer.add_line(format!(
+        "trait {}<{:?}> {{",
+        trait_def.trait_name, trait_def.generics
+    ));
     printer.indent();
-    for (field_name, field_type) in &struct_def.fields {
-        printer.add_line(format!("{}: {:?},", field_name, field_type.value));
+    for function in &trait_def.functions {
+        print_function_signature(printer, &function.value);
     }
     printer.dedent();
     printer.add_line("}".to_string());
 }
 
-fn print_function(printer: &mut Printer, function: &ParsedFunction) {
+fn print_trait_impl(printer: &mut Printer, trait_impl: &ParsedTraitImplementation) {
     printer.add_line(format!(
-        "fn {}<{:?}>(",
-        function.function_name, function.generic_params
+        "impl {} for {} {{",
+        trait_impl.trait_id, trait_impl.for_type.value
     ));
     printer.indent();
-    for (param_type, param_name) in &function.params {
-        printer.add_line(format!("{}: {:?}", param_name, param_type.value));
+    for function in &trait_impl.functions {
+        print_function(printer, &function.value);
     }
     printer.dedent();
-    printer.add_line(")".to_string());
+    printer.add_line("}".to_string());
+}
+
+fn print_struct_definition(printer: &mut Printer, struct_def: &ParsedStructDefinition) {
+    printer.add_line(format!("struct {} {{", struct_def.struct_name));
+    printer.indent();
+    for (field_name, field_type) in &struct_def.fields {
+        printer.add_line(format!("{}: {},", field_name, field_type.value));
+    }
+    printer.dedent();
+    printer.add_line("}".to_string());
+}
+
+fn print_function_signature(printer: &mut Printer, signature: &ParsedFunctionSignature) {
+    printer.add_line(format!(
+        "fn {}<{:?}>(",
+        signature.function_name, signature.generic_params
+    ));
+    printer.indent();
+    for (param_type, param_name) in &signature.params {
+        printer.add_line(format!("{}: {}", param_name, param_type.value));
+    }
+    printer.dedent();
+    printer.add_line(format!(") -> {}", signature.return_type.value));
+}
+
+fn print_function(printer: &mut Printer, function: &ParsedFunction) {
+    print_function_signature(printer, &function.signature);
     print_expression(printer, &function.body);
 }
 

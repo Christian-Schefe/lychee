@@ -199,6 +199,8 @@ pub enum Keyword {
     Import,
     Alias,
     Enum,
+    Trait,
+    Impl,
 }
 
 impl Keyword {
@@ -223,6 +225,8 @@ impl Keyword {
             "import" => Some(Keyword::Import),
             "alias" => Some(Keyword::Alias),
             "enum" => Some(Keyword::Enum),
+            "trait" => Some(Keyword::Trait),
+            "impl" => Some(Keyword::Impl),
             _ => None,
         }
     }

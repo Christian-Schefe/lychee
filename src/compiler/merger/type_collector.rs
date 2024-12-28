@@ -65,32 +65,38 @@ impl CollectedTypeData {
         generic_params: &GenericParams,
     ) -> Option<AnalyzedTypeId> {
         match ty {
-            ParsedTypeKind::Struct(id, generic_args) => {
-                if id.is_module_local {
+            ParsedTypeKind::Struct(id) => {
+                let item_id = &id.id.item_id;
+                if id.id.is_module_local {
                     if let Some(generic_param) =
-                        generic_params.get_generic_from_name(&id.item_id.item_name)
+                        generic_params.get_generic_from_name(&item_id.item_name)
                     {
                         return Some(AnalyzedTypeId::GenericType(generic_param.clone()));
                     }
 
-                    if let Some(module_aliases) = self.type_aliases.get(&id.item_id.module_id) {
-                        if let Some(alias) = module_aliases.get(&id.item_id.item_name) {
+                    if let Some(module_aliases) = self.type_aliases.get(&item_id.module_id) {
+                        if let Some(alias) = module_aliases.get(&item_id.item_name) {
                             return self.map_generic_parsed_type(&alias.value, generic_params);
                         }
                     }
                     if let Some(imported_aliases) =
-                        self.imported_type_aliases.get(&id.item_id.module_id)
+                        self.imported_type_aliases.get(&item_id.module_id)
                     {
-                        if let Some(alias) = imported_aliases.get(&id.item_id.item_name) {
+                        if let Some(alias) = imported_aliases.get(&item_id.item_name) {
                             return self.map_generic_parsed_type(&alias.value, generic_params);
                         }
                     }
                 }
 
-                let struct_ids = self.find_struct_ids(id, generic_args.len());
+                let generic_args_len = id.generic_args.as_ref().map(|x| x.len()).unwrap_or(0);
 
-                if generic_args.len() == 0 {
-                    let mut enum_ids = self.find_enum_ids(id);
+                let struct_ids = self.find_struct_ids(
+                    &id.id,
+                    id.generic_args.as_ref().map(|x| x.len()).unwrap_or(0),
+                );
+
+                if generic_args_len == 0 {
+                    let mut enum_ids = self.find_enum_ids(&id.id);
                     if enum_ids.len() > 0 {
                         if enum_ids.len() != 1 || struct_ids.len() != 0 {
                             return None;
@@ -102,7 +108,11 @@ impl CollectedTypeData {
                 if struct_ids.len() != 1 {
                     return None;
                 }
-                let mapped_generic_args = generic_args
+                let empty_generic_args = vec![];
+                let mapped_generic_args = id
+                    .generic_args
+                    .as_ref()
+                    .unwrap_or(&empty_generic_args)
                     .iter()
                     .map(|x| self.map_generic_parsed_type(&x.value, generic_params))
                     .collect::<Option<Vec<AnalyzedTypeId>>>()?;

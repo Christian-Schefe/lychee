@@ -4,9 +4,8 @@ use crate::compiler::parser::parsed_expression::ParsedGenericParams;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
-use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum AnalyzedTypeId {
     Unit,
     Bool,
@@ -56,19 +55,19 @@ impl Display for AnalyzedTypeId {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct GenericParams {
     mapping: HashMap<String, usize>,
     kind: GenericIdKind,
 }
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct GenericId {
     pub kind: GenericIdKind,
     pub index: usize,
 }
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum GenericIdKind {
     Struct(StructId),
     Function(FunctionId),

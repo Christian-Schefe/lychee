@@ -49,14 +49,15 @@ fn extract_function(
     resolved_types: &ResolvedTypes,
     func_id: FunctionId,
 ) -> MergerResult<ResolvedFunctionHeader> {
-    let mut parameter_order = Vec::with_capacity(func_def.value.params.len());
-    let mut parameter_types = HashMap::with_capacity(func_def.value.params.len());
+    let signature = &func_def.value.signature;
+    let mut parameter_order = Vec::with_capacity(signature.params.len());
+    let mut parameter_types = HashMap::with_capacity(signature.params.len());
 
-    let generic_params = func_def.value.generic_params.clone();
+    let generic_params = signature.generic_params.clone();
     let resolved_generic_params =
         GenericParams::from(GenericIdKind::Function(func_id.clone()), &generic_params);
 
-    for (arg_type, arg_name) in &func_def.value.params {
+    for (arg_type, arg_name) in &signature.params {
         parameter_order.push(arg_name.clone());
         let resolved_arg_type = resolved_types
             .map_generic_parsed_type(&arg_type.value, &resolved_generic_params)
@@ -75,11 +76,11 @@ fn extract_function(
     }
 
     let resolved_return_type = resolved_types
-        .map_generic_parsed_type(&func_def.value.return_type.value, &resolved_generic_params)
+        .map_generic_parsed_type(&signature.return_type.value, &resolved_generic_params)
         .ok_or_else(|| {
             anyhow::anyhow!(
                 "Return type {} not found at {}",
-                func_def.value.return_type.value,
+                signature.return_type.value,
                 func_def.location
             )
         })?;

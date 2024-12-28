@@ -212,7 +212,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             let ty = parse_type(tokens)
                 .with_context(|| format!("Failed to parse type at {}.", type_location))?;
             match &ty.value {
-                ParsedTypeKind::Struct(_, _) => {
+                ParsedTypeKind::Struct(_) => {
                     parse_struct_literal(tokens, ty, token.location.clone()).with_context(|| {
                         format!("Failed to parse struct literal at {}.", token.location)
                     })
@@ -342,7 +342,7 @@ fn parse_optional_else_block(tokens: &mut TokenStack) -> ParseResult<Option<Pars
     }
 }
 
-pub fn parse_generic_args(tokens: &mut TokenStack) -> ParseResult<Vec<ParsedType>> {
+pub fn parse_generic_args(tokens: &mut TokenStack) -> ParseResult<Option<Vec<ParsedType>>> {
     if let Token::Static(StaticToken::LessThan) = tokens.peek().value {
         tokens.shift();
         let mut generics = Vec::new();
@@ -373,9 +373,15 @@ pub fn parse_generic_args(tokens: &mut TokenStack) -> ParseResult<Vec<ParsedType
             }
         }
         pop_expected(tokens, Token::Static(StaticToken::GreaterThan))?;
-        Ok(generics)
+        if generics.len() == 0 {
+            Err(LocationError::new(
+                "Expected at least one generic type.".to_string(),
+                tokens.location().clone(),
+            ))?;
+        }
+        Ok(Some(generics))
     } else {
-        Ok(Vec::new())
+        Ok(None)
     }
 }
 

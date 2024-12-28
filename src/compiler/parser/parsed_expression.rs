@@ -1,6 +1,6 @@
 use crate::compiler::lexer::location::Src;
 use crate::compiler::parser::binary_op::BinaryOp;
-use crate::compiler::parser::item_id::{ParsedGenericId, ParsedScopeId};
+use crate::compiler::parser::item_id::ParsedGenericId;
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::ModuleIdentifier;
 use std::collections::{HashMap, HashSet};
@@ -20,6 +20,8 @@ pub struct ParsedModule {
     pub type_aliases: Vec<Src<ParsedTypeAlias>>,
     pub imports: Vec<Src<ParsedImport>>,
     pub enums: Vec<Src<ParsedEnumDefinition>>,
+    pub trait_definitions: Vec<Src<ParsedTraitDefinition>>,
+    pub trait_implementations: Vec<Src<ParsedTraitImplementation>>,
 }
 
 #[derive(Debug, Clone)]
@@ -32,6 +34,20 @@ pub struct ParsedTypeAlias {
 pub struct ParsedImport {
     pub imported_objects: Option<Vec<String>>,
     pub module_id: ModuleIdentifier,
+}
+
+#[derive(Debug, Clone)]
+pub struct ParsedTraitDefinition {
+    pub trait_name: String,
+    pub functions: Vec<Src<ParsedFunctionSignature>>,
+    pub generics: ParsedGenericParams,
+}
+
+#[derive(Debug, Clone)]
+pub struct ParsedTraitImplementation {
+    pub trait_id: ParsedGenericId,
+    pub for_type: ParsedType,
+    pub functions: Vec<Src<ParsedFunction>>,
 }
 
 #[derive(Debug, Clone)]
@@ -69,11 +85,16 @@ impl ParsedGenericParams {
 
 #[derive(Debug, Clone)]
 pub struct ParsedFunction {
+    pub signature: ParsedFunctionSignature,
+    pub body: ParsedExpression,
+}
+
+#[derive(Debug, Clone)]
+pub struct ParsedFunctionSignature {
     pub function_name: String,
     pub return_type: ParsedType,
     pub generic_params: ParsedGenericParams,
     pub params: Vec<(ParsedType, String)>,
-    pub body: ParsedExpression,
 }
 
 pub type ParsedExpression = Src<ParsedExpressionKind>;
@@ -132,15 +153,19 @@ pub type ParsedType = Src<ParsedTypeKind>;
 impl Display for ParsedTypeKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
-            ParsedTypeKind::Struct(id, generics) => {
-                write!(f, "{}<", id.item_id)?;
-                for (i, generic) in generics.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, ", ")?;
+            ParsedTypeKind::Struct(id) => {
+                write!(f, "{}", id.id.item_id)?;
+                if let Some(generics) = &id.generic_args {
+                    write!(f, "<")?;
+                    for (i, generic) in generics.iter().enumerate() {
+                        if i > 0 {
+                            write!(f, ", ")?;
+                        }
+                        write!(f, "{}", generic.value)?;
                     }
-                    write!(f, "{}", generic.value)?;
+                    write!(f, ">")?;
                 }
-                write!(f, ">")
+                Ok(())
             }
             ParsedTypeKind::Pointer(inner) => write!(f, "&{}", inner),
             ParsedTypeKind::Unit => write!(f, "unit"),
@@ -172,7 +197,7 @@ impl Display for ParsedTypeKind {
 
 #[derive(Debug, Clone)]
 pub enum ParsedTypeKind {
-    Struct(ParsedScopeId, Vec<ParsedType>),
+    Struct(ParsedGenericId),
     Pointer(Box<ParsedTypeKind>),
     Unit,
     Bool,
