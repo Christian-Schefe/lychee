@@ -110,7 +110,7 @@ int main() {
 }
 
 trait TestTrait {
-    int test();
+    int test(Self this);
 }
 
 impl TestTrait for int {
@@ -120,7 +120,17 @@ impl TestTrait for int {
 }
 
 trait GenericTrait<T> {
-    T test();
+    T test2(Self this);
+}
+
+impl GenericTrait<int> for int {
+    int test2(int this) {
+        this * 3
+    }
+}
+
+unit trait_bounds_test<T: TestTrait>(T a) {
+    a.test(10).println();
 }
 
 unit my_println(int a) {

@@ -88,12 +88,9 @@ impl CollectedTypeData {
                     }
                 }
 
-                let generic_args_len = id.generic_args.as_ref().map(|x| x.len()).unwrap_or(0);
+                let generic_args_len = id.generic_args.len();
 
-                let struct_ids = self.find_struct_ids(
-                    &id.id,
-                    id.generic_args.as_ref().map(|x| x.len()).unwrap_or(0),
-                );
+                let struct_ids = self.find_struct_ids(&id.id, generic_args_len);
 
                 if generic_args_len == 0 {
                     let mut enum_ids = self.find_enum_ids(&id.id);
@@ -108,11 +105,8 @@ impl CollectedTypeData {
                 if struct_ids.len() != 1 {
                     return None;
                 }
-                let empty_generic_args = vec![];
                 let mapped_generic_args = id
                     .generic_args
-                    .as_ref()
-                    .unwrap_or(&empty_generic_args)
                     .iter()
                     .map(|x| self.map_generic_parsed_type(&x.value, generic_params))
                     .collect::<Option<Vec<AnalyzedTypeId>>>()?;

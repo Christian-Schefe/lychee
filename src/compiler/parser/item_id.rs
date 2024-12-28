@@ -17,15 +17,15 @@ impl Display for ParsedScopeId {
 #[derive(Debug, Clone)]
 pub struct ParsedGenericId {
     pub id: ParsedScopeId,
-    pub generic_args: Option<Vec<ParsedType>>,
+    pub generic_args: Vec<ParsedType>,
 }
 
 impl Display for ParsedGenericId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.id)?;
-        if let Some(generic_args) = &self.generic_args {
+        if !self.generic_args.is_empty() {
             write!(f, "<")?;
-            for (i, arg) in generic_args.iter().enumerate() {
+            for (i, arg) in self.generic_args.iter().enumerate() {
                 if i > 0 {
                     write!(f, ", ")?;
                 }

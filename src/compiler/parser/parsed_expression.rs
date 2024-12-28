@@ -3,7 +3,7 @@ use crate::compiler::parser::binary_op::BinaryOp;
 use crate::compiler::parser::item_id::ParsedGenericId;
 use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::ModuleIdentifier;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::Display;
 
 #[derive(Debug, Clone)]
@@ -66,20 +66,33 @@ pub struct ParsedEnumDefinition {
 #[derive(Debug, Clone)]
 pub struct ParsedGenericParams {
     pub order: Vec<String>,
+    pub trait_bounds: HashMap<String, Vec<ParsedType>>,
 }
 
 impl ParsedGenericParams {
-    pub fn new(order: Vec<String>) -> ParseResult<Self> {
-        let mut set = HashSet::new();
-        for generic in &order {
-            if !set.insert(generic.clone()) {
+    pub fn new(params: Vec<(String, Vec<ParsedType>)>) -> ParseResult<Self> {
+        let mut trait_bounds_map = HashMap::new();
+        let mut order = Vec::new();
+        for (generic, trait_bounds) in params {
+            if trait_bounds_map
+                .insert(generic.clone(), trait_bounds)
+                .is_some()
+            {
                 return Err(anyhow::anyhow!("Duplicate generic parameter: {}", generic))?;
             }
+            order.push(generic);
         }
-        Ok(Self { order })
+        Ok(Self {
+            order,
+            trait_bounds: trait_bounds_map,
+        })
     }
+
     pub fn empty() -> Self {
-        Self { order: Vec::new() }
+        Self {
+            order: Vec::new(),
+            trait_bounds: HashMap::new(),
+        }
     }
 }
 
@@ -155,9 +168,9 @@ impl Display for ParsedTypeKind {
         match &self {
             ParsedTypeKind::Struct(id) => {
                 write!(f, "{}", id.id.item_id)?;
-                if let Some(generics) = &id.generic_args {
+                if !id.generic_args.is_empty() {
                     write!(f, "<")?;
-                    for (i, generic) in generics.iter().enumerate() {
+                    for (i, generic) in id.generic_args.iter().enumerate() {
                         if i > 0 {
                             write!(f, ", ")?;
                         }

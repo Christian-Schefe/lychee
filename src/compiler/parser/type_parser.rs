@@ -86,7 +86,7 @@ pub fn parse_type(tokens: &mut TokenStack) -> ParseResult<ParsedType> {
                                 },
                                 is_module_local: false,
                             },
-                            generic_args: Some(elements),
+                            generic_args: elements,
                         }),
                         loc,
                     ))
@@ -155,25 +155,17 @@ pub fn parse_import_id(
     })
 }
 
-pub fn parse_generic_id(tokens: &mut TokenStack) -> ParseResult<ParsedGenericId> {
-    let id = parse_scoped_id(tokens, &ModuleIdentifier::builtin())?;
-    let generic_args = parse_generic_scoped_id_extension(tokens)?;
-    Ok(ParsedGenericId { id, generic_args })
-}
-
-pub fn parse_generic_scoped_id_extension(
-    tokens: &mut TokenStack,
-) -> ParseResult<Option<Vec<ParsedType>>> {
+pub fn parse_generic_scoped_id_extension(tokens: &mut TokenStack) -> ParseResult<Vec<ParsedType>> {
     let generic_args = if tokens.peek().value == Token::Static(StaticToken::DoubleColon) {
         tokens.shift();
         if tokens.peek().value == Token::Static(StaticToken::LessThan) {
-            Some(parse_generic_args(tokens)?.unwrap())
+            parse_generic_args(tokens)?
         } else {
             tokens.reverse_shift();
-            None
+            Vec::new()
         }
     } else {
-        None
+        Vec::new()
     };
 
     Ok(generic_args)

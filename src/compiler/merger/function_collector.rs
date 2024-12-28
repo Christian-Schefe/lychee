@@ -11,6 +11,7 @@ pub struct CollectedFunctionData {
     pub functions: HashMap<ModuleIdentifier, HashMap<String, HashSet<FunctionId>>>,
     pub function_imports: HashMap<ModuleIdentifier, HashMap<String, HashSet<FunctionId>>>,
     pub traits: HashMap<ModuleIdentifier, HashMap<String, HashSet<TraitId>>>,
+    pub trait_imports: HashMap<ModuleIdentifier, HashMap<String, HashSet<TraitId>>>,
 }
 
 impl CollectedFunctionData {
@@ -54,6 +55,42 @@ impl CollectedFunctionData {
 
         matching
     }
+
+    pub fn find_trait_id(
+        &self,
+        parsed_trait_id: &ParsedScopeId,
+        generic_count: Option<usize>,
+    ) -> Vec<TraitId> {
+        let mut matching = Vec::new();
+
+        let maybe_add = |matching: &mut Vec<TraitId>, ids: &HashSet<TraitId>| {
+            for id in ids {
+                if generic_count.is_none_or(|x| x == id.generic_count) {
+                    matching.push(id.clone());
+                }
+            }
+        };
+
+        if let Some(module_traits) = self.traits.get(&parsed_trait_id.item_id.module_id) {
+            if let Some(trait_ids) = module_traits.get(&parsed_trait_id.item_id.item_name) {
+                maybe_add(&mut matching, trait_ids);
+            }
+        }
+
+        if parsed_trait_id.is_module_local {
+            if let Some(module_trait_imports) =
+                self.trait_imports.get(&parsed_trait_id.item_id.module_id)
+            {
+                if let Some(trait_ids) =
+                    module_trait_imports.get(&parsed_trait_id.item_id.item_name)
+                {
+                    maybe_add(&mut matching, trait_ids);
+                }
+            }
+        }
+
+        matching
+    }
 }
 
 pub fn collect_function_data(
@@ -68,12 +105,15 @@ pub fn collect_function_data(
     crate::compiler::builtin::BuiltinFunction::get_builtin_function_ids(&mut functions);
     collect_functions(program, &mut functions, &mut function_bodies)?;
     let function_imports = collect_function_imports(program, &functions)?;
-    let traits = HashMap::new();
+    let mut traits = HashMap::new();
+    collect_trait_definitions(program, &mut traits)?;
+    let trait_imports = collect_trait_imports(program, &traits)?;
     Ok((
         CollectedFunctionData {
             functions,
             function_imports,
             traits,
+            trait_imports,
         },
         function_bodies,
     ))
@@ -128,43 +168,110 @@ fn collect_function_imports(
                 Some(f) => f,
                 None => continue,
             };
+            let mut add_imported_function = |obj: &String, ids: &HashSet<FunctionId>| {
+                let entry = module_function_imports
+                    .entry(obj.clone())
+                    .or_insert(HashSet::new());
+                for id in ids {
+                    if !entry.insert(id.clone()) {
+                        return Err(anyhow::anyhow!(
+                            "Function {} imported multiple times at {}",
+                            id.id.item_name,
+                            import.location
+                        ));
+                    }
+                }
+                Ok(())
+            };
             if let Some(objects) = &import.value.imported_objects {
                 for obj in objects {
-                    let entry = module_function_imports
-                        .entry(obj.clone())
-                        .or_insert(HashSet::new());
                     if let Some(ids) = module_functions.get(obj) {
-                        for id in ids {
-                            if !entry.insert(id.clone()) {
-                                Err(anyhow::anyhow!(
-                                    "Function {} imported multiple times at {}",
-                                    id.id.item_name,
-                                    import.location
-                                ))?;
-                            }
-                        }
+                        add_imported_function(obj, ids)?;
                     }
                 }
             } else {
                 for (name, ids) in module_functions {
-                    let entry = module_function_imports
-                        .entry(name.clone())
-                        .or_insert(HashSet::new());
-                    for id in ids {
-                        if !entry.insert(id.clone()) {
-                            Err(anyhow::anyhow!(
-                                "Function {} imported multiple times at {}",
-                                id.id.item_name,
-                                import.location
-                            ))?;
-                        }
-                    }
+                    add_imported_function(name, ids)?;
                 }
             }
         }
         function_imports.insert(module_id.clone(), module_function_imports);
     }
     Ok(function_imports)
+}
+
+fn collect_trait_definitions(
+    program: &ParsedProgram,
+    trait_definitions: &mut HashMap<ModuleIdentifier, HashMap<String, HashSet<TraitId>>>,
+) -> MergerResult<()> {
+    for (module_id, module) in &program.module_tree {
+        let mut module_trait_defs = HashMap::new();
+        for trait_def in &module.trait_definitions {
+            let id = TraitId {
+                id: ItemId {
+                    module_id: module_id.clone(),
+                    item_name: trait_def.value.trait_name.clone(),
+                },
+                generic_count: trait_def.value.generics.order.len(),
+            };
+            let entry = module_trait_defs
+                .entry(trait_def.value.trait_name.clone())
+                .or_insert(HashSet::new());
+            if !entry.insert(id.clone()) {
+                Err(anyhow::anyhow!(
+                    "Trait {} defined multiple times at {}",
+                    id.id.item_name,
+                    trait_def.location
+                ))?;
+            }
+        }
+        trait_definitions.insert(module_id.clone(), module_trait_defs);
+    }
+    Ok(())
+}
+
+fn collect_trait_imports(
+    program: &ParsedProgram,
+    traits: &HashMap<ModuleIdentifier, HashMap<String, HashSet<TraitId>>>,
+) -> MergerResult<HashMap<ModuleIdentifier, HashMap<String, HashSet<TraitId>>>> {
+    let mut trait_imports = HashMap::new();
+    for (module_id, module) in &program.module_tree {
+        let mut module_trait_imports = HashMap::new();
+        for import in &module.imports {
+            let module_traits = match traits.get(&import.value.module_id) {
+                Some(f) => f,
+                None => continue,
+            };
+            let mut add_imported_trait = |obj: &String, ids: &HashSet<TraitId>| {
+                let entry = module_trait_imports
+                    .entry(obj.clone())
+                    .or_insert(HashSet::new());
+                for id in ids {
+                    if !entry.insert(id.clone()) {
+                        return Err(anyhow::anyhow!(
+                            "Trait {} imported multiple times at {}",
+                            id.id.item_name,
+                            import.location
+                        ));
+                    }
+                }
+                Ok(())
+            };
+            if let Some(objects) = &import.value.imported_objects {
+                for obj in objects {
+                    if let Some(ids) = module_traits.get(obj) {
+                        add_imported_trait(obj, ids)?;
+                    }
+                }
+            } else {
+                for (name, ids) in module_traits {
+                    add_imported_trait(name, ids)?;
+                }
+            }
+        }
+        trait_imports.insert(module_id.clone(), module_trait_imports);
+    }
+    Ok(trait_imports)
 }
 
 fn validate_function_name(struct_name: &str) -> MergerResult<()> {

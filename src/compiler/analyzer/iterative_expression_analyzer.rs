@@ -1213,7 +1213,7 @@ fn determine_variable_expression(
     location: &Location,
     type_hint: Option<AnalyzedTypeId>,
 ) -> AnalyzerResult<(AnalyzedTypeId, AnalyzedExpressionKind)> {
-    if var_name.id.is_module_local && var_name.generic_args.is_none() {
+    if var_name.id.is_module_local && var_name.generic_args.is_empty() {
         let local_var = context.local_variables.get(&var_name.id.item_id.item_name);
         if let Some(local_var) = local_var {
             return Ok((
@@ -1228,11 +1228,7 @@ fn determine_variable_expression(
         }
     }
 
-    let default_generic_args = Vec::new();
-    let generic_args = var_name
-        .generic_args
-        .as_ref()
-        .unwrap_or(&default_generic_args);
+    let generic_args = &var_name.generic_args;
     let analyzed_generic_args = analyze_generic_args(context, &generic_args)?;
 
     if let Some(AnalyzedTypeId::FunctionType(return_type, params)) = type_hint {
@@ -1248,7 +1244,7 @@ fn determine_variable_expression(
                 AnalyzedTypeId::FunctionType(return_type.clone(), function_id.arg_types.clone()),
                 AnalyzedExpressionKind::FunctionPointer(function_id),
             ));
-        } else if var_name.generic_args.is_some() {
+        } else if !var_name.generic_args.is_empty() {
             res?;
         }
     } else {
@@ -1273,12 +1269,12 @@ fn determine_variable_expression(
                 ),
                 AnalyzedExpressionKind::FunctionPointer(function_id),
             ));
-        } else if var_name.generic_args.is_some() {
+        } else if !var_name.generic_args.is_empty() {
             res?;
         }
     }
 
-    if var_name.generic_args.is_some() {
+    if !var_name.generic_args.is_empty() {
         return Err(anyhow::anyhow!(
             "Function '{}' not found at {}.",
             var_name,
@@ -1347,8 +1343,7 @@ fn determine_function_call(
     }
 
     if let ParsedExpressionKind::Variable(id) = &expr.value {
-        let default_generic_args = Vec::new();
-        let generic_args = id.generic_args.as_ref().unwrap_or(&default_generic_args);
+        let generic_args = &id.generic_args;
         let analyzed_generic_args = analyze_generic_args(context, &generic_args)?;
         let function_ref_res = context.functions.map_function_id(
             &id.id,

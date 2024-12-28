@@ -5,14 +5,17 @@ use crate::compiler::lexer::token::{Keyword, StaticToken, Token};
 use crate::compiler::lexer::token_stack::TokenStack;
 use crate::compiler::lexer::SrcToken;
 use crate::compiler::parser::binop_expr_parser::parse_binop_expression;
+use crate::compiler::parser::item_id::ParsedGenericId;
 use crate::compiler::parser::parsed_expression::{
     ParsedEnumDefinition, ParsedExpression, ParsedExpressionKind, ParsedFunction,
     ParsedFunctionSignature, ParsedImport, ParsedModule, ParsedStructDefinition,
     ParsedTraitDefinition, ParsedTraitImplementation, ParsedTypeAlias,
 };
 use crate::compiler::parser::parser_error::ParseResult;
-use crate::compiler::parser::primary_expr_parser::{parse_block_expression, parse_generic_params};
-use crate::compiler::parser::type_parser::{parse_generic_id, parse_import_id, parse_type};
+use crate::compiler::parser::primary_expr_parser::{
+    parse_block_expression, parse_generic_args, parse_generic_params,
+};
+use crate::compiler::parser::type_parser::{parse_import_id, parse_scoped_id, parse_type};
 use crate::compiler::parser::{ModuleIdentifier, ModulePath};
 use anyhow::Context;
 use std::collections::{HashMap, HashSet};
@@ -139,12 +142,13 @@ pub fn parse_module(
                 trait_definitions.push(trait_def);
             }
             Token::Keyword(Keyword::Impl) => {
-                let trait_impl = parse_trait_impl(&mut tokens).with_context(|| {
-                    format!(
-                        "Failed to parse trait implementation at {}.",
-                        token.location
-                    )
-                })?;
+                let trait_impl =
+                    parse_trait_impl(&mut tokens, &module_path.id).with_context(|| {
+                        format!(
+                            "Failed to parse trait implementation at {}.",
+                            token.location
+                        )
+                    })?;
                 trait_impls.push(trait_impl);
             }
             _ => {
@@ -418,9 +422,13 @@ fn parse_trait(tokens: &mut TokenStack) -> ParseResult<Src<ParsedTraitDefinition
     ))
 }
 
-fn parse_trait_impl(tokens: &mut TokenStack) -> ParseResult<Src<ParsedTraitImplementation>> {
+fn parse_trait_impl(
+    tokens: &mut TokenStack,
+    current_module: &ModuleIdentifier,
+) -> ParseResult<Src<ParsedTraitImplementation>> {
     let location = pop_expected(tokens, Token::Keyword(Keyword::Impl))?.location;
-    let trait_id = parse_generic_id(tokens)?;
+    let scope_id = parse_scoped_id(tokens, current_module)?;
+    let generic_args = parse_generic_args(tokens)?;
     pop_expected(tokens, Token::Keyword(Keyword::For))?;
     let for_type = parse_type(tokens)
         .with_context(|| format!("Failed to parse type at {}.", tokens.location()))?;
@@ -434,7 +442,10 @@ fn parse_trait_impl(tokens: &mut TokenStack) -> ParseResult<Src<ParsedTraitImple
     pop_expected(tokens, Token::Static(StaticToken::CloseBrace))?;
     Ok(Src::new(
         ParsedTraitImplementation {
-            trait_id,
+            trait_id: ParsedGenericId {
+                id: scope_id,
+                generic_args,
+            },
             for_type,
             functions,
         },

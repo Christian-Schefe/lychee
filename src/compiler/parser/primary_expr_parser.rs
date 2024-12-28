@@ -27,10 +27,7 @@ pub fn parse_primary_expression(tokens: &mut TokenStack) -> ParseResult<ParsedEx
             let generic_args = parse_generic_scoped_id_extension(tokens).with_context(|| {
                 format!("Failed to parse generic arguments at {}.", token.location)
             })?;
-            let generic_id = ParsedGenericId {
-                id: id,
-                generic_args,
-            };
+            let generic_id = ParsedGenericId { id, generic_args };
             let var_expr = ParsedExpression::new(
                 ParsedExpressionKind::Variable(generic_id),
                 token.location.clone(),
@@ -342,7 +339,7 @@ fn parse_optional_else_block(tokens: &mut TokenStack) -> ParseResult<Option<Pars
     }
 }
 
-pub fn parse_generic_args(tokens: &mut TokenStack) -> ParseResult<Option<Vec<ParsedType>>> {
+pub fn parse_generic_args(tokens: &mut TokenStack) -> ParseResult<Vec<ParsedType>> {
     if let Token::Static(StaticToken::LessThan) = tokens.peek().value {
         tokens.shift();
         let mut generics = Vec::new();
@@ -379,9 +376,9 @@ pub fn parse_generic_args(tokens: &mut TokenStack) -> ParseResult<Option<Vec<Par
                 tokens.location().clone(),
             ))?;
         }
-        Ok(Some(generics))
+        Ok(generics)
     } else {
-        Ok(None)
+        Ok(Vec::new())
     }
 }
 
@@ -391,7 +388,8 @@ pub fn parse_generic_params(tokens: &mut TokenStack) -> ParseResult<ParsedGeneri
         let mut generics = Vec::new();
         while tokens.peek().value != Token::Static(StaticToken::GreaterThan) {
             let generic = parse_identifier(tokens)?.value;
-            generics.push(generic);
+            let trait_bounds = parse_trait_bounds(tokens)?;
+            generics.push((generic, trait_bounds));
             match tokens.peek().value {
                 Token::Static(StaticToken::Comma) => {
                     tokens.shift();
@@ -404,9 +402,33 @@ pub fn parse_generic_params(tokens: &mut TokenStack) -> ParseResult<ParsedGeneri
             }
         }
         pop_expected(tokens, Token::Static(StaticToken::GreaterThan))?;
+        if generics.len() == 0 {
+            Err(LocationError::new(
+                "Expected at least one generic parameter.".to_string(),
+                tokens.location().clone(),
+            ))?;
+        }
         Ok(ParsedGenericParams::new(generics)?)
     } else {
         Ok(ParsedGenericParams::empty())
+    }
+}
+
+pub fn parse_trait_bounds(tokens: &mut TokenStack) -> ParseResult<Vec<ParsedType>> {
+    let mut trait_bounds = Vec::new();
+    if tokens.peek().value != Token::Static(StaticToken::Colon) {
+        return Ok(trait_bounds);
+    }
+    tokens.shift();
+    loop {
+        let trait_bound = parse_type(tokens)?;
+        trait_bounds.push(trait_bound);
+        match tokens.peek().value {
+            Token::Static(StaticToken::Plus) => {
+                tokens.shift();
+            }
+            _ => break Ok(trait_bounds),
+        }
     }
 }
 

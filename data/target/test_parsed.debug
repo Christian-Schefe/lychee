@@ -1,253 +1,3 @@
-Module(test::std::mem)
-Import(*) from builtin::
-fn free<ParsedGenericParams { order: ["T"] }>(
-  this: &test::std::mem::T
-) -> unit
-{
-  FunctionCall
-    Var(test::std::mem::free)
-    Unary(Cast(Src { value: Pointer(Unit), location: Location { line: 4, column: 18, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\mem.lyc" }) } }))
-      Var(test::std::mem::this)
-}
-fn malloc<ParsedGenericParams { order: ["T"] }>(
-  size: int
-) -> &test::std::mem::T
-{
-  Unary(Cast(Src { value: Pointer(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "T" }, is_module_local: true }, generic_args: None })), location: Location { line: 8, column: 33, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\mem.lyc" }) } }))
-    FunctionCall
-      Var(test::std::mem::malloc)
-      Binary(Math(Mul))
-        Var(test::std::mem::size)
-        Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "T" }, is_module_local: true }, generic_args: None }), location: Location { line: 8, column: 26, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\mem.lyc" }) } })
-}
-fn realloc<ParsedGenericParams { order: ["T"] }>(
-  pointer: &test::std::mem::T
-  size: int
-) -> &test::std::mem::T
-{
-  FunctionCall
-    Var(test::std::mem::free)
-    Var(test::std::mem::pointer)
-  FunctionCall
-    Var(test::std::mem::malloc<test::std::mem::T>)
-    Var(test::std::mem::size)
-}
-fn memset<ParsedGenericParams { order: ["T"] }>(
-  pointer: &test::std::mem::T
-  value: int
-  size: int
-) -> unit
-{
-  FunctionCall
-    Var(test::std::mem::memset)
-    Unary(Cast(Src { value: Pointer(Unit), location: Location { line: 17, column: 23, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\mem.lyc" }) } }))
-      Var(test::std::mem::pointer)
-    Var(test::std::mem::value)
-    Binary(Math(Mul))
-      Var(test::std::mem::size)
-      Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "T" }, is_module_local: true }, generic_args: None }), location: Location { line: 17, column: 51, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\mem.lyc" }) } })
-}
-fn memcopy<ParsedGenericParams { order: ["T"] }>(
-  dest: &test::std::mem::T
-  src: &test::std::mem::T
-  size: int
-) -> unit
-{
-  FunctionCall
-    Var(test::std::mem::memcopy)
-    Unary(Cast(Src { value: Pointer(Unit), location: Location { line: 21, column: 21, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\mem.lyc" }) } }))
-      Var(test::std::mem::dest)
-    Unary(Cast(Src { value: Pointer(Unit), location: Location { line: 21, column: 35, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\mem.lyc" }) } }))
-      Var(test::std::mem::src)
-    Binary(Math(Mul))
-      Var(test::std::mem::size)
-      Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "T" }, is_module_local: true }, generic_args: None }), location: Location { line: 21, column: 56, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\mem.lyc" }) } })
-}
-Module(test::std)
-Module(small_test::)
-struct Simple {
-  a: int,
-  b: int,
-}
-fn main<ParsedGenericParams { order: [] }>(
-) -> int
-{
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "small_test", path: [] }, item_name: "Simple" }, is_module_local: true }, generic_args: None }), s)
-    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "small_test", path: [] }, item_name: "Simple" }, is_module_local: true }, generic_args: None }), location: Location { line: 2, column: 24, file: Some(ModulePath { id: ModuleIdentifier { root_name: "small_test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data2\\src\\main.lyc" }) } })
-      a: 
-      Literal(Integer(1))
-      b: 
-      Literal(Integer(2))
-  FunctionCall
-    Var(small_test::::add)
-    Unary(Member("a"))
-      Var(small_test::::s)
-    Unary(Member("b"))
-      Var(small_test::::s)
-}
-fn add<ParsedGenericParams { order: [] }>(
-  a: int
-  b: int
-) -> int
-{
-  Binary(Math(Add))
-    Var(small_test::::a)
-    Var(small_test::::b)
-}
-Module(test::generic_test)
-struct MyStruct {
-  value: test::generic_test::T1,
-  value2: test::generic_test::Option<test::generic_test::T2>,
-  value3: int,
-  value4: &test::generic_test::T1,
-}
-struct Option {
-  value: test::generic_test::T,
-}
-struct TwoGenerics {
-  value: test::generic_test::T,
-  value2: test::generic_test::T2,
-}
-struct NestedGeneric {
-  value: test::generic_test::Option<test::generic_test::T>,
-}
-TypeAlias(MyStructIntInt, test::generic_test::MyStruct<int, int>)
-fn do_nothing<ParsedGenericParams { order: ["T"] }>(
-  x: test::generic_test::T
-) -> test::generic_test::T
-{
-  Var(test::generic_test::x)
-}
-fn createStruct<ParsedGenericParams { order: ["T1", "T2"] }>(
-  val: test::generic_test::T1
-  val2: test::generic_test::T2
-  val3: int
-) -> test::generic_test::MyStruct<test::generic_test::T1, test::generic_test::T2>
-{
-  Declaration(var, my_struct)
-    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "MyStruct" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "T1" }, is_module_local: true }, generic_args: None }), location: Location { line: 8, column: 38, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }, Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "T2" }, is_module_local: true }, generic_args: None }), location: Location { line: 8, column: 42, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), location: Location { line: 8, column: 29, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } })
-      value: 
-      Var(test::generic_test::val)
-      value2: 
-      StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "T2" }, is_module_local: true }, generic_args: None }), location: Location { line: 10, column: 28, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), location: Location { line: 10, column: 21, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } })
-        value: 
-        Var(test::generic_test::val2)
-      value3: 
-      Var(test::generic_test::val3)
-      value4: 
-      Unary(Borrow)
-        Var(test::generic_test::val)
-  Binary(Assign)
-    Unary(Member("value4"))
-      Var(test::generic_test::my_struct)
-    Unary(Borrow)
-      Unary(Member("value"))
-        Var(test::generic_test::my_struct)
-  Var(test::generic_test::my_struct)
-}
-fn test<ParsedGenericParams { order: [] }>(
-) -> int
-{
-  Declaration(var, x)
-    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: Some([Src { value: Integer(4), location: Location { line: 28, column: 28, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), location: Location { line: 28, column: 21, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } })
-      value: 
-      Literal(Integer(10))
-  FunctionCall
-    Var(test::generic_test::do_nothing<test::generic_test::Option<int>>)
-    Var(test::generic_test::x)
-  Declaration(var, my_struct)
-    FunctionCall
-      Var(test::generic_test::createStruct<int, int>)
-      Literal(Integer(10))
-      Literal(Integer(20))
-      Literal(Integer(30))
-  Declaration(Pointer(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "MyStruct" }, is_module_local: true }, generic_args: Some([Src { value: Integer(4), location: Location { line: 33, column: 19, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }, Src { value: Integer(4), location: Location { line: 33, column: 24, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) })), my_struct2)
-    Unary(Borrow)
-      Var(test::generic_test::my_struct)
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: Some([Src { value: Integer(4), location: Location { line: 35, column: 16, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), y)
-    Var(test::generic_test::x)
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "TwoGenerics" }, is_module_local: true }, generic_args: Some([Src { value: Integer(4), location: Location { line: 36, column: 21, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }, Src { value: Integer(4), location: Location { line: 36, column: 26, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), z)
-    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "TwoGenerics" }, is_module_local: true }, generic_args: Some([Src { value: Integer(4), location: Location { line: 36, column: 51, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }, Src { value: Integer(4), location: Location { line: 36, column: 56, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), location: Location { line: 36, column: 39, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } })
-      value: 
-      Literal(Integer(10))
-      value2: 
-      Literal(Integer(20))
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "NestedGeneric" }, is_module_local: true }, generic_args: Some([Src { value: Integer(4), location: Location { line: 40, column: 23, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), w)
-    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "NestedGeneric" }, is_module_local: true }, generic_args: Some([Src { value: Integer(4), location: Location { line: 40, column: 50, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), location: Location { line: 40, column: 36, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } })
-      value: 
-      Var(test::generic_test::x)
-  Declaration(Integer(4), a)
-    FunctionCall
-      Var(test::generic_test::generic_function<int>)
-      Literal(Integer(10))
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: Some([Src { value: Integer(4), location: Location { line: 44, column: 16, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), b)
-    FunctionCall
-      Var(test::generic_test::generic_function2<int>)
-      Var(test::generic_test::x)
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: Some([Src { value: Integer(4), location: Location { line: 45, column: 23, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), location: Location { line: 45, column: 16, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), b2)
-    FunctionCall
-      Var(test::generic_test::generic_function2<test::generic_test::Option<int>>)
-      StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: Some([Src { value: Integer(4), location: Location { line: 45, column: 85, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), location: Location { line: 45, column: 78, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), location: Location { line: 45, column: 71, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } })
-        value: 
-        Var(test::generic_test::x)
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "TwoGenerics" }, is_module_local: true }, generic_args: Some([Src { value: Char, location: Location { line: 48, column: 21, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }, Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: Some([Src { value: Char, location: Location { line: 48, column: 34, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), location: Location { line: 48, column: 27, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), c)
-    FunctionCall
-      Var(test::generic_test::partial_generic_function<char>)
-      Literal(Char(99))
-  Binary(Math(Add))
-    FunctionCall
-      Var(test::generic_test::add1)
-      FunctionCall
-        Var(test::generic_test::generic_function<int>)
-        FunctionCall
-          Var(test::generic_test::add1)
-          Unary(Member("value"))
-            Var(test::generic_test::x)
-    Var(test::generic_test::a)
-}
-fn generic_function<ParsedGenericParams { order: ["T"] }>(
-  x: test::generic_test::T
-) -> test::generic_test::T
-{
-  Var(test::generic_test::x)
-}
-fn generic_function2<ParsedGenericParams { order: ["T"] }>(
-  x: test::generic_test::Option<test::generic_test::T>
-) -> test::generic_test::Option<test::generic_test::T>
-{
-  Var(test::generic_test::x)
-}
-fn nested_generic_function<ParsedGenericParams { order: ["T"] }>(
-  x: test::generic_test::T
-) -> test::generic_test::T
-{
-  FunctionCall
-    Var(test::generic_test::generic_function<int>)
-    Literal(Integer(5))
-  FunctionCall
-    Var(test::generic_test::generic_function<test::generic_test::T>)
-    Var(test::generic_test::x)
-}
-fn partial_generic_function<ParsedGenericParams { order: ["T"] }>(
-  x: test::generic_test::T
-) -> test::generic_test::TwoGenerics<test::generic_test::T, test::generic_test::Option<test::generic_test::T>>
-{
-  StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "TwoGenerics" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "T" }, is_module_local: true }, generic_args: None }), location: Location { line: 79, column: 21, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }, Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "T" }, is_module_local: true }, generic_args: None }), location: Location { line: 79, column: 31, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), location: Location { line: 79, column: 24, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), location: Location { line: 79, column: 9, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } })
-    value2: 
-    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "T" }, is_module_local: true }, generic_args: None }), location: Location { line: 80, column: 28, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }]) }), location: Location { line: 80, column: 21, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } })
-      value: 
-      Var(test::generic_test::x)
-    value: 
-    Var(test::generic_test::x)
-}
-fn add1<ParsedGenericParams { order: [] }>(
-  x: int
-) -> int
-{
-  Binary(Math(Add))
-    Var(test::generic_test::x)
-    Literal(Integer(1))
-}
 Module(test::)
 Import(createStruct, test::generic_test)
 Import(test, test::generic_test)
@@ -268,16 +18,18 @@ Enum(TestEnum)
   C: Some(Integer(100))
   D: Some(Integer(1))
   E: Some(Integer(-240))
-trait TestTrait<ParsedGenericParams { order: [] }> {
-  fn test<ParsedGenericParams { order: [] }>(
+trait TestTrait<ParsedGenericParams { order: [], trait_bounds: {} }> {
+  fn test<ParsedGenericParams { order: [], trait_bounds: {} }>(
+    this: test::::Self
   ) -> int
 }
-trait GenericTrait<ParsedGenericParams { order: ["T"] }> {
-  fn test<ParsedGenericParams { order: [] }>(
+trait GenericTrait<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }> {
+  fn test2<ParsedGenericParams { order: [], trait_bounds: {} }>(
+    this: test::::Self
   ) -> test::::T
 }
-impl builtin::::TestTrait for int {
-  fn test<ParsedGenericParams { order: [] }>(
+impl test::::TestTrait for int {
+  fn test<ParsedGenericParams { order: [], trait_bounds: {} }>(
     this: int
   ) -> int
   {
@@ -286,10 +38,20 @@ impl builtin::::TestTrait for int {
       Literal(Integer(2))
   }
 }
-fn main<ParsedGenericParams { order: [] }>(
+impl test::::GenericTrait<int> for int {
+  fn test2<ParsedGenericParams { order: [], trait_bounds: {} }>(
+    this: int
+  ) -> int
+  {
+    Binary(Math(Mul))
+      Var(test::::this)
+      Literal(Integer(3))
+  }
+}
+fn main<ParsedGenericParams { order: [], trait_bounds: {} }>(
 ) -> int
 {
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "Test" }, is_module_local: true }, generic_args: None }), arr)
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "Test" }, is_module_local: true }, generic_args: [] }), arr)
     FunctionCall
       Var(test::::create_array<int>)
       Literal(Integer(100))
@@ -332,7 +94,7 @@ fn main<ParsedGenericParams { order: [] }>(
   FunctionCall
     Var(test::::print)
     Var(test::::arr)
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "MyStructIntInt" }, is_module_local: true }, generic_args: None }), my_struct)
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "MyStructIntInt" }, is_module_local: true }, generic_args: [] }), my_struct)
     FunctionCall
       Var(test::::createStruct)
       Literal(Integer(10))
@@ -342,7 +104,7 @@ fn main<ParsedGenericParams { order: [] }>(
     Var(test::std::io::file_test)
   FunctionCall
     Var(test::::generic_sizeof_test<int>)
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "TestEnum" }, is_module_local: true }, generic_args: None }), test_enum)
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "TestEnum" }, is_module_local: true }, generic_args: [] }), test_enum)
     Var(TestEnum::::A)
   FunctionCall
     Var(test::::println)
@@ -503,11 +265,11 @@ fn main<ParsedGenericParams { order: [] }>(
   FunctionCall
     Var(test::::println)
     Literal(String("TUPLE TEST"))
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "builtin", path: [] }, item_name: "$tuple" }, is_module_local: false }, generic_args: Some([Src { value: Integer(4), location: Location { line: 70, column: 10, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 70, column: 15, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), tuple)
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "builtin", path: [] }, item_name: "$tuple" }, is_module_local: false }, generic_args: [Src { value: Integer(4), location: Location { line: 70, column: 10, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 70, column: 15, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), tuple)
     Tuple
       Literal(Integer(-11))
       Literal(Integer(-22))
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "builtin", path: [] }, item_name: "$tuple" }, is_module_local: false }, generic_args: Some([Src { value: Char, location: Location { line: 71, column: 10, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 71, column: 16, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), tuple2)
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "builtin", path: [] }, item_name: "$tuple" }, is_module_local: false }, generic_args: [Src { value: Char, location: Location { line: 71, column: 10, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 71, column: 16, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), tuple2)
     FunctionCall
       Var(test::::tuple_test)
       Literal(Char(99))
@@ -520,13 +282,13 @@ fn main<ParsedGenericParams { order: [] }>(
     Var(test::::println)
     Unary(Member("item1"))
       Var(test::::tuple2)
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "builtin", path: [] }, item_name: "$tuple" }, is_module_local: false }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "builtin", path: [] }, item_name: "$tuple" }, is_module_local: false }, generic_args: Some([Src { value: Integer(4), location: Location { line: 74, column: 11, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 74, column: 16, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), location: Location { line: 74, column: 10, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "builtin", path: [] }, item_name: "$tuple" }, is_module_local: false }, generic_args: Some([Src { value: Integer(4), location: Location { line: 74, column: 23, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 74, column: 28, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), location: Location { line: 74, column: 22, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), tuple_2d)
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "builtin", path: [] }, item_name: "$tuple" }, is_module_local: false }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "builtin", path: [] }, item_name: "$tuple" }, is_module_local: false }, generic_args: [Src { value: Integer(4), location: Location { line: 74, column: 11, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 74, column: 16, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), location: Location { line: 74, column: 10, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "builtin", path: [] }, item_name: "$tuple" }, is_module_local: false }, generic_args: [Src { value: Integer(4), location: Location { line: 74, column: 23, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 74, column: 28, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), location: Location { line: 74, column: 22, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), tuple_2d)
     Tuple
       Var(test::::tuple)
       Var(test::::tuple)
   FunctionCall
     Var(test::::println)
-    Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "builtin", path: [] }, item_name: "$tuple" }, is_module_local: false }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "builtin", path: [] }, item_name: "$tuple" }, is_module_local: false }, generic_args: Some([Src { value: Integer(4), location: Location { line: 75, column: 14, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 75, column: 19, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 75, column: 24, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), location: Location { line: 75, column: 13, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "builtin", path: [] }, item_name: "$tuple" }, is_module_local: false }, generic_args: Some([Src { value: Integer(4), location: Location { line: 75, column: 31, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 75, column: 36, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 75, column: 41, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), location: Location { line: 75, column: 30, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(8), location: Location { line: 75, column: 47, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 75, column: 53, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(8), location: Location { line: 75, column: 58, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 75, column: 64, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(8), location: Location { line: 75, column: 69, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(8), location: Location { line: 75, column: 75, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(8), location: Location { line: 75, column: 81, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), location: Location { line: 75, column: 12, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } })
+    Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "builtin", path: [] }, item_name: "$tuple" }, is_module_local: false }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "builtin", path: [] }, item_name: "$tuple" }, is_module_local: false }, generic_args: [Src { value: Integer(4), location: Location { line: 75, column: 14, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 75, column: 19, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 75, column: 24, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), location: Location { line: 75, column: 13, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "builtin", path: [] }, item_name: "$tuple" }, is_module_local: false }, generic_args: [Src { value: Integer(4), location: Location { line: 75, column: 31, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 75, column: 36, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 75, column: 41, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), location: Location { line: 75, column: 30, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(8), location: Location { line: 75, column: 47, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 75, column: 53, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(8), location: Location { line: 75, column: 58, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(4), location: Location { line: 75, column: 64, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(8), location: Location { line: 75, column: 69, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(8), location: Location { line: 75, column: 75, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }, Src { value: Integer(8), location: Location { line: 75, column: 81, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), location: Location { line: 75, column: 12, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } })
   FunctionCall
     Var(test::::println)
     Unary(Member("item2"))
@@ -534,22 +296,22 @@ fn main<ParsedGenericParams { order: [] }>(
         Var(test::::tuple_2d)
   FunctionCall
     Var(test::::println)
-    Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: Some([Src { value: Integer(4), location: Location { line: 77, column: 24, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), location: Location { line: 77, column: 22, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), location: Location { line: 77, column: 20, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), location: Location { line: 77, column: 18, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), location: Location { line: 77, column: 16, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), location: Location { line: 77, column: 14, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), location: Location { line: 77, column: 12, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } })
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: Some([Src { value: Integer(4), location: Location { line: 79, column: 13, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), location: Location { line: 79, column: 11, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), A)
-    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: Some([Src { value: Integer(4), location: Location { line: 79, column: 31, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), location: Location { line: 79, column: 29, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), location: Location { line: 79, column: 27, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } })
+    Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: [Src { value: Integer(4), location: Location { line: 77, column: 24, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), location: Location { line: 77, column: 22, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), location: Location { line: 77, column: 20, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), location: Location { line: 77, column: 18, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), location: Location { line: 77, column: 16, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), location: Location { line: 77, column: 14, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), location: Location { line: 77, column: 12, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } })
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: [Src { value: Integer(4), location: Location { line: 79, column: 13, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), location: Location { line: 79, column: 11, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), A)
+    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: [Src { value: Integer(4), location: Location { line: 79, column: 31, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), location: Location { line: 79, column: 29, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), location: Location { line: 79, column: 27, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } })
       a: 
-      StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: Some([Src { value: Integer(4), location: Location { line: 80, column: 18, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), location: Location { line: 80, column: 16, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } })
+      StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: [Src { value: Integer(4), location: Location { line: 80, column: 18, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), location: Location { line: 80, column: 16, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } })
         a: 
         Literal(Integer(10))
         b: 
         Literal(Integer(20))
       b: 
-      StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: Some([Src { value: Integer(4), location: Location { line: 84, column: 18, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]) }), location: Location { line: 84, column: 16, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } })
+      StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "A" }, is_module_local: true }, generic_args: [Src { value: Integer(4), location: Location { line: 84, column: 18, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }] }), location: Location { line: 84, column: 16, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } })
         a: 
         Literal(Integer(30))
         b: 
         Literal(Integer(40))
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, item_name: "Direction" }, is_module_local: false }, generic_args: None }), dir)
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, item_name: "Direction" }, is_module_local: false }, generic_args: [] }), dir)
     Var(test::enum_test::Direction::Up)
   FunctionCall
     Var(test::::println)
@@ -613,7 +375,18 @@ fn main<ParsedGenericParams { order: [] }>(
       Var(test::::arr)
       Literal(Integer(9))
 }
-fn my_println<ParsedGenericParams { order: [] }>(
+fn trait_bounds_test<ParsedGenericParams { order: ["T"], trait_bounds: {"T": [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "TestTrait" }, is_module_local: true }, generic_args: [] }), location: Location { line: 132, column: 27, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } }]} }>(
+  a: test::::T
+) -> unit
+{
+  FunctionCall
+    Var(test::::println)
+    FunctionCall
+      Var(test::::test)
+      Var(test::::a)
+      Literal(Integer(10))
+}
+fn my_println<ParsedGenericParams { order: [], trait_bounds: {} }>(
   a: int
 ) -> unit
 {
@@ -621,26 +394,26 @@ fn my_println<ParsedGenericParams { order: [] }>(
     Var(test::::println)
     Var(test::::a)
 }
-fn generic_sizeof_test<ParsedGenericParams { order: ["T"] }>(
+fn generic_sizeof_test<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
 ) -> int
 {
-  Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "T" }, is_module_local: true }, generic_args: None }), location: Location { line: 147, column: 12, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } })
+  Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), location: Location { line: 157, column: 12, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } })
 }
-fn generic_sizeof_test<ParsedGenericParams { order: ["T", "K"] }>(
+fn generic_sizeof_test<ParsedGenericParams { order: ["T", "K"], trait_bounds: {"K": [], "T": []} }>(
 ) -> int
 {
   Binary(Math(Mul))
-    Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "T" }, is_module_local: true }, generic_args: None }), location: Location { line: 151, column: 12, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } })
-    Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "K" }, is_module_local: true }, generic_args: None }), location: Location { line: 151, column: 24, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } })
+    Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), location: Location { line: 161, column: 12, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } })
+    Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: [] }, item_name: "K" }, is_module_local: true }, generic_args: [] }), location: Location { line: 161, column: 24, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main.lyc" }) } })
 }
-fn unit_test<ParsedGenericParams { order: [] }>(
+fn unit_test<ParsedGenericParams { order: [], trait_bounds: {} }>(
   a: unit
   b: unit
 ) -> unit
 {
   Var(test::::a)
 }
-fn mul2<ParsedGenericParams { order: [] }>(
+fn mul2<ParsedGenericParams { order: [], trait_bounds: {} }>(
   a: int
 ) -> int
 {
@@ -648,13 +421,13 @@ fn mul2<ParsedGenericParams { order: [] }>(
     Var(test::::a)
     Literal(Integer(2))
 }
-fn mul3<ParsedGenericParams { order: [] }>(
+fn mul3<ParsedGenericParams { order: [], trait_bounds: {} }>(
   a: char
 ) -> char
 {
   Var(test::::a)
 }
-fn call_test_fn<ParsedGenericParams { order: [] }>(
+fn call_test_fn<ParsedGenericParams { order: [], trait_bounds: {} }>(
   fn: fn(int) -> int
   val: int
 ) -> int
@@ -663,7 +436,7 @@ fn call_test_fn<ParsedGenericParams { order: [] }>(
     Var(test::::fn)
     Var(test::::val)
 }
-fn generic_call_test<ParsedGenericParams { order: ["T"] }>(
+fn generic_call_test<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
   fn: fn(test::::T) -> test::::T
   val: test::::T
 ) -> test::::T
@@ -672,7 +445,7 @@ fn generic_call_test<ParsedGenericParams { order: ["T"] }>(
     Var(test::::fn)
     Var(test::::val)
 }
-fn tuple_test<ParsedGenericParams { order: ["T"] }>(
+fn tuple_test<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
   a: test::::T
   b: int
 ) -> builtin::::$tuple<test::::T, int>
@@ -681,10 +454,668 @@ fn tuple_test<ParsedGenericParams { order: ["T"] }>(
     Var(test::::a)
     Var(test::::b)
 }
+Module(test::enum_test)
+Import(*) from test::std::print
+Enum(Direction)
+  Up: Some(Integer(1))
+  Down: Some(Integer(2))
+  Left: Some(Integer(3))
+  Right: Some(Integer(2147483647))
+fn enum_test<ParsedGenericParams { order: [], trait_bounds: {} }>(
+) -> unit
+{
+  FunctionCall
+    Var(test::enum_test::println)
+    Literal(String("ENUM TEST"))
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, item_name: "Direction" }, is_module_local: true }, generic_args: [] }), dir)
+    Var(Direction::::Up)
+  FunctionCall
+    Var(test::enum_test::println)
+    Unary(Cast(Src { value: Integer(4), location: Location { line: 13, column: 13, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\enum_test.lyc" }) } }))
+      Var(test::enum_test::dir)
+  FunctionCall
+    Var(test::enum_test::println)
+    Binary(Comparison(Equals))
+      Var(Direction::::Down)
+      Var(Direction::::Left)
+  FunctionCall
+    Var(test::enum_test::println)
+    Literal(String("hi"))
+  FunctionCall
+    Var(test::enum_test::println)
+    Unary(Cast(Src { value: Integer(4), location: Location { line: 16, column: 26, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\enum_test.lyc" }) } }))
+      Var(Direction::::Right)
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, item_name: "Direction" }, is_module_local: true }, generic_args: [] }), from_int)
+    Unary(Cast(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, item_name: "Direction" }, is_module_local: true }, generic_args: [] }), location: Location { line: 17, column: 53, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\enum_test.lyc" }) } }))
+      Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, item_name: "Direction" }, is_module_local: true }, generic_args: [] }), location: Location { line: 17, column: 38, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\enum_test.lyc" }) } })
+  FunctionCall
+    Var(test::enum_test::println)
+    Unary(Cast(Src { value: Integer(4), location: Location { line: 18, column: 18, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\enum_test.lyc" }) } }))
+      Var(test::enum_test::from_int)
+}
+Module(test::std::array)
+Import(*) from test::std::print
+Import(*) from test::std::mem
+Import(write_char, builtin::)
+struct Array {
+  data: &test::std::array::T,
+  size: int,
+}
+fn get<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
+  this: test::std::array::Array<test::std::array::T>
+  index: int
+) -> test::std::array::T
+{
+  Return
+    Binary(Index)
+      Unary(Member("data"))
+        Var(test::std::array::this)
+      Var(test::std::array::index)
+}
+fn set<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
+  this: test::std::array::Array<test::std::array::T>
+  index: int
+  value: test::std::array::T
+) -> unit
+{
+  Binary(Assign)
+    Binary(Index)
+      Unary(Member("data"))
+        Var(test::std::array::this)
+      Var(test::std::array::index)
+    Var(test::std::array::value)
+}
+fn fill<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
+  this: test::std::array::Array<test::std::array::T>
+  value: test::std::array::T
+) -> unit
+{
+  Declaration(Integer(4), i)
+    Literal(Integer(0))
+  Loop
+    Binary(Comparison(Less))
+      Var(test::std::array::i)
+      Unary(Member("size"))
+        Var(test::std::array::this)
+    {
+      Binary(Assign)
+        Binary(Index)
+          Unary(Member("data"))
+            Var(test::std::array::this)
+          Var(test::std::array::i)
+        Var(test::std::array::value)
+      Unary(Increment { is_prefix: false })
+        Var(test::std::array::i)
+    }
+}
+fn print<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  this: test::std::array::Array<int>
+) -> unit
+{
+  Declaration(Integer(4), i)
+    Literal(Integer(0))
+  FunctionCall
+    Var(test::std::array::write_char)
+    Literal(Char(91))
+  Loop
+    Binary(Comparison(Less))
+      Var(test::std::array::i)
+      Unary(Member("size"))
+        Var(test::std::array::this)
+    {
+      If
+        Binary(Comparison(Greater))
+          Var(test::std::array::i)
+          Literal(Integer(0))
+        {
+          FunctionCall
+            Var(test::std::array::write_char)
+            Literal(Char(44))
+          FunctionCall
+            Var(test::std::array::write_char)
+            Literal(Char(32))
+        }
+      FunctionCall
+        Var(test::std::array::print)
+        Binary(Index)
+          Unary(Member("data"))
+            Var(test::std::array::this)
+          Var(test::std::array::i)
+      Unary(Increment { is_prefix: false })
+        Var(test::std::array::i)
+    }
+  FunctionCall
+    Var(test::std::array::write_char)
+    Literal(Char(93))
+  FunctionCall
+    Var(test::std::array::write_char)
+    Literal(Char(10))
+}
+fn create_array<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
+  size: int
+) -> test::std::array::Array<test::std::array::T>
+{
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "Array" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), location: Location { line: 42, column: 15, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\array.lyc" }) } }] }), arr)
+    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "Array" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), location: Location { line: 42, column: 34, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\array.lyc" }) } }] }), location: Location { line: 42, column: 28, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\array.lyc" }) } })
+      data: 
+      FunctionCall
+        Var(test::std::array::malloc<test::std::array::T>)
+        Var(test::std::array::size)
+      size: 
+      Var(test::std::array::size)
+  FunctionCall
+    Var(test::std::array::memset<test::std::array::T>)
+    Unary(Member("data"))
+      Var(test::std::array::arr)
+    Literal(Integer(0))
+    Var(test::std::array::size)
+  Var(test::std::array::arr)
+}
+fn free<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
+  this: test::std::array::Array<test::std::array::T>
+) -> unit
+{
+  FunctionCall
+    Var(test::std::array::free)
+    Unary(Cast(Src { value: Pointer(Unit), location: Location { line: 51, column: 23, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\array.lyc" }) } }))
+      Unary(Member("data"))
+        Var(test::std::array::this)
+}
+fn map<ParsedGenericParams { order: ["T", "K"], trait_bounds: {"T": [], "K": []} }>(
+  this: test::std::array::Array<test::std::array::T>
+  fn: fn(test::std::array::T) -> test::std::array::K
+) -> test::std::array::Array<test::std::array::K>
+{
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "Array" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "K" }, is_module_local: true }, generic_args: [] }), location: Location { line: 55, column: 15, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\array.lyc" }) } }] }), arr)
+    FunctionCall
+      Var(test::std::array::create_array<test::std::array::K>)
+      Unary(Member("size"))
+        Var(test::std::array::this)
+  Declaration(Integer(4), i)
+    Literal(Integer(0))
+  Loop
+    Binary(Comparison(Less))
+      Var(test::std::array::i)
+      Unary(Member("size"))
+        Var(test::std::array::this)
+    {
+      FunctionCall
+        Var(test::std::array::set<test::std::array::K>)
+        Var(test::std::array::arr)
+        Var(test::std::array::i)
+        FunctionCall
+          Var(test::std::array::fn)
+          FunctionCall
+            Var(test::std::array::get<test::std::array::T>)
+            Var(test::std::array::this)
+            Var(test::std::array::i)
+      Unary(Increment { is_prefix: false })
+        Var(test::std::array::i)
+    }
+  Var(test::std::array::arr)
+}
+fn filter<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
+  this: test::std::array::Array<test::std::array::T>
+  fn: fn(test::std::array::T) -> bool
+) -> test::std::array::Array<test::std::array::T>
+{
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "Array" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), location: Location { line: 65, column: 15, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\array.lyc" }) } }] }), arr)
+    FunctionCall
+      Var(test::std::array::create_array<test::std::array::T>)
+      Unary(Member("size"))
+        Var(test::std::array::this)
+  Declaration(Integer(4), i)
+    Literal(Integer(0))
+  Declaration(Integer(4), j)
+    Literal(Integer(0))
+  Loop
+    Binary(Comparison(Less))
+      Var(test::std::array::i)
+      Unary(Member("size"))
+        Var(test::std::array::this)
+    {
+      If
+        FunctionCall
+          Var(test::std::array::fn)
+          FunctionCall
+            Var(test::std::array::get<test::std::array::T>)
+            Var(test::std::array::this)
+            Var(test::std::array::i)
+        {
+          FunctionCall
+            Var(test::std::array::set<test::std::array::T>)
+            Var(test::std::array::arr)
+            Var(test::std::array::j)
+            FunctionCall
+              Var(test::std::array::get<test::std::array::T>)
+              Var(test::std::array::this)
+              Var(test::std::array::i)
+          Unary(Increment { is_prefix: false })
+            Var(test::std::array::j)
+        }
+      Unary(Increment { is_prefix: false })
+        Var(test::std::array::i)
+    }
+  Var(test::std::array::arr)
+}
+Module(test::std::io)
+Import(*) from test::std::string
+Import(*) from test::std::print
+Import(*) from builtin::
+struct File {
+  file: int,
+}
+fn file_test<ParsedGenericParams { order: [], trait_bounds: {} }>(
+) -> unit
+{
+  Declaration(var, in_file)
+    FunctionCall
+      Var(test::std::io::open_file)
+      Literal(String("data/input.txt"))
+  Declaration(var, out_file)
+    FunctionCall
+      Var(test::std::io::open_file)
+      Literal(String("data/output.txt"))
+  FunctionCall
+    Var(test::std::io::write_char)
+    Literal(Char(10))
+  Declaration(var, str)
+    FunctionCall
+      Var(test::std::io::read_chars)
+      Var(test::std::io::in_file)
+      Literal(Integer(100))
+  FunctionCall
+    Var(test::std::io::print)
+    Var(test::std::io::str)
+  FunctionCall
+    Var(test::std::io::write_file)
+    Var(test::std::io::out_file)
+    Unary(Borrow)
+      Var(test::std::io::str)
+  FunctionCall
+    Var(test::std::io::close)
+    Var(test::std::io::in_file)
+  FunctionCall
+    Var(test::std::io::close)
+    Var(test::std::io::out_file)
+  FunctionCall
+    Var(test::std::io::print_file)
+    Var(test::std::io::in_file)
+  FunctionCall
+    Var(test::std::io::print_file)
+    Var(test::std::io::out_file)
+  FunctionCall
+    Var(test::std::io::free)
+    Var(test::std::io::str)
+}
+fn open_file<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  path: &char
+) -> test::std::io::File
+{
+  Declaration(Integer(4), file)
+    FunctionCall
+      Var(test::std::io::fopen)
+      Var(test::std::io::path)
+  StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, item_name: "File" }, is_module_local: true }, generic_args: [] }), location: Location { line: 25, column: 9, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\io.lyc" }) } })
+    file: 
+    Var(test::std::io::file)
+}
+fn close<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  this: test::std::io::File
+) -> unit
+{
+  FunctionCall
+    Var(test::std::io::fclose)
+    Unary(Member("file"))
+      Var(test::std::io::this)
+}
+fn read<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  this: test::std::io::File
+  string: &test::std::io::String
+) -> unit
+{
+  FunctionCall
+    Var(test::std::io::fread)
+    Unary(Member("data"))
+      Var(test::std::io::string)
+    Unary(Member("size"))
+      Var(test::std::io::string)
+    Unary(Member("file"))
+      Var(test::std::io::this)
+}
+fn read_chars<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  this: test::std::io::File
+  amount: int
+) -> test::std::io::String
+{
+  Declaration(var, str)
+    FunctionCall
+      Var(test::std::io::create_sized_string)
+      Var(test::std::io::amount)
+  FunctionCall
+    Var(test::std::io::fread)
+    Unary(Member("data"))
+      Var(test::std::io::str)
+    Unary(Member("size"))
+      Var(test::std::io::str)
+    Unary(Member("file"))
+      Var(test::std::io::this)
+  Var(test::std::io::str)
+}
+fn write_file<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  this: test::std::io::File
+  string: &test::std::io::String
+) -> unit
+{
+  FunctionCall
+    Var(test::std::io::fwrite)
+    Unary(Member("data"))
+      Var(test::std::io::string)
+    Unary(Member("size"))
+      Var(test::std::io::string)
+    Unary(Member("file"))
+      Var(test::std::io::this)
+}
+fn print_file<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  this: test::std::io::File
+) -> unit
+{
+  FunctionCall
+    Var(test::std::io::write_char)
+    Literal(Char(91))
+  FunctionCall
+    Var(test::std::io::print)
+    Unary(Member("file"))
+      Var(test::std::io::this)
+  FunctionCall
+    Var(test::std::io::write_char)
+    Literal(Char(93))
+}
+Module(small_test::)
+struct Simple {
+  a: int,
+  b: int,
+}
+fn main<ParsedGenericParams { order: [], trait_bounds: {} }>(
+) -> int
+{
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "small_test", path: [] }, item_name: "Simple" }, is_module_local: true }, generic_args: [] }), s)
+    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "small_test", path: [] }, item_name: "Simple" }, is_module_local: true }, generic_args: [] }), location: Location { line: 2, column: 24, file: Some(ModulePath { id: ModuleIdentifier { root_name: "small_test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data2\\src\\main.lyc" }) } })
+      a: 
+      Literal(Integer(1))
+      b: 
+      Literal(Integer(2))
+  FunctionCall
+    Var(small_test::::add)
+    Unary(Member("a"))
+      Var(small_test::::s)
+    Unary(Member("b"))
+      Var(small_test::::s)
+}
+fn add<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  a: int
+  b: int
+) -> int
+{
+  Binary(Math(Add))
+    Var(small_test::::a)
+    Var(small_test::::b)
+}
+Module(test::std::string)
+Import(*) from test::std::vec
+Import(write, builtin::)
+Import(read_char, builtin::)
+Import(read, builtin::)
+Import(free, test::std::mem)
+TypeAlias(String, test::std::string::Vec<char>)
+fn create_string<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  capacity: int
+) -> test::std::string::String
+{
+  Declaration(var, str)
+    FunctionCall
+      Var(test::std::string::create_vec<char>)
+      Var(test::std::string::capacity)
+  Var(test::std::string::str)
+}
+fn create_sized_string<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  size: int
+) -> test::std::string::String
+{
+  Declaration(var, str)
+    FunctionCall
+      Var(test::std::string::create_sized_vec<char>)
+      Var(test::std::string::size)
+  Var(test::std::string::str)
+}
+fn print<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  this: test::std::string::String
+) -> unit
+{
+  FunctionCall
+    Var(test::std::string::write)
+    Unary(Member("data"))
+      Var(test::std::string::this)
+    Unary(Member("size"))
+      Var(test::std::string::this)
+}
+fn free<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  this: test::std::string::String
+) -> unit
+{
+  FunctionCall
+    Var(test::std::string::free)
+    Unary(Member("data"))
+      Var(test::std::string::this)
+}
+fn from_literal<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  literal: &char
+) -> test::std::string::String
+{
+  Declaration(Integer(4), size)
+    Literal(Integer(0))
+  Loop
+    Binary(Comparison(NotEquals))
+      Binary(Index)
+        Var(test::std::string::literal)
+        Var(test::std::string::size)
+      Literal(Char(0))
+    {
+      Unary(Increment { is_prefix: false })
+        Var(test::std::string::size)
+    }
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "String" }, is_module_local: true }, generic_args: [] }), str)
+    FunctionCall
+      Var(test::std::string::create_string)
+      Var(test::std::string::size)
+  Declaration(Integer(4), i)
+    Literal(Integer(0))
+  Loop
+    Binary(Comparison(Less))
+      Var(test::std::string::i)
+      Var(test::std::string::size)
+    {
+      FunctionCall
+        Var(test::std::string::set)
+        Unary(Borrow)
+          Var(test::std::string::str)
+        Var(test::std::string::i)
+        Binary(Index)
+          Var(test::std::string::literal)
+          Var(test::std::string::i)
+      Unary(Increment { is_prefix: false })
+        Var(test::std::string::i)
+    }
+  Var(test::std::string::str)
+}
+fn read_line<ParsedGenericParams { order: [], trait_bounds: {} }>(
+) -> test::std::string::String
+{
+  Declaration(var, str)
+    FunctionCall
+      Var(test::std::string::create_string)
+      Literal(Integer(100))
+  Declaration(Integer(4), i)
+    Literal(Integer(0))
+  Loop
+    Binary(Comparison(Less))
+      Var(test::std::string::i)
+      Unary(Member("size"))
+        Var(test::std::string::str)
+    {
+      Declaration(Char, c)
+        FunctionCall
+          Var(test::std::string::read_char)
+      If
+        Binary(Logical(Or))
+          Binary(Comparison(Equals))
+            Var(test::std::string::c)
+            Literal(Char(10))
+          Binary(Comparison(Equals))
+            Var(test::std::string::c)
+            Literal(Char(13))
+        {
+          Break
+        }
+      FunctionCall
+        Var(test::std::string::set)
+        Unary(Borrow)
+          Var(test::std::string::str)
+        Var(test::std::string::i)
+        Var(test::std::string::c)
+      Unary(Increment { is_prefix: false })
+        Var(test::std::string::i)
+    }
+  Binary(Assign)
+    Unary(Member("size"))
+      Var(test::std::string::str)
+    Var(test::std::string::i)
+  Var(test::std::string::str)
+}
+fn concat<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  str1: &test::std::string::String
+  str2: &test::std::string::String
+) -> test::std::string::String
+{
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "String" }, is_module_local: true }, generic_args: [] }), str)
+    FunctionCall
+      Var(test::std::string::create_string)
+      Binary(Math(Add))
+        Unary(Member("size"))
+          Var(test::std::string::str1)
+        Unary(Member("size"))
+          Var(test::std::string::str2)
+  Declaration(Integer(4), i)
+    Literal(Integer(0))
+  Loop
+    Binary(Comparison(Less))
+      Var(test::std::string::i)
+      Unary(Member("size"))
+        Var(test::std::string::str1)
+    {
+      FunctionCall
+        Var(test::std::string::set)
+        Unary(Borrow)
+          Var(test::std::string::str)
+        Var(test::std::string::i)
+        FunctionCall
+          Var(test::std::string::get)
+          Var(test::std::string::str1)
+          Var(test::std::string::i)
+      Unary(Increment { is_prefix: false })
+        Var(test::std::string::i)
+    }
+  Declaration(Integer(4), j)
+    Literal(Integer(0))
+  Loop
+    Binary(Comparison(Less))
+      Var(test::std::string::j)
+      Unary(Member("size"))
+        Var(test::std::string::str2)
+    {
+      FunctionCall
+        Var(test::std::string::set)
+        Unary(Borrow)
+          Var(test::std::string::str)
+        Var(test::std::string::i)
+        FunctionCall
+          Var(test::std::string::get)
+          Var(test::std::string::str2)
+          Var(test::std::string::j)
+      Unary(Increment { is_prefix: false })
+        Var(test::std::string::i)
+      Unary(Increment { is_prefix: false })
+        Var(test::std::string::j)
+    }
+  Var(test::std::string::str)
+}
+fn read_string<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  str: &test::std::string::String
+) -> unit
+{
+  FunctionCall
+    Var(test::std::string::read)
+    Unary(Member("data"))
+      Var(test::std::string::str)
+    Unary(Member("size"))
+      Var(test::std::string::str)
+}
+fn parse_int<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  str: &test::std::string::String
+) -> int
+{
+  Declaration(Integer(4), i)
+    Literal(Integer(0))
+  Declaration(Integer(4), num)
+    Literal(Integer(0))
+  Declaration(Integer(4), sign)
+    Literal(Integer(1))
+  If
+    Binary(Comparison(Equals))
+      FunctionCall
+        Var(test::std::string::get)
+        Var(test::std::string::str)
+        Literal(Integer(0))
+      Literal(Char(45))
+    {
+      Binary(Assign)
+        Var(test::std::string::sign)
+        Literal(Integer(-1))
+      Unary(Increment { is_prefix: false })
+        Var(test::std::string::i)
+    }
+  Loop
+    Binary(Comparison(Less))
+      Var(test::std::string::i)
+      Unary(Member("size"))
+        Var(test::std::string::str)
+    {
+      Binary(Assign)
+        Var(test::std::string::num)
+        Binary(Math(Add))
+          Binary(Math(Mul))
+            Var(test::std::string::num)
+            Literal(Integer(10))
+          Binary(Math(Sub))
+            Unary(Cast(Src { value: Integer(4), location: Location { line: 83, column: 42, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\string.lyc" }) } }))
+              FunctionCall
+                Var(test::std::string::get)
+                Var(test::std::string::str)
+                Var(test::std::string::i)
+            Unary(Cast(Src { value: Integer(4), location: Location { line: 83, column: 55, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\string.lyc" }) } }))
+              Literal(Char(48))
+      Unary(Increment { is_prefix: false })
+        Var(test::std::string::i)
+    }
+  Binary(Math(Mul))
+    Var(test::std::string::num)
+    Var(test::std::string::sign)
+}
+Module(test::std)
 Module(test::std::print)
 Import(write_char, builtin::)
 Import(write, builtin::)
-fn print<ParsedGenericParams { order: [] }>(
+fn print<ParsedGenericParams { order: [], trait_bounds: {} }>(
   literal: &char
 ) -> unit
 {
@@ -705,7 +1136,7 @@ fn print<ParsedGenericParams { order: [] }>(
     Var(test::std::print::literal)
     Var(test::std::print::i)
 }
-fn println<ParsedGenericParams { order: [] }>(
+fn println<ParsedGenericParams { order: [], trait_bounds: {} }>(
   literal: &char
 ) -> unit
 {
@@ -716,7 +1147,7 @@ fn println<ParsedGenericParams { order: [] }>(
     Var(test::std::print::write_char)
     Literal(Char(10))
 }
-fn print<ParsedGenericParams { order: [] }>(
+fn print<ParsedGenericParams { order: [], trait_bounds: {} }>(
   c: char
 ) -> unit
 {
@@ -724,7 +1155,7 @@ fn print<ParsedGenericParams { order: [] }>(
     Var(test::std::print::write_char)
     Var(test::std::print::c)
 }
-fn println<ParsedGenericParams { order: [] }>(
+fn println<ParsedGenericParams { order: [], trait_bounds: {} }>(
   c: char
 ) -> unit
 {
@@ -735,7 +1166,7 @@ fn println<ParsedGenericParams { order: [] }>(
     Var(test::std::print::write_char)
     Literal(Char(10))
 }
-fn print<ParsedGenericParams { order: [] }>(
+fn print<ParsedGenericParams { order: [], trait_bounds: {} }>(
   b: bool
 ) -> unit
 {
@@ -753,7 +1184,7 @@ fn print<ParsedGenericParams { order: [] }>(
         Literal(String("false"))
     }
 }
-fn println<ParsedGenericParams { order: [] }>(
+fn println<ParsedGenericParams { order: [], trait_bounds: {} }>(
   b: bool
 ) -> unit
 {
@@ -764,7 +1195,7 @@ fn println<ParsedGenericParams { order: [] }>(
     Var(test::std::print::write_char)
     Literal(Char(10))
 }
-fn print<ParsedGenericParams { order: [] }>(
+fn print<ParsedGenericParams { order: [], trait_bounds: {} }>(
   num: int
 ) -> unit
 {
@@ -834,7 +1265,7 @@ fn print<ParsedGenericParams { order: [] }>(
         Literal(Integer(10))
     }
 }
-fn println<ParsedGenericParams { order: [] }>(
+fn println<ParsedGenericParams { order: [], trait_bounds: {} }>(
   num: int
 ) -> unit
 {
@@ -844,344 +1275,6 @@ fn println<ParsedGenericParams { order: [] }>(
   FunctionCall
     Var(test::std::print::write_char)
     Literal(Char(10))
-}
-Module(test::std::io)
-Import(*) from test::std::string
-Import(*) from test::std::print
-Import(*) from builtin::
-struct File {
-  file: int,
-}
-fn file_test<ParsedGenericParams { order: [] }>(
-) -> unit
-{
-  Declaration(var, in_file)
-    FunctionCall
-      Var(test::std::io::open_file)
-      Literal(String("data/input.txt"))
-  Declaration(var, out_file)
-    FunctionCall
-      Var(test::std::io::open_file)
-      Literal(String("data/output.txt"))
-  FunctionCall
-    Var(test::std::io::write_char)
-    Literal(Char(10))
-  Declaration(var, str)
-    FunctionCall
-      Var(test::std::io::read_chars)
-      Var(test::std::io::in_file)
-      Literal(Integer(100))
-  FunctionCall
-    Var(test::std::io::print)
-    Var(test::std::io::str)
-  FunctionCall
-    Var(test::std::io::write_file)
-    Var(test::std::io::out_file)
-    Unary(Borrow)
-      Var(test::std::io::str)
-  FunctionCall
-    Var(test::std::io::close)
-    Var(test::std::io::in_file)
-  FunctionCall
-    Var(test::std::io::close)
-    Var(test::std::io::out_file)
-  FunctionCall
-    Var(test::std::io::print_file)
-    Var(test::std::io::in_file)
-  FunctionCall
-    Var(test::std::io::print_file)
-    Var(test::std::io::out_file)
-  FunctionCall
-    Var(test::std::io::free)
-    Var(test::std::io::str)
-}
-fn open_file<ParsedGenericParams { order: [] }>(
-  path: &char
-) -> test::std::io::File
-{
-  Declaration(Integer(4), file)
-    FunctionCall
-      Var(test::std::io::fopen)
-      Var(test::std::io::path)
-  StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, item_name: "File" }, is_module_local: true }, generic_args: None }), location: Location { line: 25, column: 9, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "io"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\io.lyc" }) } })
-    file: 
-    Var(test::std::io::file)
-}
-fn close<ParsedGenericParams { order: [] }>(
-  this: test::std::io::File
-) -> unit
-{
-  FunctionCall
-    Var(test::std::io::fclose)
-    Unary(Member("file"))
-      Var(test::std::io::this)
-}
-fn read<ParsedGenericParams { order: [] }>(
-  this: test::std::io::File
-  string: &test::std::io::String
-) -> unit
-{
-  FunctionCall
-    Var(test::std::io::fread)
-    Unary(Member("data"))
-      Var(test::std::io::string)
-    Unary(Member("size"))
-      Var(test::std::io::string)
-    Unary(Member("file"))
-      Var(test::std::io::this)
-}
-fn read_chars<ParsedGenericParams { order: [] }>(
-  this: test::std::io::File
-  amount: int
-) -> test::std::io::String
-{
-  Declaration(var, str)
-    FunctionCall
-      Var(test::std::io::create_sized_string)
-      Var(test::std::io::amount)
-  FunctionCall
-    Var(test::std::io::fread)
-    Unary(Member("data"))
-      Var(test::std::io::str)
-    Unary(Member("size"))
-      Var(test::std::io::str)
-    Unary(Member("file"))
-      Var(test::std::io::this)
-  Var(test::std::io::str)
-}
-fn write_file<ParsedGenericParams { order: [] }>(
-  this: test::std::io::File
-  string: &test::std::io::String
-) -> unit
-{
-  FunctionCall
-    Var(test::std::io::fwrite)
-    Unary(Member("data"))
-      Var(test::std::io::string)
-    Unary(Member("size"))
-      Var(test::std::io::string)
-    Unary(Member("file"))
-      Var(test::std::io::this)
-}
-fn print_file<ParsedGenericParams { order: [] }>(
-  this: test::std::io::File
-) -> unit
-{
-  FunctionCall
-    Var(test::std::io::write_char)
-    Literal(Char(91))
-  FunctionCall
-    Var(test::std::io::print)
-    Unary(Member("file"))
-      Var(test::std::io::this)
-  FunctionCall
-    Var(test::std::io::write_char)
-    Literal(Char(93))
-}
-Module(test::std::array)
-Import(*) from test::std::print
-Import(*) from test::std::mem
-Import(write_char, builtin::)
-struct Array {
-  data: &test::std::array::T,
-  size: int,
-}
-fn get<ParsedGenericParams { order: ["T"] }>(
-  this: test::std::array::Array<test::std::array::T>
-  index: int
-) -> test::std::array::T
-{
-  Return
-    Binary(Index)
-      Unary(Member("data"))
-        Var(test::std::array::this)
-      Var(test::std::array::index)
-}
-fn set<ParsedGenericParams { order: ["T"] }>(
-  this: test::std::array::Array<test::std::array::T>
-  index: int
-  value: test::std::array::T
-) -> unit
-{
-  Binary(Assign)
-    Binary(Index)
-      Unary(Member("data"))
-        Var(test::std::array::this)
-      Var(test::std::array::index)
-    Var(test::std::array::value)
-}
-fn fill<ParsedGenericParams { order: ["T"] }>(
-  this: test::std::array::Array<test::std::array::T>
-  value: test::std::array::T
-) -> unit
-{
-  Declaration(Integer(4), i)
-    Literal(Integer(0))
-  Loop
-    Binary(Comparison(Less))
-      Var(test::std::array::i)
-      Unary(Member("size"))
-        Var(test::std::array::this)
-    {
-      Binary(Assign)
-        Binary(Index)
-          Unary(Member("data"))
-            Var(test::std::array::this)
-          Var(test::std::array::i)
-        Var(test::std::array::value)
-      Unary(Increment { is_prefix: false })
-        Var(test::std::array::i)
-    }
-}
-fn print<ParsedGenericParams { order: [] }>(
-  this: test::std::array::Array<int>
-) -> unit
-{
-  Declaration(Integer(4), i)
-    Literal(Integer(0))
-  FunctionCall
-    Var(test::std::array::write_char)
-    Literal(Char(91))
-  Loop
-    Binary(Comparison(Less))
-      Var(test::std::array::i)
-      Unary(Member("size"))
-        Var(test::std::array::this)
-    {
-      If
-        Binary(Comparison(Greater))
-          Var(test::std::array::i)
-          Literal(Integer(0))
-        {
-          FunctionCall
-            Var(test::std::array::write_char)
-            Literal(Char(44))
-          FunctionCall
-            Var(test::std::array::write_char)
-            Literal(Char(32))
-        }
-      FunctionCall
-        Var(test::std::array::print)
-        Binary(Index)
-          Unary(Member("data"))
-            Var(test::std::array::this)
-          Var(test::std::array::i)
-      Unary(Increment { is_prefix: false })
-        Var(test::std::array::i)
-    }
-  FunctionCall
-    Var(test::std::array::write_char)
-    Literal(Char(93))
-  FunctionCall
-    Var(test::std::array::write_char)
-    Literal(Char(10))
-}
-fn create_array<ParsedGenericParams { order: ["T"] }>(
-  size: int
-) -> test::std::array::Array<test::std::array::T>
-{
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "Array" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "T" }, is_module_local: true }, generic_args: None }), location: Location { line: 42, column: 15, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\array.lyc" }) } }]) }), arr)
-    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "Array" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "T" }, is_module_local: true }, generic_args: None }), location: Location { line: 42, column: 34, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\array.lyc" }) } }]) }), location: Location { line: 42, column: 28, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\array.lyc" }) } })
-      data: 
-      FunctionCall
-        Var(test::std::array::malloc<test::std::array::T>)
-        Var(test::std::array::size)
-      size: 
-      Var(test::std::array::size)
-  FunctionCall
-    Var(test::std::array::memset<test::std::array::T>)
-    Unary(Member("data"))
-      Var(test::std::array::arr)
-    Literal(Integer(0))
-    Var(test::std::array::size)
-  Var(test::std::array::arr)
-}
-fn free<ParsedGenericParams { order: ["T"] }>(
-  this: test::std::array::Array<test::std::array::T>
-) -> unit
-{
-  FunctionCall
-    Var(test::std::array::free)
-    Unary(Cast(Src { value: Pointer(Unit), location: Location { line: 51, column: 23, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\array.lyc" }) } }))
-      Unary(Member("data"))
-        Var(test::std::array::this)
-}
-fn map<ParsedGenericParams { order: ["T", "K"] }>(
-  this: test::std::array::Array<test::std::array::T>
-  fn: fn(test::std::array::T) -> test::std::array::K
-) -> test::std::array::Array<test::std::array::K>
-{
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "Array" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "K" }, is_module_local: true }, generic_args: None }), location: Location { line: 55, column: 15, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\array.lyc" }) } }]) }), arr)
-    FunctionCall
-      Var(test::std::array::create_array<test::std::array::K>)
-      Unary(Member("size"))
-        Var(test::std::array::this)
-  Declaration(Integer(4), i)
-    Literal(Integer(0))
-  Loop
-    Binary(Comparison(Less))
-      Var(test::std::array::i)
-      Unary(Member("size"))
-        Var(test::std::array::this)
-    {
-      FunctionCall
-        Var(test::std::array::set<test::std::array::K>)
-        Var(test::std::array::arr)
-        Var(test::std::array::i)
-        FunctionCall
-          Var(test::std::array::fn)
-          FunctionCall
-            Var(test::std::array::get<test::std::array::T>)
-            Var(test::std::array::this)
-            Var(test::std::array::i)
-      Unary(Increment { is_prefix: false })
-        Var(test::std::array::i)
-    }
-  Var(test::std::array::arr)
-}
-fn filter<ParsedGenericParams { order: ["T"] }>(
-  this: test::std::array::Array<test::std::array::T>
-  fn: fn(test::std::array::T) -> bool
-) -> test::std::array::Array<test::std::array::T>
-{
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "Array" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, item_name: "T" }, is_module_local: true }, generic_args: None }), location: Location { line: 65, column: 15, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "array"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\array.lyc" }) } }]) }), arr)
-    FunctionCall
-      Var(test::std::array::create_array<test::std::array::T>)
-      Unary(Member("size"))
-        Var(test::std::array::this)
-  Declaration(Integer(4), i)
-    Literal(Integer(0))
-  Declaration(Integer(4), j)
-    Literal(Integer(0))
-  Loop
-    Binary(Comparison(Less))
-      Var(test::std::array::i)
-      Unary(Member("size"))
-        Var(test::std::array::this)
-    {
-      If
-        FunctionCall
-          Var(test::std::array::fn)
-          FunctionCall
-            Var(test::std::array::get<test::std::array::T>)
-            Var(test::std::array::this)
-            Var(test::std::array::i)
-        {
-          FunctionCall
-            Var(test::std::array::set<test::std::array::T>)
-            Var(test::std::array::arr)
-            Var(test::std::array::j)
-            FunctionCall
-              Var(test::std::array::get<test::std::array::T>)
-              Var(test::std::array::this)
-              Var(test::std::array::i)
-          Unary(Increment { is_prefix: false })
-            Var(test::std::array::j)
-        }
-      Unary(Increment { is_prefix: false })
-        Var(test::std::array::i)
-    }
-  Var(test::std::array::arr)
 }
 Module(test::std::vec)
 Import(*) from test::std::panic
@@ -1193,7 +1286,7 @@ struct Vec {
   size: int,
   capacity: int,
 }
-fn get<ParsedGenericParams { order: ["T"] }>(
+fn get<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
   this: &test::std::vec::Vec<test::std::vec::T>
   index: int
 ) -> test::std::vec::T
@@ -1217,7 +1310,7 @@ fn get<ParsedGenericParams { order: ["T"] }>(
       Var(test::std::vec::this)
     Var(test::std::vec::index)
 }
-fn get<ParsedGenericParams { order: ["T"] }>(
+fn get<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
   this: test::std::vec::Vec<test::std::vec::T>
   index: int
 ) -> test::std::vec::T
@@ -1228,7 +1321,7 @@ fn get<ParsedGenericParams { order: ["T"] }>(
       Var(test::std::vec::this)
     Var(test::std::vec::index)
 }
-fn set<ParsedGenericParams { order: ["T"] }>(
+fn set<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
   this: &test::std::vec::Vec<test::std::vec::T>
   index: int
   value: test::std::vec::T
@@ -1255,7 +1348,7 @@ fn set<ParsedGenericParams { order: ["T"] }>(
       Var(test::std::vec::index)
     Var(test::std::vec::value)
 }
-fn set<ParsedGenericParams { order: ["T"] }>(
+fn set<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
   this: test::std::vec::Vec<test::std::vec::T>
   index: int
   value: test::std::vec::T
@@ -1268,7 +1361,7 @@ fn set<ParsedGenericParams { order: ["T"] }>(
     Var(test::std::vec::index)
     Var(test::std::vec::value)
 }
-fn fill<ParsedGenericParams { order: ["T"] }>(
+fn fill<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
   this: test::std::vec::Vec<test::std::vec::T>
   value: test::std::vec::T
 ) -> unit
@@ -1291,7 +1384,7 @@ fn fill<ParsedGenericParams { order: ["T"] }>(
         Var(test::std::vec::i)
     }
 }
-fn print<ParsedGenericParams { order: [] }>(
+fn print<ParsedGenericParams { order: [], trait_bounds: {} }>(
   this: test::std::vec::Vec<int>
 ) -> unit
 {
@@ -1334,7 +1427,7 @@ fn print<ParsedGenericParams { order: [] }>(
     Var(test::std::vec::write_char)
     Literal(Char(10))
 }
-fn create_vec<ParsedGenericParams { order: ["T"] }>(
+fn create_vec<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
   initial_capacity: int
 ) -> test::std::vec::Vec<test::std::vec::T>
 {
@@ -1347,8 +1440,8 @@ fn create_vec<ParsedGenericParams { order: ["T"] }>(
         Var(test::std::vec::panic)
         Literal(String("Initial capacity must be greater than 0"))
     }
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "Vec" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "T" }, is_module_local: true }, generic_args: None }), location: Location { line: 61, column: 13, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\vec.lyc" }) } }]) }), arr)
-    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "Vec" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "T" }, is_module_local: true }, generic_args: None }), location: Location { line: 61, column: 30, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\vec.lyc" }) } }]) }), location: Location { line: 61, column: 26, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\vec.lyc" }) } })
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "Vec" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), location: Location { line: 61, column: 13, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\vec.lyc" }) } }] }), arr)
+    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "Vec" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), location: Location { line: 61, column: 30, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\vec.lyc" }) } }] }), location: Location { line: 61, column: 26, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\vec.lyc" }) } })
       data: 
       FunctionCall
         Var(test::std::vec::malloc<test::std::vec::T>)
@@ -1359,12 +1452,12 @@ fn create_vec<ParsedGenericParams { order: ["T"] }>(
       Var(test::std::vec::initial_capacity)
   Var(test::std::vec::arr)
 }
-fn create_sized_vec<ParsedGenericParams { order: ["T"] }>(
+fn create_sized_vec<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
   size: int
 ) -> test::std::vec::Vec<test::std::vec::T>
 {
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "Vec" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "T" }, is_module_local: true }, generic_args: None }), location: Location { line: 70, column: 13, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\vec.lyc" }) } }]) }), arr)
-    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "Vec" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "T" }, is_module_local: true }, generic_args: None }), location: Location { line: 70, column: 30, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\vec.lyc" }) } }]) }), location: Location { line: 70, column: 26, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\vec.lyc" }) } })
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "Vec" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), location: Location { line: 70, column: 13, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\vec.lyc" }) } }] }), arr)
+    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "Vec" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), location: Location { line: 70, column: 30, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\vec.lyc" }) } }] }), location: Location { line: 70, column: 26, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\vec.lyc" }) } })
       data: 
       FunctionCall
         Var(test::std::vec::malloc<test::std::vec::T>)
@@ -1381,7 +1474,7 @@ fn create_sized_vec<ParsedGenericParams { order: ["T"] }>(
     Var(test::std::vec::size)
   Var(test::std::vec::arr)
 }
-fn free<ParsedGenericParams { order: ["T"] }>(
+fn free<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
   this: test::std::vec::Vec<test::std::vec::T>
 ) -> unit
 {
@@ -1390,7 +1483,7 @@ fn free<ParsedGenericParams { order: ["T"] }>(
     Unary(Member("data"))
       Var(test::std::vec::this)
 }
-fn push<ParsedGenericParams { order: ["T"] }>(
+fn push<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
   this: &test::std::vec::Vec<test::std::vec::T>
   value: test::std::vec::T
 ) -> unit
@@ -1436,7 +1529,7 @@ fn push<ParsedGenericParams { order: ["T"] }>(
     Unary(Member("size"))
       Var(test::std::vec::this)
 }
-fn pop<ParsedGenericParams { order: ["T"] }>(
+fn pop<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
   this: &test::std::vec::Vec<test::std::vec::T>
 ) -> test::std::vec::T
 {
@@ -1453,7 +1546,7 @@ fn pop<ParsedGenericParams { order: ["T"] }>(
   Unary(Decrement { is_prefix: false })
     Unary(Member("size"))
       Var(test::std::vec::this)
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "T" }, is_module_local: true }, generic_args: None }), value)
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), value)
     Binary(Index)
       Unary(Member("data"))
         Var(test::std::vec::this)
@@ -1493,11 +1586,11 @@ fn pop<ParsedGenericParams { order: ["T"] }>(
     }
   Var(test::std::vec::value)
 }
-fn clone<ParsedGenericParams { order: ["T"] }>(
+fn clone<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
   this: test::std::vec::Vec<test::std::vec::T>
 ) -> test::std::vec::Vec<test::std::vec::T>
 {
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "Vec" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "T" }, is_module_local: true }, generic_args: None }), location: Location { line: 110, column: 13, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\vec.lyc" }) } }]) }), new_vec)
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "Vec" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), location: Location { line: 110, column: 13, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\vec.lyc" }) } }] }), new_vec)
     FunctionCall
       Var(test::std::vec::create_vec<test::std::vec::T>)
       Unary(Member("capacity"))
@@ -1517,12 +1610,12 @@ fn clone<ParsedGenericParams { order: ["T"] }>(
       Var(test::std::vec::this)
   Var(test::std::vec::new_vec)
 }
-fn map<ParsedGenericParams { order: ["T", "K"] }>(
+fn map<ParsedGenericParams { order: ["T", "K"], trait_bounds: {"T": [], "K": []} }>(
   this: test::std::vec::Vec<test::std::vec::T>
   fn: fn(test::std::vec::T) -> test::std::vec::K
 ) -> test::std::vec::Vec<test::std::vec::K>
 {
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "Vec" }, is_module_local: true }, generic_args: Some([Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "K" }, is_module_local: true }, generic_args: None }), location: Location { line: 117, column: 13, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\vec.lyc" }) } }]) }), arr)
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "Vec" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, item_name: "K" }, is_module_local: true }, generic_args: [] }), location: Location { line: 117, column: 13, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "vec"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\vec.lyc" }) } }] }), arr)
     FunctionCall
       Var(test::std::vec::create_vec<test::std::vec::K>)
       Unary(Member("size"))
@@ -1550,7 +1643,7 @@ fn map<ParsedGenericParams { order: ["T", "K"] }>(
     }
   Var(test::std::vec::arr)
 }
-fn foreach<ParsedGenericParams { order: ["T"] }>(
+fn foreach<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
   this: test::std::vec::Vec<test::std::vec::T>
   fn: fn(test::std::vec::T) -> unit
 ) -> unit
@@ -1573,48 +1666,228 @@ fn foreach<ParsedGenericParams { order: ["T"] }>(
         Var(test::std::vec::i)
     }
 }
-Module(test::enum_test)
-Import(*) from test::std::print
-Enum(Direction)
-  Up: Some(Integer(1))
-  Down: Some(Integer(2))
-  Left: Some(Integer(3))
-  Right: Some(Integer(2147483647))
-fn enum_test<ParsedGenericParams { order: [] }>(
+Module(test::std::mem)
+Import(*) from builtin::
+fn free<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
+  this: &test::std::mem::T
 ) -> unit
 {
   FunctionCall
-    Var(test::enum_test::println)
-    Literal(String("ENUM TEST"))
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, item_name: "Direction" }, is_module_local: true }, generic_args: None }), dir)
-    Var(Direction::::Up)
+    Var(test::std::mem::free)
+    Unary(Cast(Src { value: Pointer(Unit), location: Location { line: 4, column: 18, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\mem.lyc" }) } }))
+      Var(test::std::mem::this)
+}
+fn malloc<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
+  size: int
+) -> &test::std::mem::T
+{
+  Unary(Cast(Src { value: Pointer(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "T" }, is_module_local: true }, generic_args: [] })), location: Location { line: 8, column: 33, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\mem.lyc" }) } }))
+    FunctionCall
+      Var(test::std::mem::malloc)
+      Binary(Math(Mul))
+        Var(test::std::mem::size)
+        Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), location: Location { line: 8, column: 26, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\mem.lyc" }) } })
+}
+fn realloc<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
+  pointer: &test::std::mem::T
+  size: int
+) -> &test::std::mem::T
+{
   FunctionCall
-    Var(test::enum_test::println)
-    Unary(Cast(Src { value: Integer(4), location: Location { line: 13, column: 13, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\enum_test.lyc" }) } }))
-      Var(test::enum_test::dir)
+    Var(test::std::mem::free)
+    Var(test::std::mem::pointer)
   FunctionCall
-    Var(test::enum_test::println)
-    Binary(Comparison(Equals))
-      Var(Direction::::Down)
-      Var(Direction::::Left)
+    Var(test::std::mem::malloc<test::std::mem::T>)
+    Var(test::std::mem::size)
+}
+fn memset<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
+  pointer: &test::std::mem::T
+  value: int
+  size: int
+) -> unit
+{
   FunctionCall
-    Var(test::enum_test::println)
-    Literal(String("hi"))
+    Var(test::std::mem::memset)
+    Unary(Cast(Src { value: Pointer(Unit), location: Location { line: 17, column: 23, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\mem.lyc" }) } }))
+      Var(test::std::mem::pointer)
+    Var(test::std::mem::value)
+    Binary(Math(Mul))
+      Var(test::std::mem::size)
+      Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), location: Location { line: 17, column: 51, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\mem.lyc" }) } })
+}
+fn memcopy<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
+  dest: &test::std::mem::T
+  src: &test::std::mem::T
+  size: int
+) -> unit
+{
   FunctionCall
-    Var(test::enum_test::println)
-    Unary(Cast(Src { value: Integer(4), location: Location { line: 16, column: 26, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\enum_test.lyc" }) } }))
-      Var(Direction::::Right)
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, item_name: "Direction" }, is_module_local: true }, generic_args: None }), from_int)
-    Unary(Cast(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, item_name: "Direction" }, is_module_local: true }, generic_args: None }), location: Location { line: 17, column: 53, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\enum_test.lyc" }) } }))
-      Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, item_name: "Direction" }, is_module_local: true }, generic_args: None }), location: Location { line: 17, column: 38, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\enum_test.lyc" }) } })
+    Var(test::std::mem::memcopy)
+    Unary(Cast(Src { value: Pointer(Unit), location: Location { line: 21, column: 21, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\mem.lyc" }) } }))
+      Var(test::std::mem::dest)
+    Unary(Cast(Src { value: Pointer(Unit), location: Location { line: 21, column: 35, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\mem.lyc" }) } }))
+      Var(test::std::mem::src)
+    Binary(Math(Mul))
+      Var(test::std::mem::size)
+      Sizeof(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), location: Location { line: 21, column: 56, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "mem"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\mem.lyc" }) } })
+}
+Module(test::generic_test)
+struct MyStruct {
+  value: test::generic_test::T1,
+  value2: test::generic_test::Option<test::generic_test::T2>,
+  value3: int,
+  value4: &test::generic_test::T1,
+}
+struct Option {
+  value: test::generic_test::T,
+}
+struct TwoGenerics {
+  value: test::generic_test::T,
+  value2: test::generic_test::T2,
+}
+struct NestedGeneric {
+  value: test::generic_test::Option<test::generic_test::T>,
+}
+TypeAlias(MyStructIntInt, test::generic_test::MyStruct<int, int>)
+fn do_nothing<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
+  x: test::generic_test::T
+) -> test::generic_test::T
+{
+  Var(test::generic_test::x)
+}
+fn createStruct<ParsedGenericParams { order: ["T1", "T2"], trait_bounds: {"T1": [], "T2": []} }>(
+  val: test::generic_test::T1
+  val2: test::generic_test::T2
+  val3: int
+) -> test::generic_test::MyStruct<test::generic_test::T1, test::generic_test::T2>
+{
+  Declaration(var, my_struct)
+    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "MyStruct" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "T1" }, is_module_local: true }, generic_args: [] }), location: Location { line: 8, column: 38, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }, Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "T2" }, is_module_local: true }, generic_args: [] }), location: Location { line: 8, column: 42, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), location: Location { line: 8, column: 29, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } })
+      value: 
+      Var(test::generic_test::val)
+      value2: 
+      StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "T2" }, is_module_local: true }, generic_args: [] }), location: Location { line: 10, column: 28, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), location: Location { line: 10, column: 21, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } })
+        value: 
+        Var(test::generic_test::val2)
+      value3: 
+      Var(test::generic_test::val3)
+      value4: 
+      Unary(Borrow)
+        Var(test::generic_test::val)
+  Binary(Assign)
+    Unary(Member("value4"))
+      Var(test::generic_test::my_struct)
+    Unary(Borrow)
+      Unary(Member("value"))
+        Var(test::generic_test::my_struct)
+  Var(test::generic_test::my_struct)
+}
+fn test<ParsedGenericParams { order: [], trait_bounds: {} }>(
+) -> int
+{
+  Declaration(var, x)
+    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: [Src { value: Integer(4), location: Location { line: 28, column: 28, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), location: Location { line: 28, column: 21, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } })
+      value: 
+      Literal(Integer(10))
   FunctionCall
-    Var(test::enum_test::println)
-    Unary(Cast(Src { value: Integer(4), location: Location { line: 18, column: 18, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["enum_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\enum_test.lyc" }) } }))
-      Var(test::enum_test::from_int)
+    Var(test::generic_test::do_nothing<test::generic_test::Option<int>>)
+    Var(test::generic_test::x)
+  Declaration(var, my_struct)
+    FunctionCall
+      Var(test::generic_test::createStruct<int, int>)
+      Literal(Integer(10))
+      Literal(Integer(20))
+      Literal(Integer(30))
+  Declaration(Pointer(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "MyStruct" }, is_module_local: true }, generic_args: [Src { value: Integer(4), location: Location { line: 33, column: 19, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }, Src { value: Integer(4), location: Location { line: 33, column: 24, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] })), my_struct2)
+    Unary(Borrow)
+      Var(test::generic_test::my_struct)
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: [Src { value: Integer(4), location: Location { line: 35, column: 16, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), y)
+    Var(test::generic_test::x)
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "TwoGenerics" }, is_module_local: true }, generic_args: [Src { value: Integer(4), location: Location { line: 36, column: 21, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }, Src { value: Integer(4), location: Location { line: 36, column: 26, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), z)
+    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "TwoGenerics" }, is_module_local: true }, generic_args: [Src { value: Integer(4), location: Location { line: 36, column: 51, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }, Src { value: Integer(4), location: Location { line: 36, column: 56, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), location: Location { line: 36, column: 39, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } })
+      value: 
+      Literal(Integer(10))
+      value2: 
+      Literal(Integer(20))
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "NestedGeneric" }, is_module_local: true }, generic_args: [Src { value: Integer(4), location: Location { line: 40, column: 23, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), w)
+    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "NestedGeneric" }, is_module_local: true }, generic_args: [Src { value: Integer(4), location: Location { line: 40, column: 50, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), location: Location { line: 40, column: 36, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } })
+      value: 
+      Var(test::generic_test::x)
+  Declaration(Integer(4), a)
+    FunctionCall
+      Var(test::generic_test::generic_function<int>)
+      Literal(Integer(10))
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: [Src { value: Integer(4), location: Location { line: 44, column: 16, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), b)
+    FunctionCall
+      Var(test::generic_test::generic_function2<int>)
+      Var(test::generic_test::x)
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: [Src { value: Integer(4), location: Location { line: 45, column: 23, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), location: Location { line: 45, column: 16, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), b2)
+    FunctionCall
+      Var(test::generic_test::generic_function2<test::generic_test::Option<int>>)
+      StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: [Src { value: Integer(4), location: Location { line: 45, column: 85, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), location: Location { line: 45, column: 78, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), location: Location { line: 45, column: 71, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } })
+        value: 
+        Var(test::generic_test::x)
+  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "TwoGenerics" }, is_module_local: true }, generic_args: [Src { value: Char, location: Location { line: 48, column: 21, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }, Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: [Src { value: Char, location: Location { line: 48, column: 34, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), location: Location { line: 48, column: 27, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), c)
+    FunctionCall
+      Var(test::generic_test::partial_generic_function<char>)
+      Literal(Char(99))
+  Binary(Math(Add))
+    FunctionCall
+      Var(test::generic_test::add1)
+      FunctionCall
+        Var(test::generic_test::generic_function<int>)
+        FunctionCall
+          Var(test::generic_test::add1)
+          Unary(Member("value"))
+            Var(test::generic_test::x)
+    Var(test::generic_test::a)
+}
+fn generic_function<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
+  x: test::generic_test::T
+) -> test::generic_test::T
+{
+  Var(test::generic_test::x)
+}
+fn generic_function2<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
+  x: test::generic_test::Option<test::generic_test::T>
+) -> test::generic_test::Option<test::generic_test::T>
+{
+  Var(test::generic_test::x)
+}
+fn nested_generic_function<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
+  x: test::generic_test::T
+) -> test::generic_test::T
+{
+  FunctionCall
+    Var(test::generic_test::generic_function<int>)
+    Literal(Integer(5))
+  FunctionCall
+    Var(test::generic_test::generic_function<test::generic_test::T>)
+    Var(test::generic_test::x)
+}
+fn partial_generic_function<ParsedGenericParams { order: ["T"], trait_bounds: {"T": []} }>(
+  x: test::generic_test::T
+) -> test::generic_test::TwoGenerics<test::generic_test::T, test::generic_test::Option<test::generic_test::T>>
+{
+  StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "TwoGenerics" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), location: Location { line: 79, column: 21, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }, Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), location: Location { line: 79, column: 31, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), location: Location { line: 79, column: 24, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), location: Location { line: 79, column: 9, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } })
+    value2: 
+    StructInstance(Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "Option" }, is_module_local: true }, generic_args: [Src { value: Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, item_name: "T" }, is_module_local: true }, generic_args: [] }), location: Location { line: 80, column: 28, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } }] }), location: Location { line: 80, column: 21, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["generic_test"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\main\\generic_test.lyc" }) } })
+      value: 
+      Var(test::generic_test::x)
+    value: 
+    Var(test::generic_test::x)
+}
+fn add1<ParsedGenericParams { order: [], trait_bounds: {} }>(
+  x: int
+) -> int
+{
+  Binary(Math(Add))
+    Var(test::generic_test::x)
+    Literal(Integer(1))
 }
 Module(test::std::panic)
 Import(*) from test::std::print
-fn panic<ParsedGenericParams { order: [] }>(
+fn panic<ParsedGenericParams { order: [], trait_bounds: {} }>(
   message: &char
 ) -> unit
 {
@@ -1627,254 +1900,4 @@ fn panic<ParsedGenericParams { order: [] }>(
   FunctionCall
     Var(builtin::::exit)
     Literal(Integer(1))
-}
-Module(test::std::string)
-Import(*) from test::std::vec
-Import(write, builtin::)
-Import(read_char, builtin::)
-Import(read, builtin::)
-Import(free, test::std::mem)
-TypeAlias(String, test::std::string::Vec<char>)
-fn create_string<ParsedGenericParams { order: [] }>(
-  capacity: int
-) -> test::std::string::String
-{
-  Declaration(var, str)
-    FunctionCall
-      Var(test::std::string::create_vec<char>)
-      Var(test::std::string::capacity)
-  Var(test::std::string::str)
-}
-fn create_sized_string<ParsedGenericParams { order: [] }>(
-  size: int
-) -> test::std::string::String
-{
-  Declaration(var, str)
-    FunctionCall
-      Var(test::std::string::create_sized_vec<char>)
-      Var(test::std::string::size)
-  Var(test::std::string::str)
-}
-fn print<ParsedGenericParams { order: [] }>(
-  this: test::std::string::String
-) -> unit
-{
-  FunctionCall
-    Var(test::std::string::write)
-    Unary(Member("data"))
-      Var(test::std::string::this)
-    Unary(Member("size"))
-      Var(test::std::string::this)
-}
-fn free<ParsedGenericParams { order: [] }>(
-  this: test::std::string::String
-) -> unit
-{
-  FunctionCall
-    Var(test::std::string::free)
-    Unary(Member("data"))
-      Var(test::std::string::this)
-}
-fn from_literal<ParsedGenericParams { order: [] }>(
-  literal: &char
-) -> test::std::string::String
-{
-  Declaration(Integer(4), size)
-    Literal(Integer(0))
-  Loop
-    Binary(Comparison(NotEquals))
-      Binary(Index)
-        Var(test::std::string::literal)
-        Var(test::std::string::size)
-      Literal(Char(0))
-    {
-      Unary(Increment { is_prefix: false })
-        Var(test::std::string::size)
-    }
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "String" }, is_module_local: true }, generic_args: None }), str)
-    FunctionCall
-      Var(test::std::string::create_string)
-      Var(test::std::string::size)
-  Declaration(Integer(4), i)
-    Literal(Integer(0))
-  Loop
-    Binary(Comparison(Less))
-      Var(test::std::string::i)
-      Var(test::std::string::size)
-    {
-      FunctionCall
-        Var(test::std::string::set)
-        Unary(Borrow)
-          Var(test::std::string::str)
-        Var(test::std::string::i)
-        Binary(Index)
-          Var(test::std::string::literal)
-          Var(test::std::string::i)
-      Unary(Increment { is_prefix: false })
-        Var(test::std::string::i)
-    }
-  Var(test::std::string::str)
-}
-fn read_line<ParsedGenericParams { order: [] }>(
-) -> test::std::string::String
-{
-  Declaration(var, str)
-    FunctionCall
-      Var(test::std::string::create_string)
-      Literal(Integer(100))
-  Declaration(Integer(4), i)
-    Literal(Integer(0))
-  Loop
-    Binary(Comparison(Less))
-      Var(test::std::string::i)
-      Unary(Member("size"))
-        Var(test::std::string::str)
-    {
-      Declaration(Char, c)
-        FunctionCall
-          Var(test::std::string::read_char)
-      If
-        Binary(Logical(Or))
-          Binary(Comparison(Equals))
-            Var(test::std::string::c)
-            Literal(Char(10))
-          Binary(Comparison(Equals))
-            Var(test::std::string::c)
-            Literal(Char(13))
-        {
-          Break
-        }
-      FunctionCall
-        Var(test::std::string::set)
-        Unary(Borrow)
-          Var(test::std::string::str)
-        Var(test::std::string::i)
-        Var(test::std::string::c)
-      Unary(Increment { is_prefix: false })
-        Var(test::std::string::i)
-    }
-  Binary(Assign)
-    Unary(Member("size"))
-      Var(test::std::string::str)
-    Var(test::std::string::i)
-  Var(test::std::string::str)
-}
-fn concat<ParsedGenericParams { order: [] }>(
-  str1: &test::std::string::String
-  str2: &test::std::string::String
-) -> test::std::string::String
-{
-  Declaration(Struct(ParsedGenericId { id: ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, item_name: "String" }, is_module_local: true }, generic_args: None }), str)
-    FunctionCall
-      Var(test::std::string::create_string)
-      Binary(Math(Add))
-        Unary(Member("size"))
-          Var(test::std::string::str1)
-        Unary(Member("size"))
-          Var(test::std::string::str2)
-  Declaration(Integer(4), i)
-    Literal(Integer(0))
-  Loop
-    Binary(Comparison(Less))
-      Var(test::std::string::i)
-      Unary(Member("size"))
-        Var(test::std::string::str1)
-    {
-      FunctionCall
-        Var(test::std::string::set)
-        Unary(Borrow)
-          Var(test::std::string::str)
-        Var(test::std::string::i)
-        FunctionCall
-          Var(test::std::string::get)
-          Var(test::std::string::str1)
-          Var(test::std::string::i)
-      Unary(Increment { is_prefix: false })
-        Var(test::std::string::i)
-    }
-  Declaration(Integer(4), j)
-    Literal(Integer(0))
-  Loop
-    Binary(Comparison(Less))
-      Var(test::std::string::j)
-      Unary(Member("size"))
-        Var(test::std::string::str2)
-    {
-      FunctionCall
-        Var(test::std::string::set)
-        Unary(Borrow)
-          Var(test::std::string::str)
-        Var(test::std::string::i)
-        FunctionCall
-          Var(test::std::string::get)
-          Var(test::std::string::str2)
-          Var(test::std::string::j)
-      Unary(Increment { is_prefix: false })
-        Var(test::std::string::i)
-      Unary(Increment { is_prefix: false })
-        Var(test::std::string::j)
-    }
-  Var(test::std::string::str)
-}
-fn read_string<ParsedGenericParams { order: [] }>(
-  str: &test::std::string::String
-) -> unit
-{
-  FunctionCall
-    Var(test::std::string::read)
-    Unary(Member("data"))
-      Var(test::std::string::str)
-    Unary(Member("size"))
-      Var(test::std::string::str)
-}
-fn parse_int<ParsedGenericParams { order: [] }>(
-  str: &test::std::string::String
-) -> int
-{
-  Declaration(Integer(4), i)
-    Literal(Integer(0))
-  Declaration(Integer(4), num)
-    Literal(Integer(0))
-  Declaration(Integer(4), sign)
-    Literal(Integer(1))
-  If
-    Binary(Comparison(Equals))
-      FunctionCall
-        Var(test::std::string::get)
-        Var(test::std::string::str)
-        Literal(Integer(0))
-      Literal(Char(45))
-    {
-      Binary(Assign)
-        Var(test::std::string::sign)
-        Literal(Integer(-1))
-      Unary(Increment { is_prefix: false })
-        Var(test::std::string::i)
-    }
-  Loop
-    Binary(Comparison(Less))
-      Var(test::std::string::i)
-      Unary(Member("size"))
-        Var(test::std::string::str)
-    {
-      Binary(Assign)
-        Var(test::std::string::num)
-        Binary(Math(Add))
-          Binary(Math(Mul))
-            Var(test::std::string::num)
-            Literal(Integer(10))
-          Binary(Math(Sub))
-            Unary(Cast(Src { value: Integer(4), location: Location { line: 83, column: 42, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\string.lyc" }) } }))
-              FunctionCall
-                Var(test::std::string::get)
-                Var(test::std::string::str)
-                Var(test::std::string::i)
-            Unary(Cast(Src { value: Integer(4), location: Location { line: 83, column: 55, file: Some(ModulePath { id: ModuleIdentifier { root_name: "test", path: ["std", "string"] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data\\src\\std\\string.lyc" }) } }))
-              Literal(Char(48))
-      Unary(Increment { is_prefix: false })
-        Var(test::std::string::i)
-    }
-  Binary(Math(Mul))
-    Var(test::std::string::num)
-    Var(test::std::string::sign)
 }
