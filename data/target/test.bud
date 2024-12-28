@@ -1,0 +1,2298 @@
+call _L46_test::::main;59;<0>;(0);<>;()
+exit
+_L68_::::read_char;-1;<0>;(0);<>;():
+movi r0 1
+subi sp 1
+read r0 [sp]
+pop #8 r0
+ret
+_L69_::::write_char;-1;<0>;(1);<>;(char):
+movi r0 1
+write r0 [sp;8]
+ret
+_L70_::::write;-1;<0>;(2);<>;(&char,int):
+load #32 r0 [sp;8]
+load #64 r1 [sp;12]
+write r0 [r1]
+ret
+_L71_::::read;-1;<0>;(2);<>;(&char,int):
+load #32 r0 [sp;8]
+load #64 r1 [sp;12]
+read r0 [r1]
+ret
+_L72_::::malloc;-1;<0>;(1);<>;(int):
+load #32 r1 [sp;8]
+alloc r1 r0
+ret
+_L73_::::free;-1;<0>;(1);<>;(&unit):
+load #64 r0 [sp;8]
+free r0
+ret
+_L74_::::random;-1;<0>;(0);<>;():
+rand r0
+ret
+_L75_::::exit;-1;<0>;(1);<>;(int):
+load #32 r0 [sp;8]
+exit
+_L76_::::memcopy;-1;<0>;(3);<>;(&unit,&unit,int):
+load #32 r0 [sp;8]
+load #64 r1 [sp;12]
+load #64 r2 [sp;20]
+memcopy r0 [r1] [r2]
+ret
+_L77_::::memset;-1;<0>;(3);<>;(&unit,int,int):
+load #32 r0 [sp;8]
+load #32 r1 [sp;12]
+load #64 r2 [sp;16]
+memset r0 r1 [r2]
+ret
+_L78_::::fopen;-1;<0>;(1);<>;(&char):
+load #64 r0 [sp;8]
+fileopen r0 [r0]
+ret
+_L79_::::fclose;-1;<0>;(1);<>;(int):
+load #32 r0 [sp;8]
+fileclose r0
+ret
+_L80_::::fread;-1;<0>;(3);<>;(&char,int,int):
+load #32 r1 [sp;8]
+load #32 r0 [sp;12]
+load #64 r2 [sp;16]
+fileread r1 r0 [r2]
+ret
+_L81_::::fwrite;-1;<0>;(3);<>;(&char,int,int):
+load #32 r0 [sp;8]
+load #32 r1 [sp;12]
+load #64 r2 [sp;16]
+filewrite r0 r1 [r2]
+ret
+_L0_test::std::array::print;32;<0>;(1);<>;(Struct(test::std::array::Array;<1>;<int>)):
+push #64 bp
+mov bp sp
+subi sp 4
+movi r0 0
+store #32 r0 [bp;-4]
+movi r0 91
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+_L83_loop:
+load #32 r0 [bp;-4]
+push #32 r0
+movi r0 12
+pushmem r0 [bp;16]
+addi sp 12
+load #32 r0 [sp;-12]
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setl r0
+cmpi r0 0
+jz _L85_else
+load #32 r0 [bp;-4]
+push #32 r0
+movi r0 0
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setg r0
+cmpi r0 0
+jz _L87_else
+movi r0 44
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+movi r0 32
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+jmp _L88_end
+_L87_else:
+_L88_end:
+load #32 r0 [bp;-4]
+push #64 r0
+movi r0 12
+pushmem r0 [bp;16]
+addi sp 12
+load #64 r0 [sp;-8]
+pop #64 r1
+muli r1 4
+add r1 r0
+load #32 r0 [r1]
+push #32 r0
+call _L51_test::std::print::print;44;<0>;(1);<>;(int)
+addi sp 4
+lea r0 [bp;-4]
+load #32 r1 [r0]
+push #32 r1
+inc r1
+store #32 r1 [r0]
+pop #32 r0
+_L84_continue:
+jmp _L83_loop
+_L85_else:
+_L86_break:
+movi r0 93
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+movi r0 10
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+_L82_test::std::array::print;32;<0>;(1);<>;(Struct(test::std::array::Array;<1>;<int>))_return:
+mov sp bp
+pop #64 bp
+ret
+_L1_test::std::string::create_sized_string;4;<0>;(1);<>;(int):
+push #64 bp
+mov bp sp
+subi sp 16
+subi sp 16
+load #32 r0 [bp;16]
+push #32 r0
+call _L20_test::std::vec::create_sized_vec;51;<1>;(1);<char>;(int)
+addi sp 4
+movi r0 16
+popmem r0 [bp;-16]
+movi r0 16
+pushmem r0 [bp;-16]
+_L89_test::std::string::create_sized_string;4;<0>;(1);<>;(int)_return:
+movi r0 16
+popmem r0 [bp;20]
+mov sp bp
+pop #64 bp
+ret
+_L2_test::std::vec::pop;54;<1>;(1);<int>;(&Struct(test::std::vec::Vec;<1>;<int>)):
+push #64 bp
+mov bp sp
+subi sp 12
+load #64 r0 [bp;16]
+load #32 r1 [r0;4]
+mov r0 r1
+push #32 r0
+movi r0 0
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setz r0
+cmpi r0 0
+jz _L91_else
+lea r0 _L52_constant_0
+push #64 r0
+call _L28_test::std::panic::panic;37;<0>;(1);<>;(&char)
+addi sp 8
+jmp _L92_end
+_L91_else:
+_L92_end:
+load #64 r0 [bp;16]
+addi r0 4
+load #32 r1 [r0]
+push #32 r1
+dec r1
+store #32 r1 [r0]
+pop #32 r0
+load #64 r0 [bp;16]
+load #32 r1 [r0;4]
+mov r0 r1
+push #64 r0
+load #64 r0 [bp;16]
+load #64 r1 [r0;8]
+mov r0 r1
+pop #64 r1
+muli r1 4
+add r1 r0
+load #32 r0 [r1]
+store #32 r0 [bp;-4]
+load #64 r0 [bp;16]
+load #32 r1 [r0;4]
+mov r0 r1
+push #32 r0
+load #64 r0 [bp;16]
+load #32 r1 [r0;0]
+mov r0 r1
+push #32 r0
+movi r0 2
+mov r1 r0
+pop #32 r0
+div r0 r1
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setl r0
+cmpi r0 0
+jz _L93_else
+movi r0 2
+push #32 r0
+load #64 r0 [bp;16]
+addi r0 0
+mov r1 r0
+load #32 r0 [r1]
+pop #32 r2
+div r0 r2
+store #32 r0 [r1]
+load #64 r0 [bp;16]
+load #64 r1 [r0;8]
+mov r0 r1
+push #64 r0
+load #64 r0 [bp;16]
+load #32 r1 [r0;0]
+mov r0 r1
+push #32 r0
+movi r0 4
+mov r1 r0
+pop #32 r0
+mul r0 r1
+push #32 r0
+call _L14_test::std::vec::reallocate;58;<0>;(2);<>;(&unit,int)
+addi sp 12
+store #64 r0 [bp;-12]
+load #64 r0 [bp;16]
+load #64 r1 [r0;8]
+mov r0 r1
+push #64 r0
+load #64 r0 [bp;-12]
+push #64 r0
+load #64 r0 [bp;16]
+load #32 r1 [r0;4]
+mov r0 r1
+push #32 r0
+movi r0 4
+mov r1 r0
+pop #32 r0
+mul r0 r1
+push #32 r0
+call _L76_::::memcopy;-1;<0>;(3);<>;(&unit,&unit,int)
+addi sp 20
+load #64 r0 [bp;-12]
+push #64 r0
+load #64 r0 [bp;16]
+addi r0 8
+mov r1 r0
+pop #64 r0
+store #64 r0 [r1]
+jmp _L94_end
+_L93_else:
+_L94_end:
+load #32 r0 [bp;-4]
+_L90_test::std::vec::pop;54;<1>;(1);<int>;(&Struct(test::std::vec::Vec;<1>;<int>))_return:
+mov sp bp
+pop #64 bp
+ret
+_L3_test::std::print::print;38;<0>;(1);<>;(&char):
+push #64 bp
+mov bp sp
+subi sp 4
+movi r0 0
+store #32 r0 [bp;-4]
+_L96_loop:
+load #32 r0 [bp;-4]
+push #64 r0
+load #64 r0 [bp;16]
+pop #64 r1
+muli r1 1
+add r1 r0
+load #8 r0 [r1]
+push #8 r0
+movi r0 0
+mov r1 r0
+pop #8 r0
+cmp r0 r1
+setnz r0
+cmpi r0 0
+jz _L98_else
+lea r0 [bp;-4]
+load #32 r1 [r0]
+push #32 r1
+inc r1
+store #32 r1 [r0]
+pop #32 r0
+_L97_continue:
+jmp _L96_loop
+_L98_else:
+_L99_break:
+load #64 r0 [bp;16]
+push #64 r0
+load #32 r0 [bp;-4]
+push #32 r0
+call _L70_::::write;-1;<0>;(2);<>;(&char,int)
+addi sp 12
+_L95_test::std::print::print;38;<0>;(1);<>;(&char)_return:
+mov sp bp
+pop #64 bp
+ret
+_L4_test::std::array::create_array;33;<1>;(1);<int>;(int):
+push #64 bp
+mov bp sp
+subi sp 12
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 4
+mov r1 r0
+pop #32 r0
+mul r0 r1
+push #32 r0
+call _L72_::::malloc;-1;<0>;(1);<>;(int)
+addi sp 4
+push #64 r0
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 12
+popmem r0 [bp;-12]
+movi r0 12
+pushmem r0 [bp;-12]
+_L100_test::std::array::create_array;33;<1>;(1);<int>;(int)_return:
+movi r0 12
+popmem r0 [bp;20]
+mov sp bp
+pop #64 bp
+ret
+_L5_test::enum_test::enum_test;0;<0>;(0);<>;():
+push #64 bp
+mov bp sp
+subi sp 8
+lea r0 _L53_constant_1
+push #64 r0
+call _L17_test::std::print::println;39;<0>;(1);<>;(&char)
+addi sp 8
+movi r0 1
+store #32 r0 [bp;-4]
+load #32 r0 [bp;-4]
+signext #32 r0
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+movi r0 2
+push #32 r0
+movi r0 3
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setz r0
+push #8 r0
+call _L38_test::std::print::println;43;<0>;(1);<>;(bool)
+addi sp 1
+lea r0 _L54_constant_2
+push #64 r0
+call _L17_test::std::print::println;39;<0>;(1);<>;(&char)
+addi sp 8
+movi r0 2147483647
+signext #32 r0
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+movi r0 4
+signext #32 r0
+store #32 r0 [bp;-8]
+load #32 r0 [bp;-8]
+signext #32 r0
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+_L101_test::enum_test::enum_test;0;<0>;(0);<>;()_return:
+mov sp bp
+pop #64 bp
+ret
+_L6_test::::unit_test;63;<0>;(2);<>;(unit,unit):
+push #64 bp
+mov bp sp
+subi sp 0
+_L102_test::::unit_test;63;<0>;(2);<>;(unit,unit)_return:
+mov sp bp
+pop #64 bp
+ret
+_L7_test::std::vec::create_sized_vec;51;<1>;(1);<int>;(int):
+push #64 bp
+mov bp sp
+subi sp 16
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 4
+mov r1 r0
+pop #32 r0
+mul r0 r1
+push #32 r0
+call _L72_::::malloc;-1;<0>;(1);<>;(int)
+addi sp 4
+push #64 r0
+load #32 r0 [bp;16]
+push #32 r0
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 16
+popmem r0 [bp;-16]
+movi r0 16
+pushmem r0 [bp;-16]
+addi sp 16
+load #64 r0 [sp;-8]
+push #64 r0
+movi r0 0
+push #32 r0
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 4
+mov r1 r0
+pop #32 r0
+mul r0 r1
+push #32 r0
+call _L77_::::memset;-1;<0>;(3);<>;(&unit,int,int)
+addi sp 16
+movi r0 16
+pushmem r0 [bp;-16]
+_L103_test::std::vec::create_sized_vec;51;<1>;(1);<int>;(int)_return:
+movi r0 16
+popmem r0 [bp;20]
+mov sp bp
+pop #64 bp
+ret
+_L8_test::std::io::write_file;19;<0>;(2);<>;(Struct(test::std::io::File;<0>;<>),&Struct(test::std::vec::Vec;<1>;<char>)):
+push #64 bp
+mov bp sp
+subi sp 0
+load #64 r0 [bp;16]
+load #64 r1 [r0;8]
+mov r0 r1
+push #64 r0
+load #64 r0 [bp;16]
+load #32 r1 [r0;4]
+mov r0 r1
+push #32 r0
+movi r0 4
+pushmem r0 [bp;24]
+addi sp 4
+load #32 r0 [sp;-4]
+push #32 r0
+call _L81_::::fwrite;-1;<0>;(3);<>;(&char,int,int)
+addi sp 16
+_L104_test::std::io::write_file;19;<0>;(2);<>;(Struct(test::std::io::File;<0>;<>),&Struct(test::std::vec::Vec;<1>;<char>))_return:
+mov sp bp
+pop #64 bp
+ret
+_L9_test::std::vec::clone;55;<1>;(1);<int>;(Struct(test::std::vec::Vec;<1>;<int>)):
+push #64 bp
+mov bp sp
+subi sp 16
+subi sp 16
+movi r0 16
+pushmem r0 [bp;16]
+addi sp 16
+load #32 r0 [sp;-16]
+push #32 r0
+call _L36_test::std::vec::create_vec;50;<1>;(1);<int>;(int)
+addi sp 4
+movi r0 16
+popmem r0 [bp;-16]
+movi r0 16
+pushmem r0 [bp;16]
+addi sp 16
+load #64 r0 [sp;-8]
+push #64 r0
+movi r0 16
+pushmem r0 [bp;-16]
+addi sp 16
+load #64 r0 [sp;-8]
+push #64 r0
+movi r0 16
+pushmem r0 [bp;16]
+addi sp 16
+load #32 r0 [sp;-12]
+push #32 r0
+movi r0 4
+mov r1 r0
+pop #32 r0
+mul r0 r1
+push #32 r0
+call _L76_::::memcopy;-1;<0>;(3);<>;(&unit,&unit,int)
+addi sp 20
+movi r0 16
+pushmem r0 [bp;16]
+addi sp 16
+load #32 r0 [sp;-12]
+push #64 r0
+lea r0 [bp;-16]
+addi r0 4
+mov r1 r0
+pop #64 r0
+store #32 r0 [r1]
+movi r0 16
+pushmem r0 [bp;-16]
+_L105_test::std::vec::clone;55;<1>;(1);<int>;(Struct(test::std::vec::Vec;<1>;<int>))_return:
+movi r0 16
+popmem r0 [bp;32]
+mov sp bp
+pop #64 bp
+ret
+_L10_test::std::array::set;30;<1>;(3);<int>;(Struct(test::std::array::Array;<1>;<int>),int,int):
+push #64 bp
+mov bp sp
+subi sp 0
+load #32 r0 [bp;16]
+push #64 r0
+load #32 r0 [bp;20]
+push #64 r0
+movi r0 12
+pushmem r0 [bp;24]
+addi sp 12
+load #64 r0 [sp;-8]
+pop #64 r1
+muli r1 4
+add r0 r1
+mov r1 r0
+pop #64 r0
+store #32 r0 [r1]
+_L106_test::std::array::set;30;<1>;(3);<int>;(Struct(test::std::array::Array;<1>;<int>),int,int)_return:
+mov sp bp
+pop #64 bp
+ret
+_L11_test::std::print::print;42;<0>;(1);<>;(bool):
+push #64 bp
+mov bp sp
+subi sp 0
+load #8 r0 [bp;16]
+cmpi r0 0
+jz _L108_else
+lea r0 _L55_constant_3
+push #64 r0
+call _L3_test::std::print::print;38;<0>;(1);<>;(&char)
+addi sp 8
+jmp _L109_end
+_L108_else:
+lea r0 _L56_constant_4
+push #64 r0
+call _L3_test::std::print::print;38;<0>;(1);<>;(&char)
+addi sp 8
+_L109_end:
+_L107_test::std::print::print;42;<0>;(1);<>;(bool)_return:
+mov sp bp
+pop #64 bp
+ret
+_L12_test::std::array::get;29;<1>;(2);<int>;(Struct(test::std::array::Array;<1>;<int>),int):
+push #64 bp
+mov bp sp
+subi sp 0
+load #32 r0 [bp;16]
+push #64 r0
+movi r0 12
+pushmem r0 [bp;20]
+addi sp 12
+load #64 r0 [sp;-8]
+pop #64 r1
+muli r1 4
+add r1 r0
+load #32 r0 [r1]
+jmp _L110_test::std::array::get;29;<1>;(2);<int>;(Struct(test::std::array::Array;<1>;<int>),int)_return
+_L110_test::std::array::get;29;<1>;(2);<int>;(Struct(test::std::array::Array;<1>;<int>),int)_return:
+mov sp bp
+pop #64 bp
+ret
+_L13_test::std::vec::get;46;<1>;(2);<int>;(Struct(test::std::vec::Vec;<1>;<int>),int):
+push #64 bp
+mov bp sp
+subi sp 0
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 0
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setl r0
+cmpi r0 0
+jnz _L114_short_circuit
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 16
+pushmem r0 [bp;20]
+addi sp 16
+load #32 r0 [sp;-12]
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setge r0
+_L114_short_circuit:
+cmpi r0 0
+jz _L112_else
+lea r0 _L57_constant_5
+push #64 r0
+call _L28_test::std::panic::panic;37;<0>;(1);<>;(&char)
+addi sp 8
+jmp _L113_end
+_L112_else:
+_L113_end:
+load #32 r0 [bp;16]
+push #64 r0
+movi r0 16
+pushmem r0 [bp;20]
+addi sp 16
+load #64 r0 [sp;-8]
+pop #64 r1
+muli r1 4
+add r1 r0
+load #32 r0 [r1]
+jmp _L111_test::std::vec::get;46;<1>;(2);<int>;(Struct(test::std::vec::Vec;<1>;<int>),int)_return
+_L111_test::std::vec::get;46;<1>;(2);<int>;(Struct(test::std::vec::Vec;<1>;<int>),int)_return:
+mov sp bp
+pop #64 bp
+ret
+_L14_test::std::vec::reallocate;58;<0>;(2);<>;(&unit,int):
+push #64 bp
+mov bp sp
+subi sp 0
+load #64 r0 [bp;20]
+push #64 r0
+call _L73_::::free;-1;<0>;(1);<>;(&unit)
+addi sp 8
+load #32 r0 [bp;16]
+push #32 r0
+call _L72_::::malloc;-1;<0>;(1);<>;(int)
+addi sp 4
+_L115_test::std::vec::reallocate;58;<0>;(2);<>;(&unit,int)_return:
+mov sp bp
+pop #64 bp
+ret
+_L15_test::generic_test::do_nothing;21;<1>;(1);<Struct(test::generic_test::Option;<1>;<int>)>;(Struct(test::generic_test::Option;<1>;<int>)):
+push #64 bp
+mov bp sp
+subi sp 0
+movi r0 4
+pushmem r0 [bp;16]
+_L116_test::generic_test::do_nothing;21;<1>;(1);<Struct(test::generic_test::Option;<1>;<int>)>;(Struct(test::generic_test::Option;<1>;<int>))_return:
+movi r0 4
+popmem r0 [bp;20]
+mov sp bp
+pop #64 bp
+ret
+_L16_test::std::io::read_chars;18;<0>;(2);<>;(Struct(test::std::io::File;<0>;<>),int):
+push #64 bp
+mov bp sp
+subi sp 16
+subi sp 16
+load #32 r0 [bp;16]
+push #32 r0
+call _L1_test::std::string::create_sized_string;4;<0>;(1);<>;(int)
+addi sp 4
+movi r0 16
+popmem r0 [bp;-16]
+movi r0 16
+pushmem r0 [bp;-16]
+addi sp 16
+load #64 r0 [sp;-8]
+push #64 r0
+movi r0 16
+pushmem r0 [bp;-16]
+addi sp 16
+load #32 r0 [sp;-12]
+push #32 r0
+movi r0 4
+pushmem r0 [bp;20]
+addi sp 4
+load #32 r0 [sp;-4]
+push #32 r0
+call _L80_::::fread;-1;<0>;(3);<>;(&char,int,int)
+addi sp 16
+movi r0 16
+pushmem r0 [bp;-16]
+_L117_test::std::io::read_chars;18;<0>;(2);<>;(Struct(test::std::io::File;<0>;<>),int)_return:
+movi r0 16
+popmem r0 [bp;24]
+mov sp bp
+pop #64 bp
+ret
+_L17_test::std::print::println;39;<0>;(1);<>;(&char):
+push #64 bp
+mov bp sp
+subi sp 0
+load #64 r0 [bp;16]
+push #64 r0
+call _L3_test::std::print::print;38;<0>;(1);<>;(&char)
+addi sp 8
+movi r0 10
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+_L118_test::std::print::println;39;<0>;(1);<>;(&char)_return:
+mov sp bp
+pop #64 bp
+ret
+_L18_test::::call_test_fn;66;<0>;(2);<>;(fn(int)->int,int):
+push #64 bp
+mov bp sp
+subi sp 0
+load #32 r0 [bp;16]
+push #32 r0
+load #64 r0 [bp;20]
+call [r0]
+addi sp 4
+_L119_test::::call_test_fn;66;<0>;(2);<>;(fn(int)->int,int)_return:
+mov sp bp
+pop #64 bp
+ret
+_L19_test::::generic_sizeof_test;62;<2>;(0);<Struct(test::generic_test::MyStruct;<2>;<char,long>),int>;():
+push #64 bp
+mov bp sp
+subi sp 0
+movi r0 21
+push #32 r0
+movi r0 4
+mov r1 r0
+pop #32 r0
+mul r0 r1
+_L120_test::::generic_sizeof_test;62;<2>;(0);<Struct(test::generic_test::MyStruct;<2>;<char,long>),int>;()_return:
+mov sp bp
+pop #64 bp
+ret
+_L20_test::std::vec::create_sized_vec;51;<1>;(1);<char>;(int):
+push #64 bp
+mov bp sp
+subi sp 16
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 1
+mov r1 r0
+pop #32 r0
+mul r0 r1
+push #32 r0
+call _L72_::::malloc;-1;<0>;(1);<>;(int)
+addi sp 4
+push #64 r0
+load #32 r0 [bp;16]
+push #32 r0
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 16
+popmem r0 [bp;-16]
+movi r0 16
+pushmem r0 [bp;-16]
+addi sp 16
+load #64 r0 [sp;-8]
+push #64 r0
+movi r0 0
+push #32 r0
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 1
+mov r1 r0
+pop #32 r0
+mul r0 r1
+push #32 r0
+call _L77_::::memset;-1;<0>;(3);<>;(&unit,int,int)
+addi sp 16
+movi r0 16
+pushmem r0 [bp;-16]
+_L121_test::std::vec::create_sized_vec;51;<1>;(1);<char>;(int)_return:
+movi r0 16
+popmem r0 [bp;20]
+mov sp bp
+pop #64 bp
+ret
+_L21_test::std::io::close;16;<0>;(1);<>;(Struct(test::std::io::File;<0>;<>)):
+push #64 bp
+mov bp sp
+subi sp 0
+movi r0 4
+pushmem r0 [bp;16]
+addi sp 4
+load #32 r0 [sp;-4]
+push #32 r0
+call _L79_::::fclose;-1;<0>;(1);<>;(int)
+addi sp 4
+_L122_test::std::io::close;16;<0>;(1);<>;(Struct(test::std::io::File;<0>;<>))_return:
+mov sp bp
+pop #64 bp
+ret
+_L22_test::::mul2;64;<0>;(1);<>;(int):
+push #64 bp
+mov bp sp
+subi sp 0
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 2
+mov r1 r0
+pop #32 r0
+mul r0 r1
+_L123_test::::mul2;64;<0>;(1);<>;(int)_return:
+mov sp bp
+pop #64 bp
+ret
+_L23_test::::generic_call_test;67;<1>;(2);<int>;(fn(int)->int,int):
+push #64 bp
+mov bp sp
+subi sp 0
+load #32 r0 [bp;16]
+push #32 r0
+load #64 r0 [bp;20]
+call [r0]
+addi sp 4
+_L124_test::::generic_call_test;67;<1>;(2);<int>;(fn(int)->int,int)_return:
+mov sp bp
+pop #64 bp
+ret
+_L24_test::std::io::file_test;14;<0>;(0);<>;():
+push #64 bp
+mov bp sp
+subi sp 24
+subi sp 4
+lea r0 _L58_constant_6
+push #64 r0
+call _L35_test::std::io::open_file;15;<0>;(1);<>;(&char)
+addi sp 8
+movi r0 4
+popmem r0 [bp;-4]
+subi sp 4
+lea r0 _L59_constant_7
+push #64 r0
+call _L35_test::std::io::open_file;15;<0>;(1);<>;(&char)
+addi sp 8
+movi r0 4
+popmem r0 [bp;-8]
+movi r0 10
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+subi sp 16
+movi r0 4
+pushmem r0 [bp;-4]
+movi r0 100
+push #32 r0
+call _L16_test::std::io::read_chars;18;<0>;(2);<>;(Struct(test::std::io::File;<0>;<>),int)
+addi sp 8
+movi r0 16
+popmem r0 [bp;-24]
+movi r0 16
+pushmem r0 [bp;-24]
+call _L32_test::std::string::print;5;<0>;(1);<>;(Struct(test::std::vec::Vec;<1>;<char>))
+addi sp 16
+movi r0 4
+pushmem r0 [bp;-8]
+lea r0 [bp;-24]
+push #64 r0
+call _L8_test::std::io::write_file;19;<0>;(2);<>;(Struct(test::std::io::File;<0>;<>),&Struct(test::std::vec::Vec;<1>;<char>))
+addi sp 12
+movi r0 4
+pushmem r0 [bp;-4]
+call _L21_test::std::io::close;16;<0>;(1);<>;(Struct(test::std::io::File;<0>;<>))
+addi sp 4
+movi r0 4
+pushmem r0 [bp;-8]
+call _L21_test::std::io::close;16;<0>;(1);<>;(Struct(test::std::io::File;<0>;<>))
+addi sp 4
+movi r0 4
+pushmem r0 [bp;-4]
+call _L37_test::std::io::print_file;20;<0>;(1);<>;(Struct(test::std::io::File;<0>;<>))
+addi sp 4
+movi r0 4
+pushmem r0 [bp;-8]
+call _L37_test::std::io::print_file;20;<0>;(1);<>;(Struct(test::std::io::File;<0>;<>))
+addi sp 4
+movi r0 16
+pushmem r0 [bp;-24]
+call _L34_test::std::string::free;6;<0>;(1);<>;(Struct(test::std::vec::Vec;<1>;<char>))
+addi sp 16
+_L125_test::std::io::file_test;14;<0>;(0);<>;()_return:
+mov sp bp
+pop #64 bp
+ret
+_L25_test::::generic_sizeof_test;61;<1>;(0);<int>;():
+push #64 bp
+mov bp sp
+subi sp 0
+movi r0 4
+_L126_test::::generic_sizeof_test;61;<1>;(0);<int>;()_return:
+mov sp bp
+pop #64 bp
+ret
+_L26_test::std::array::fill;31;<1>;(2);<int>;(Struct(test::std::array::Array;<1>;<int>),int):
+push #64 bp
+mov bp sp
+subi sp 4
+movi r0 0
+store #32 r0 [bp;-4]
+_L128_loop:
+load #32 r0 [bp;-4]
+push #32 r0
+movi r0 12
+pushmem r0 [bp;20]
+addi sp 12
+load #32 r0 [sp;-12]
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setl r0
+cmpi r0 0
+jz _L130_else
+load #32 r0 [bp;16]
+push #64 r0
+load #32 r0 [bp;-4]
+push #64 r0
+movi r0 12
+pushmem r0 [bp;20]
+addi sp 12
+load #64 r0 [sp;-8]
+pop #64 r1
+muli r1 4
+add r0 r1
+mov r1 r0
+pop #64 r0
+store #32 r0 [r1]
+lea r0 [bp;-4]
+load #32 r1 [r0]
+push #32 r1
+inc r1
+store #32 r1 [r0]
+pop #32 r0
+_L129_continue:
+jmp _L128_loop
+_L130_else:
+_L131_break:
+_L127_test::std::array::fill;31;<1>;(2);<int>;(Struct(test::std::array::Array;<1>;<int>),int)_return:
+mov sp bp
+pop #64 bp
+ret
+_L27_test::std::array::map;35;<2>;(2);<int,int>;(Struct(test::std::array::Array;<1>;<int>),fn(int)->int):
+push #64 bp
+mov bp sp
+subi sp 16
+subi sp 12
+movi r0 12
+pushmem r0 [bp;24]
+addi sp 12
+load #32 r0 [sp;-12]
+push #32 r0
+call _L4_test::std::array::create_array;33;<1>;(1);<int>;(int)
+addi sp 4
+movi r0 12
+popmem r0 [bp;-12]
+movi r0 0
+store #32 r0 [bp;-16]
+_L133_loop:
+load #32 r0 [bp;-16]
+push #32 r0
+movi r0 12
+pushmem r0 [bp;24]
+addi sp 12
+load #32 r0 [sp;-12]
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setl r0
+cmpi r0 0
+jz _L135_else
+movi r0 12
+pushmem r0 [bp;-12]
+load #32 r0 [bp;-16]
+push #32 r0
+movi r0 12
+pushmem r0 [bp;24]
+load #32 r0 [bp;-16]
+push #32 r0
+call _L12_test::std::array::get;29;<1>;(2);<int>;(Struct(test::std::array::Array;<1>;<int>),int)
+addi sp 16
+push #32 r0
+load #64 r0 [bp;16]
+call [r0]
+addi sp 4
+push #32 r0
+call _L10_test::std::array::set;30;<1>;(3);<int>;(Struct(test::std::array::Array;<1>;<int>),int,int)
+addi sp 20
+lea r0 [bp;-16]
+load #32 r1 [r0]
+push #32 r1
+inc r1
+store #32 r1 [r0]
+pop #32 r0
+_L134_continue:
+jmp _L133_loop
+_L135_else:
+_L136_break:
+movi r0 12
+pushmem r0 [bp;-12]
+_L132_test::std::array::map;35;<2>;(2);<int,int>;(Struct(test::std::array::Array;<1>;<int>),fn(int)->int)_return:
+movi r0 12
+popmem r0 [bp;36]
+mov sp bp
+pop #64 bp
+ret
+_L28_test::std::panic::panic;37;<0>;(1);<>;(&char):
+push #64 bp
+mov bp sp
+subi sp 0
+lea r0 _L60_constant_8
+push #64 r0
+call _L17_test::std::print::println;39;<0>;(1);<>;(&char)
+addi sp 8
+load #64 r0 [bp;16]
+push #64 r0
+call _L17_test::std::print::println;39;<0>;(1);<>;(&char)
+addi sp 8
+movi r0 1
+push #32 r0
+call _L75_::::exit;-1;<0>;(1);<>;(int)
+addi sp 4
+_L137_test::std::panic::panic;37;<0>;(1);<>;(&char)_return:
+mov sp bp
+pop #64 bp
+ret
+_L29_test::std::vec::foreach;57;<1>;(2);<int>;(Struct(test::std::vec::Vec;<1>;<int>),fn(int)->unit):
+push #64 bp
+mov bp sp
+subi sp 4
+movi r0 0
+store #32 r0 [bp;-4]
+_L139_loop:
+load #32 r0 [bp;-4]
+push #32 r0
+movi r0 16
+pushmem r0 [bp;24]
+addi sp 16
+load #32 r0 [sp;-12]
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setl r0
+cmpi r0 0
+jz _L141_else
+movi r0 16
+pushmem r0 [bp;24]
+load #32 r0 [bp;-4]
+push #32 r0
+call _L13_test::std::vec::get;46;<1>;(2);<int>;(Struct(test::std::vec::Vec;<1>;<int>),int)
+addi sp 20
+push #32 r0
+load #64 r0 [bp;16]
+call [r0]
+addi sp 4
+lea r0 [bp;-4]
+load #32 r1 [r0]
+push #32 r1
+inc r1
+store #32 r1 [r0]
+pop #32 r0
+_L140_continue:
+jmp _L139_loop
+_L141_else:
+_L142_break:
+_L138_test::std::vec::foreach;57;<1>;(2);<int>;(Struct(test::std::vec::Vec;<1>;<int>),fn(int)->unit)_return:
+mov sp bp
+pop #64 bp
+ret
+_L30_test::std::print::println;41;<0>;(1);<>;(char):
+push #64 bp
+mov bp sp
+subi sp 0
+load #8 r0 [bp;16]
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+movi r0 10
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+_L143_test::std::print::println;41;<0>;(1);<>;(char)_return:
+mov sp bp
+pop #64 bp
+ret
+_L31_test::generic_test::createStruct;22;<2>;(3);<int,int>;(int,int,int):
+push #64 bp
+mov bp sp
+subi sp 20
+load #32 r0 [bp;24]
+push #32 r0
+load #32 r0 [bp;20]
+push #32 r0
+load #32 r0 [bp;16]
+push #32 r0
+lea r0 [bp;24]
+push #64 r0
+movi r0 20
+popmem r0 [bp;-20]
+lea r0 [bp;-20]
+addi r0 16
+push #64 r0
+lea r0 [bp;-20]
+addi r0 0
+mov r1 r0
+pop #64 r0
+store #64 r0 [r1]
+movi r0 20
+pushmem r0 [bp;-20]
+_L144_test::generic_test::createStruct;22;<2>;(3);<int,int>;(int,int,int)_return:
+movi r0 20
+popmem r0 [bp;28]
+mov sp bp
+pop #64 bp
+ret
+_L32_test::std::string::print;5;<0>;(1);<>;(Struct(test::std::vec::Vec;<1>;<char>)):
+push #64 bp
+mov bp sp
+subi sp 0
+movi r0 16
+pushmem r0 [bp;16]
+addi sp 16
+load #64 r0 [sp;-8]
+push #64 r0
+movi r0 16
+pushmem r0 [bp;16]
+addi sp 16
+load #32 r0 [sp;-12]
+push #32 r0
+call _L70_::::write;-1;<0>;(2);<>;(&char,int)
+addi sp 12
+_L145_test::std::string::print;5;<0>;(1);<>;(Struct(test::std::vec::Vec;<1>;<char>))_return:
+mov sp bp
+pop #64 bp
+ret
+_L33_test::generic_test::generic_function;24;<1>;(1);<int>;(int):
+push #64 bp
+mov bp sp
+subi sp 0
+load #32 r0 [bp;16]
+_L146_test::generic_test::generic_function;24;<1>;(1);<int>;(int)_return:
+mov sp bp
+pop #64 bp
+ret
+_L34_test::std::string::free;6;<0>;(1);<>;(Struct(test::std::vec::Vec;<1>;<char>)):
+push #64 bp
+mov bp sp
+subi sp 0
+movi r0 16
+pushmem r0 [bp;16]
+addi sp 16
+load #64 r0 [sp;-8]
+push #64 r0
+call _L73_::::free;-1;<0>;(1);<>;(&unit)
+addi sp 8
+_L147_test::std::string::free;6;<0>;(1);<>;(Struct(test::std::vec::Vec;<1>;<char>))_return:
+mov sp bp
+pop #64 bp
+ret
+_L35_test::std::io::open_file;15;<0>;(1);<>;(&char):
+push #64 bp
+mov bp sp
+subi sp 4
+load #64 r0 [bp;16]
+push #64 r0
+call _L78_::::fopen;-1;<0>;(1);<>;(&char)
+addi sp 8
+store #32 r0 [bp;-4]
+load #32 r0 [bp;-4]
+push #32 r0
+_L148_test::std::io::open_file;15;<0>;(1);<>;(&char)_return:
+movi r0 4
+popmem r0 [bp;24]
+mov sp bp
+pop #64 bp
+ret
+_L36_test::std::vec::create_vec;50;<1>;(1);<int>;(int):
+push #64 bp
+mov bp sp
+subi sp 16
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 0
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setle r0
+cmpi r0 0
+jz _L150_else
+lea r0 _L61_constant_9
+push #64 r0
+call _L28_test::std::panic::panic;37;<0>;(1);<>;(&char)
+addi sp 8
+jmp _L151_end
+_L150_else:
+_L151_end:
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 4
+mov r1 r0
+pop #32 r0
+mul r0 r1
+push #32 r0
+call _L72_::::malloc;-1;<0>;(1);<>;(int)
+addi sp 4
+push #64 r0
+movi r0 0
+push #32 r0
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 16
+popmem r0 [bp;-16]
+movi r0 16
+pushmem r0 [bp;-16]
+_L149_test::std::vec::create_vec;50;<1>;(1);<int>;(int)_return:
+movi r0 16
+popmem r0 [bp;20]
+mov sp bp
+pop #64 bp
+ret
+_L37_test::std::io::print_file;20;<0>;(1);<>;(Struct(test::std::io::File;<0>;<>)):
+push #64 bp
+mov bp sp
+subi sp 0
+movi r0 91
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+movi r0 4
+pushmem r0 [bp;16]
+addi sp 4
+load #32 r0 [sp;-4]
+push #32 r0
+call _L51_test::std::print::print;44;<0>;(1);<>;(int)
+addi sp 4
+movi r0 93
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+_L152_test::std::io::print_file;20;<0>;(1);<>;(Struct(test::std::io::File;<0>;<>))_return:
+mov sp bp
+pop #64 bp
+ret
+_L38_test::std::print::println;43;<0>;(1);<>;(bool):
+push #64 bp
+mov bp sp
+subi sp 0
+load #8 r0 [bp;16]
+push #8 r0
+call _L11_test::std::print::print;42;<0>;(1);<>;(bool)
+addi sp 1
+movi r0 10
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+_L153_test::std::print::println;43;<0>;(1);<>;(bool)_return:
+mov sp bp
+pop #64 bp
+ret
+_L39_test::std::vec::print;49;<0>;(1);<>;(Struct(test::std::vec::Vec;<1>;<int>)):
+push #64 bp
+mov bp sp
+subi sp 4
+movi r0 0
+store #32 r0 [bp;-4]
+movi r0 91
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+_L155_loop:
+load #32 r0 [bp;-4]
+push #32 r0
+movi r0 16
+pushmem r0 [bp;16]
+addi sp 16
+load #32 r0 [sp;-12]
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setl r0
+cmpi r0 0
+jz _L157_else
+load #32 r0 [bp;-4]
+push #32 r0
+movi r0 0
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setg r0
+cmpi r0 0
+jz _L159_else
+movi r0 44
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+movi r0 32
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+jmp _L160_end
+_L159_else:
+_L160_end:
+load #32 r0 [bp;-4]
+push #64 r0
+movi r0 16
+pushmem r0 [bp;16]
+addi sp 16
+load #64 r0 [sp;-8]
+pop #64 r1
+muli r1 4
+add r1 r0
+load #32 r0 [r1]
+push #32 r0
+call _L51_test::std::print::print;44;<0>;(1);<>;(int)
+addi sp 4
+lea r0 [bp;-4]
+load #32 r1 [r0]
+push #32 r1
+inc r1
+store #32 r1 [r0]
+pop #32 r0
+_L156_continue:
+jmp _L155_loop
+_L157_else:
+_L158_break:
+movi r0 93
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+movi r0 10
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+_L154_test::std::vec::print;49;<0>;(1);<>;(Struct(test::std::vec::Vec;<1>;<int>))_return:
+mov sp bp
+pop #64 bp
+ret
+_L40_small_test::::add;2;<0>;(2);<>;(int,int):
+push #64 bp
+mov bp sp
+subi sp 0
+load #32 r0 [bp;20]
+push #32 r0
+load #32 r0 [bp;16]
+mov r1 r0
+pop #32 r0
+add r0 r1
+_L161_small_test::::add;2;<0>;(2);<>;(int,int)_return:
+mov sp bp
+pop #64 bp
+ret
+_L41_test::generic_test::add1;28;<0>;(1);<>;(int):
+push #64 bp
+mov bp sp
+subi sp 0
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 1
+mov r1 r0
+pop #32 r0
+add r0 r1
+_L162_test::generic_test::add1;28;<0>;(1);<>;(int)_return:
+mov sp bp
+pop #64 bp
+ret
+_L42_test::generic_test::partial_generic_function;27;<1>;(1);<char>;(char):
+push #64 bp
+mov bp sp
+subi sp 0
+load #8 r0 [bp;16]
+push #8 r0
+load #8 r0 [bp;16]
+push #8 r0
+_L163_test::generic_test::partial_generic_function;27;<1>;(1);<char>;(char)_return:
+movi r0 2
+popmem r0 [bp;17]
+mov sp bp
+pop #64 bp
+ret
+_L43_test::generic_test::test;23;<0>;(0);<>;():
+push #64 bp
+mov bp sp
+subi sp 62
+movi r0 10
+push #32 r0
+movi r0 4
+popmem r0 [bp;-4]
+subi sp 4
+movi r0 4
+pushmem r0 [bp;-4]
+call _L15_test::generic_test::do_nothing;21;<1>;(1);<Struct(test::generic_test::Option;<1>;<int>)>;(Struct(test::generic_test::Option;<1>;<int>))
+addi sp 8
+subi sp 20
+movi r0 10
+push #32 r0
+movi r0 20
+push #32 r0
+movi r0 30
+push #32 r0
+call _L31_test::generic_test::createStruct;22;<2>;(3);<int,int>;(int,int,int)
+addi sp 12
+movi r0 20
+popmem r0 [bp;-24]
+lea r0 [bp;-24]
+store #64 r0 [bp;-32]
+movi r0 4
+pushmem r0 [bp;-4]
+movi r0 4
+popmem r0 [bp;-36]
+movi r0 10
+push #32 r0
+movi r0 20
+push #32 r0
+movi r0 8
+popmem r0 [bp;-44]
+movi r0 4
+pushmem r0 [bp;-4]
+movi r0 4
+popmem r0 [bp;-48]
+movi r0 10
+push #32 r0
+call _L33_test::generic_test::generic_function;24;<1>;(1);<int>;(int)
+addi sp 4
+store #32 r0 [bp;-52]
+subi sp 4
+movi r0 4
+pushmem r0 [bp;-4]
+call _L48_test::generic_test::generic_function2;25;<1>;(1);<int>;(Struct(test::generic_test::Option;<1>;<int>))
+addi sp 4
+movi r0 4
+popmem r0 [bp;-56]
+subi sp 4
+movi r0 4
+pushmem r0 [bp;-4]
+call _L49_test::generic_test::generic_function2;25;<1>;(1);<Struct(test::generic_test::Option;<1>;<int>)>;(Struct(test::generic_test::Option;<1>;<Struct(test::generic_test::Option;<1>;<int>)>))
+addi sp 4
+movi r0 4
+popmem r0 [bp;-60]
+subi sp 2
+movi r0 99
+push #8 r0
+call _L42_test::generic_test::partial_generic_function;27;<1>;(1);<char>;(char)
+addi sp 1
+movi r0 2
+popmem r0 [bp;-62]
+movi r0 4
+pushmem r0 [bp;-4]
+addi sp 4
+load #32 r0 [sp;-4]
+push #32 r0
+call _L41_test::generic_test::add1;28;<0>;(1);<>;(int)
+addi sp 4
+push #32 r0
+call _L33_test::generic_test::generic_function;24;<1>;(1);<int>;(int)
+addi sp 4
+push #32 r0
+call _L41_test::generic_test::add1;28;<0>;(1);<>;(int)
+addi sp 4
+push #32 r0
+load #32 r0 [bp;-52]
+mov r1 r0
+pop #32 r0
+add r0 r1
+_L164_test::generic_test::test;23;<0>;(0);<>;()_return:
+mov sp bp
+pop #64 bp
+ret
+_L44_test::std::vec::map;56;<2>;(2);<int,int>;(Struct(test::std::vec::Vec;<1>;<int>),fn(int)->int):
+push #64 bp
+mov bp sp
+subi sp 20
+subi sp 16
+movi r0 16
+pushmem r0 [bp;24]
+addi sp 16
+load #32 r0 [sp;-12]
+push #32 r0
+call _L36_test::std::vec::create_vec;50;<1>;(1);<int>;(int)
+addi sp 4
+movi r0 16
+popmem r0 [bp;-16]
+movi r0 0
+store #32 r0 [bp;-20]
+_L166_loop:
+load #32 r0 [bp;-20]
+push #32 r0
+movi r0 16
+pushmem r0 [bp;24]
+addi sp 16
+load #32 r0 [sp;-12]
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setl r0
+cmpi r0 0
+jz _L168_else
+lea r0 [bp;-16]
+push #64 r0
+movi r0 16
+pushmem r0 [bp;24]
+load #32 r0 [bp;-20]
+push #32 r0
+call _L13_test::std::vec::get;46;<1>;(2);<int>;(Struct(test::std::vec::Vec;<1>;<int>),int)
+addi sp 20
+push #32 r0
+load #64 r0 [bp;16]
+call [r0]
+addi sp 4
+push #32 r0
+call _L47_test::std::vec::push;53;<1>;(2);<int>;(&Struct(test::std::vec::Vec;<1>;<int>),int)
+addi sp 12
+lea r0 [bp;-20]
+load #32 r1 [r0]
+push #32 r1
+inc r1
+store #32 r1 [r0]
+pop #32 r0
+_L167_continue:
+jmp _L166_loop
+_L168_else:
+_L169_break:
+movi r0 16
+pushmem r0 [bp;-16]
+_L165_test::std::vec::map;56;<2>;(2);<int,int>;(Struct(test::std::vec::Vec;<1>;<int>),fn(int)->int)_return:
+movi r0 16
+popmem r0 [bp;40]
+mov sp bp
+pop #64 bp
+ret
+_L45_test::::tuple_test;68;<1>;(2);<char>;(char,int):
+push #64 bp
+mov bp sp
+subi sp 0
+load #8 r0 [bp;20]
+push #8 r0
+load #32 r0 [bp;16]
+push #32 r0
+_L170_test::::tuple_test;68;<1>;(2);<char>;(char,int)_return:
+movi r0 5
+popmem r0 [bp;21]
+mov sp bp
+pop #64 bp
+ret
+_L46_test::::main;59;<0>;(0);<>;():
+push #64 bp
+mov bp sp
+subi sp 201
+subi sp 12
+movi r0 100
+push #32 r0
+call _L4_test::std::array::create_array;33;<1>;(1);<int>;(int)
+addi sp 4
+movi r0 12
+popmem r0 [bp;-12]
+movi r0 12
+pushmem r0 [bp;-12]
+movi r0 10
+push #32 r0
+call _L26_test::std::array::fill;31;<1>;(2);<int>;(Struct(test::std::array::Array;<1>;<int>),int)
+addi sp 16
+movi r0 12
+pushmem r0 [bp;-12]
+movi r0 8
+push #32 r0
+call _L19_test::::generic_sizeof_test;62;<2>;(0);<Struct(test::generic_test::MyStruct;<2>;<char,long>),int>;()
+push #32 r0
+call _L10_test::std::array::set;30;<1>;(3);<int>;(Struct(test::std::array::Array;<1>;<int>),int,int)
+addi sp 20
+movi r0 0
+store #32 r0 [bp;-16]
+_L172_loop:
+load #32 r0 [bp;-16]
+push #32 r0
+movi r0 5
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setl r0
+cmpi r0 0
+jz _L174_else
+movi r0 12
+pushmem r0 [bp;-12]
+load #32 r0 [bp;-16]
+push #32 r0
+load #32 r0 [bp;-16]
+push #32 r0
+call _L10_test::std::array::set;30;<1>;(3);<int>;(Struct(test::std::array::Array;<1>;<int>),int,int)
+addi sp 20
+jmp _L173_continue
+jmp _L175_break
+call _L6_test::::unit_test;63;<0>;(2);<>;(unit,unit)
+movi r0 12
+pushmem r0 [bp;-12]
+load #32 r0 [bp;-16]
+push #32 r0
+load #32 r0 [bp;-16]
+push #32 r0
+movi r0 50
+mov r1 r0
+pop #32 r0
+add r0 r1
+push #32 r0
+call _L10_test::std::array::set;30;<1>;(3);<int>;(Struct(test::std::array::Array;<1>;<int>),int,int)
+addi sp 20
+_L173_continue:
+lea r0 [bp;-16]
+load #32 r1 [r0]
+push #32 r1
+inc r1
+store #32 r1 [r0]
+pop #32 r0
+jmp _L172_loop
+_L174_else:
+_L175_break:
+movi r0 12
+pushmem r0 [bp;-12]
+call _L0_test::std::array::print;32;<0>;(1);<>;(Struct(test::std::array::Array;<1>;<int>))
+addi sp 12
+subi sp 20
+movi r0 10
+push #32 r0
+movi r0 20
+push #32 r0
+movi r0 30
+push #32 r0
+call _L31_test::generic_test::createStruct;22;<2>;(3);<int,int>;(int,int,int)
+addi sp 12
+movi r0 20
+popmem r0 [bp;-36]
+call _L24_test::std::io::file_test;14;<0>;(0);<>;()
+call _L25_test::::generic_sizeof_test;61;<1>;(0);<int>;()
+movi r0 0
+store #32 r0 [bp;-40]
+movi r0 1
+signext #32 r0
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+movi r0 1
+push #32 r0
+movi r0 1
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setz r0
+push #8 r0
+call _L38_test::std::print::println;43;<0>;(1);<>;(bool)
+addi sp 1
+lea r0 _L62_constant_10
+push #64 r0
+call _L17_test::std::print::println;39;<0>;(1);<>;(&char)
+addi sp 8
+movi r0 -240
+signext #32 r0
+push #32 r0
+call _L51_test::std::print::print;44;<0>;(1);<>;(int)
+addi sp 4
+call _L5_test::enum_test::enum_test;0;<0>;(0);<>;()
+lea r0 _L63_constant_11
+push #64 r0
+call _L17_test::std::print::println;39;<0>;(1);<>;(&char)
+addi sp 8
+lea r0 _L22_test::::mul2;64;<0>;(1);<>;(int)
+store #64 r0 [bp;-48]
+movi r0 10
+push #32 r0
+load #64 r0 [bp;-48]
+call [r0]
+addi sp 4
+store #32 r0 [bp;-52]
+load #32 r0 [bp;-52]
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+movi r0 10
+push #32 r0
+load #64 r0 [bp;-48]
+call [r0]
+addi sp 4
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+load #64 r0 [bp;-48]
+push #64 r0
+movi r0 10
+push #32 r0
+call _L18_test::::call_test_fn;66;<0>;(2);<>;(fn(int)->int,int)
+addi sp 12
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+lea r0 _L64_constant_12
+push #64 r0
+call _L17_test::std::print::println;39;<0>;(1);<>;(&char)
+addi sp 8
+lea r0 _L23_test::::generic_call_test;67;<1>;(2);<int>;(fn(int)->int,int)
+store #64 r0 [bp;-60]
+load #64 r0 [bp;-48]
+push #64 r0
+movi r0 12
+push #32 r0
+load #64 r0 [bp;-60]
+call [r0]
+addi sp 12
+store #32 r0 [bp;-64]
+load #32 r0 [bp;-64]
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+subi sp 12
+movi r0 12
+pushmem r0 [bp;-12]
+load #64 r0 [bp;-48]
+push #64 r0
+call _L27_test::std::array::map;35;<2>;(2);<int,int>;(Struct(test::std::array::Array;<1>;<int>),fn(int)->int)
+addi sp 20
+movi r0 12
+popmem r0 [bp;-76]
+movi r0 12
+pushmem r0 [bp;-76]
+call _L0_test::std::array::print;32;<0>;(1);<>;(Struct(test::std::array::Array;<1>;<int>))
+addi sp 12
+subi sp 16
+movi r0 1
+push #32 r0
+call _L36_test::std::vec::create_vec;50;<1>;(1);<int>;(int)
+addi sp 4
+movi r0 16
+popmem r0 [bp;-92]
+lea r0 [bp;-92]
+push #64 r0
+movi r0 10
+push #32 r0
+call _L47_test::std::vec::push;53;<1>;(2);<int>;(&Struct(test::std::vec::Vec;<1>;<int>),int)
+addi sp 12
+lea r0 [bp;-92]
+push #64 r0
+movi r0 20
+push #32 r0
+call _L47_test::std::vec::push;53;<1>;(2);<int>;(&Struct(test::std::vec::Vec;<1>;<int>),int)
+addi sp 12
+movi r0 16
+pushmem r0 [bp;-92]
+call _L39_test::std::vec::print;49;<0>;(1);<>;(Struct(test::std::vec::Vec;<1>;<int>))
+addi sp 16
+lea r0 [bp;-92]
+push #64 r0
+movi r0 30
+push #32 r0
+call _L47_test::std::vec::push;53;<1>;(2);<int>;(&Struct(test::std::vec::Vec;<1>;<int>),int)
+addi sp 12
+subi sp 16
+movi r0 16
+pushmem r0 [bp;-92]
+call _L9_test::std::vec::clone;55;<1>;(1);<int>;(Struct(test::std::vec::Vec;<1>;<int>))
+addi sp 16
+movi r0 16
+popmem r0 [bp;-108]
+movi r0 16
+pushmem r0 [bp;-108]
+call _L39_test::std::vec::print;49;<0>;(1);<>;(Struct(test::std::vec::Vec;<1>;<int>))
+addi sp 16
+movi r0 16
+pushmem r0 [bp;-92]
+call _L39_test::std::vec::print;49;<0>;(1);<>;(Struct(test::std::vec::Vec;<1>;<int>))
+addi sp 16
+movi r0 16
+pushmem r0 [bp;-92]
+addi sp 16
+load #32 r0 [sp;-16]
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+lea r0 [bp;-92]
+push #64 r0
+movi r0 40
+push #32 r0
+call _L47_test::std::vec::push;53;<1>;(2);<int>;(&Struct(test::std::vec::Vec;<1>;<int>),int)
+addi sp 12
+lea r0 [bp;-92]
+push #64 r0
+movi r0 50
+push #32 r0
+call _L47_test::std::vec::push;53;<1>;(2);<int>;(&Struct(test::std::vec::Vec;<1>;<int>),int)
+addi sp 12
+movi r0 16
+pushmem r0 [bp;-92]
+call _L39_test::std::vec::print;49;<0>;(1);<>;(Struct(test::std::vec::Vec;<1>;<int>))
+addi sp 16
+movi r0 16
+pushmem r0 [bp;-92]
+addi sp 16
+load #32 r0 [sp;-16]
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+subi sp 16
+movi r0 16
+pushmem r0 [bp;-92]
+lea r0 _L22_test::::mul2;64;<0>;(1);<>;(int)
+push #64 r0
+call _L44_test::std::vec::map;56;<2>;(2);<int,int>;(Struct(test::std::vec::Vec;<1>;<int>),fn(int)->int)
+addi sp 24
+movi r0 16
+popmem r0 [bp;-124]
+movi r0 16
+pushmem r0 [bp;-124]
+call _L39_test::std::vec::print;49;<0>;(1);<>;(Struct(test::std::vec::Vec;<1>;<int>))
+addi sp 16
+lea r0 [bp;-92]
+push #64 r0
+call _L2_test::std::vec::pop;54;<1>;(1);<int>;(&Struct(test::std::vec::Vec;<1>;<int>))
+addi sp 8
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+lea r0 [bp;-92]
+push #64 r0
+call _L2_test::std::vec::pop;54;<1>;(1);<int>;(&Struct(test::std::vec::Vec;<1>;<int>))
+addi sp 8
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+lea r0 [bp;-92]
+push #64 r0
+call _L2_test::std::vec::pop;54;<1>;(1);<int>;(&Struct(test::std::vec::Vec;<1>;<int>))
+addi sp 8
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+lea r0 [bp;-92]
+push #64 r0
+call _L2_test::std::vec::pop;54;<1>;(1);<int>;(&Struct(test::std::vec::Vec;<1>;<int>))
+addi sp 8
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+movi r0 16
+pushmem r0 [bp;-92]
+call _L39_test::std::vec::print;49;<0>;(1);<>;(Struct(test::std::vec::Vec;<1>;<int>))
+addi sp 16
+lea r0 _L50_test::std::print::println;45;<0>;(1);<>;(int)
+store #64 r0 [bp;-132]
+movi r0 16
+pushmem r0 [bp;-124]
+load #64 r0 [bp;-132]
+push #64 r0
+call _L29_test::std::vec::foreach;57;<1>;(2);<int>;(Struct(test::std::vec::Vec;<1>;<int>),fn(int)->unit)
+addi sp 24
+lea r0 _L65_constant_13
+push #64 r0
+call _L17_test::std::print::println;39;<0>;(1);<>;(&char)
+addi sp 8
+movi r0 -11
+push #32 r0
+movi r0 -22
+push #32 r0
+movi r0 8
+popmem r0 [bp;-140]
+subi sp 5
+movi r0 99
+push #8 r0
+movi r0 10
+push #32 r0
+call _L45_test::::tuple_test;68;<1>;(2);<char>;(char,int)
+addi sp 5
+movi r0 5
+popmem r0 [bp;-145]
+movi r0 8
+pushmem r0 [bp;-140]
+addi sp 8
+load #32 r0 [sp;-8]
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+movi r0 5
+pushmem r0 [bp;-145]
+addi sp 5
+load #8 r0 [sp;-1]
+push #8 r0
+call _L30_test::std::print::println;41;<0>;(1);<>;(char)
+addi sp 1
+movi r0 8
+pushmem r0 [bp;-140]
+movi r0 8
+pushmem r0 [bp;-140]
+movi r0 16
+popmem r0 [bp;-161]
+movi r0 72
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+movi r0 16
+pushmem r0 [bp;-161]
+addi sp 16
+movi r0 8
+pushmem r0 [sp;-8]
+addi sp 8
+load #32 r0 [sp;-8]
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+movi r0 256
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+movi r0 10
+push #32 r0
+movi r0 20
+push #32 r0
+movi r0 30
+push #32 r0
+movi r0 40
+push #32 r0
+movi r0 16
+popmem r0 [bp;-177]
+movi r0 1
+store #32 r0 [bp;-181]
+load #32 r0 [bp;-181]
+signext #32 r0
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+movi r0 10
+push #32 r0
+movi r0 20
+push #32 r0
+call _L40_small_test::::add;2;<0>;(2);<>;(int,int)
+addi sp 8
+push #32 r0
+movi r0 20
+push #32 r0
+call _L40_small_test::::add;2;<0>;(2);<>;(int,int)
+addi sp 8
+store #32 r0 [bp;-185]
+load #32 r0 [bp;-185]
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+lea r0 _L66_constant_14
+push #64 r0
+call _L17_test::std::print::println;39;<0>;(1);<>;(&char)
+addi sp 8
+subi sp 16
+movi r0 5
+push #32 r0
+call _L7_test::std::vec::create_sized_vec;51;<1>;(1);<int>;(int)
+addi sp 4
+movi r0 16
+popmem r0 [bp;-201]
+movi r0 16
+pushmem r0 [bp;-201]
+call _L39_test::std::vec::print;49;<0>;(1);<>;(Struct(test::std::vec::Vec;<1>;<int>))
+addi sp 16
+lea r0 _L67_constant_15
+push #64 r0
+call _L17_test::std::print::println;39;<0>;(1);<>;(&char)
+addi sp 8
+lea r0 [bp;-92]
+push #64 r0
+call _L2_test::std::vec::pop;54;<1>;(1);<int>;(&Struct(test::std::vec::Vec;<1>;<int>))
+addi sp 8
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+lea r0 [bp;-92]
+push #64 r0
+call _L2_test::std::vec::pop;54;<1>;(1);<int>;(&Struct(test::std::vec::Vec;<1>;<int>))
+addi sp 8
+push #32 r0
+call _L50_test::std::print::println;45;<0>;(1);<>;(int)
+addi sp 4
+call _L43_test::generic_test::test;23;<0>;(0);<>;()
+push #32 r0
+movi r0 12
+pushmem r0 [bp;-12]
+movi r0 9
+push #32 r0
+call _L12_test::std::array::get;29;<1>;(2);<int>;(Struct(test::std::array::Array;<1>;<int>),int)
+addi sp 16
+mov r1 r0
+pop #32 r0
+add r0 r1
+_L171_test::::main;59;<0>;(0);<>;()_return:
+mov sp bp
+pop #64 bp
+ret
+_L47_test::std::vec::push;53;<1>;(2);<int>;(&Struct(test::std::vec::Vec;<1>;<int>),int):
+push #64 bp
+mov bp sp
+subi sp 8
+load #64 r0 [bp;20]
+load #32 r1 [r0;4]
+mov r0 r1
+push #32 r0
+load #64 r0 [bp;20]
+load #32 r1 [r0;0]
+mov r0 r1
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setz r0
+cmpi r0 0
+jz _L177_else
+movi r0 2
+push #32 r0
+load #64 r0 [bp;20]
+addi r0 0
+mov r1 r0
+load #32 r0 [r1]
+pop #32 r2
+mul r0 r2
+store #32 r0 [r1]
+load #64 r0 [bp;20]
+load #64 r1 [r0;8]
+mov r0 r1
+push #64 r0
+load #64 r0 [bp;20]
+load #32 r1 [r0;0]
+mov r0 r1
+push #32 r0
+movi r0 4
+mov r1 r0
+pop #32 r0
+mul r0 r1
+push #32 r0
+call _L14_test::std::vec::reallocate;58;<0>;(2);<>;(&unit,int)
+addi sp 12
+store #64 r0 [bp;-8]
+load #64 r0 [bp;20]
+load #64 r1 [r0;8]
+mov r0 r1
+push #64 r0
+load #64 r0 [bp;-8]
+push #64 r0
+load #64 r0 [bp;20]
+load #32 r1 [r0;4]
+mov r0 r1
+push #32 r0
+movi r0 4
+mov r1 r0
+pop #32 r0
+mul r0 r1
+push #32 r0
+call _L76_::::memcopy;-1;<0>;(3);<>;(&unit,&unit,int)
+addi sp 20
+load #64 r0 [bp;-8]
+push #64 r0
+load #64 r0 [bp;20]
+addi r0 8
+mov r1 r0
+pop #64 r0
+store #64 r0 [r1]
+jmp _L178_end
+_L177_else:
+_L178_end:
+load #32 r0 [bp;16]
+push #64 r0
+load #64 r0 [bp;20]
+load #32 r1 [r0;4]
+mov r0 r1
+push #64 r0
+load #64 r0 [bp;20]
+load #64 r1 [r0;8]
+mov r0 r1
+pop #64 r1
+muli r1 4
+add r0 r1
+mov r1 r0
+pop #64 r0
+store #32 r0 [r1]
+load #64 r0 [bp;20]
+addi r0 4
+load #32 r1 [r0]
+push #32 r1
+inc r1
+store #32 r1 [r0]
+pop #32 r0
+_L176_test::std::vec::push;53;<1>;(2);<int>;(&Struct(test::std::vec::Vec;<1>;<int>),int)_return:
+mov sp bp
+pop #64 bp
+ret
+_L48_test::generic_test::generic_function2;25;<1>;(1);<int>;(Struct(test::generic_test::Option;<1>;<int>)):
+push #64 bp
+mov bp sp
+subi sp 0
+movi r0 4
+pushmem r0 [bp;16]
+_L179_test::generic_test::generic_function2;25;<1>;(1);<int>;(Struct(test::generic_test::Option;<1>;<int>))_return:
+movi r0 4
+popmem r0 [bp;20]
+mov sp bp
+pop #64 bp
+ret
+_L49_test::generic_test::generic_function2;25;<1>;(1);<Struct(test::generic_test::Option;<1>;<int>)>;(Struct(test::generic_test::Option;<1>;<Struct(test::generic_test::Option;<1>;<int>)>)):
+push #64 bp
+mov bp sp
+subi sp 0
+movi r0 4
+pushmem r0 [bp;16]
+_L180_test::generic_test::generic_function2;25;<1>;(1);<Struct(test::generic_test::Option;<1>;<int>)>;(Struct(test::generic_test::Option;<1>;<Struct(test::generic_test::Option;<1>;<int>)>))_return:
+movi r0 4
+popmem r0 [bp;20]
+mov sp bp
+pop #64 bp
+ret
+_L50_test::std::print::println;45;<0>;(1);<>;(int):
+push #64 bp
+mov bp sp
+subi sp 0
+load #32 r0 [bp;16]
+push #32 r0
+call _L51_test::std::print::print;44;<0>;(1);<>;(int)
+addi sp 4
+movi r0 10
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+_L181_test::std::print::println;45;<0>;(1);<>;(int)_return:
+mov sp bp
+pop #64 bp
+ret
+_L51_test::std::print::print;44;<0>;(1);<>;(int):
+push #64 bp
+mov bp sp
+subi sp 8
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 0
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setl r0
+cmpi r0 0
+jz _L183_else
+movi r0 45
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+load #32 r0 [bp;16]
+neg r0
+push #64 r0
+lea r0 [bp;16]
+mov r1 r0
+pop #64 r0
+store #32 r0 [r1]
+jmp _L184_end
+_L183_else:
+_L184_end:
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 9
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setle r0
+cmpi r0 0
+jz _L185_else
+load #32 r0 [bp;16]
+push #32 r0
+movi r0 10
+mov r1 r0
+pop #32 r0
+mod r0 r1
+push #32 r0
+movi r0 48
+signext #8 r0
+mov r1 r0
+pop #32 r0
+add r0 r1
+signext #8 r0
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+jmp _L182_test::std::print::print;44;<0>;(1);<>;(int)_return
+jmp _L186_end
+_L185_else:
+_L186_end:
+movi r0 1
+store #32 r0 [bp;-4]
+_L187_loop:
+load #32 r0 [bp;16]
+push #32 r0
+load #32 r0 [bp;-4]
+mov r1 r0
+pop #32 r0
+div r0 r1
+push #32 r0
+movi r0 10
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setge r0
+cmpi r0 0
+jz _L189_else
+movi r0 10
+push #32 r0
+lea r0 [bp;-4]
+mov r1 r0
+load #32 r0 [r1]
+pop #32 r2
+mul r0 r2
+store #32 r0 [r1]
+_L188_continue:
+jmp _L187_loop
+_L189_else:
+_L190_break:
+_L191_loop:
+load #32 r0 [bp;-4]
+push #32 r0
+movi r0 0
+mov r1 r0
+pop #32 r0
+cmp r0 r1
+setg r0
+cmpi r0 0
+jz _L193_else
+load #32 r0 [bp;16]
+push #32 r0
+load #32 r0 [bp;-4]
+mov r1 r0
+pop #32 r0
+div r0 r1
+store #32 r0 [bp;-8]
+load #32 r0 [bp;-8]
+push #32 r0
+movi r0 48
+signext #8 r0
+mov r1 r0
+pop #32 r0
+add r0 r1
+signext #8 r0
+push #8 r0
+call _L69_::::write_char;-1;<0>;(1);<>;(char)
+addi sp 1
+load #32 r0 [bp;-4]
+push #32 r0
+lea r0 [bp;16]
+mov r1 r0
+load #32 r0 [r1]
+pop #32 r2
+mod r0 r2
+store #32 r0 [r1]
+movi r0 10
+push #32 r0
+lea r0 [bp;-4]
+mov r1 r0
+load #32 r0 [r1]
+pop #32 r2
+div r0 r2
+store #32 r0 [r1]
+_L192_continue:
+jmp _L191_loop
+_L193_else:
+_L194_break:
+_L182_test::std::print::print;44;<0>;(1);<>;(int)_return:
+mov sp bp
+pop #64 bp
+ret
+_L52_constant_0:
+bytes 80 111 112 32 102 114 111 109 32 101 109 112 116 121 32 86 101 99 0
+_L53_constant_1:
+bytes 69 78 85 77 32 84 69 83 84 0
+_L54_constant_2:
+bytes 104 105 0
+_L55_constant_3:
+bytes 116 114 117 101 0
+_L56_constant_4:
+bytes 102 97 108 115 101 0
+_L57_constant_5:
+bytes 73 110 100 101 120 32 111 117 116 32 111 102 32 98 111 117 110 100 115 0
+_L58_constant_6:
+bytes 100 97 116 97 47 105 110 112 117 116 46 116 120 116 0
+_L59_constant_7:
+bytes 100 97 116 97 47 111 117 116 112 117 116 46 116 120 116 0
+_L60_constant_8:
+bytes 80 65 78 73 67 58 0
+_L61_constant_9:
+bytes 73 110 105 116 105 97 108 32 99 97 112 97 99 105 116 121 32 109 117 115 116 32 98 101 32 103 114 101 97 116 101 114 32 116 104 97 110 32 48 0
+_L62_constant_10:
+bytes 104 105 0
+_L63_constant_11:
+bytes 69 78 68 32 84 69 83 84 0
+_L64_constant_12:
+bytes 69 78 68 32 84 69 83 84 32 50 0
+_L65_constant_13:
+bytes 84 85 80 76 69 32 84 69 83 84 0
+_L66_constant_14:
+bytes 77 69 77 32 84 69 83 84 0
+_L67_constant_15:
+bytes 80 65 78 73 67 32 84 69 83 84 0

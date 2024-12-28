@@ -1,2 +1,2 @@
 [package]
-root_name = "small_test"
+name = "small_test"

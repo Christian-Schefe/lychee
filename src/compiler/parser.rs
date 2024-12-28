@@ -1,5 +1,6 @@
 use crate::compiler::config::ConfigData;
 use crate::compiler::parser::parsed_expression::ParsedProgram;
+use crate::compiler::parser::parser_error::ParseResult;
 use crate::compiler::parser::program_parser::parse_module;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -83,7 +84,7 @@ impl ModuleIdentifier {
     }
 }
 
-pub fn parse(entry_points: &Vec<ConfigData>) -> ParsedProgram {
+pub fn parse(entry_points: &Vec<ConfigData>) -> ParseResult<ParsedProgram> {
     let mut module_tree = HashMap::new();
     for entry_point in entry_points {
         let mut visited_modules = HashSet::new();
@@ -93,18 +94,17 @@ pub fn parse(entry_points: &Vec<ConfigData>) -> ParsedProgram {
             ModulePath {
                 id: ModuleIdentifier {
                     path: vec![],
-                    root_name: entry_point.config.package.root_name.to_string(),
+                    root_name: entry_point.config.package.name.to_string(),
                 },
-                file: entry_point.get_entry_point(),
+                file: entry_point.get_entry_point()?,
             },
-        )
-        .unwrap();
+        )?;
     }
 
     let top_level_entry_point = entry_points.first().unwrap();
 
-    ParsedProgram {
+    Ok(ParsedProgram {
         module_tree,
-        root_name: top_level_entry_point.config.package.root_name.to_string(),
-    }
+        root_name: top_level_entry_point.config.package.name.to_string(),
+    })
 }

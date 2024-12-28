@@ -1,0 +1,30 @@
+Module(small_test::)
+struct Simple {
+  a: Integer(4),
+  b: Integer(4),
+}
+fn main<ParsedGenericParams { order: [] }>(
+)
+{
+  Declaration(Struct(ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "small_test", path: [] }, item_name: "Simple" }, is_module_local: true }, []), s)
+    StructInstance(Src { value: Struct(ParsedScopeId { item_id: ItemId { module_id: ModuleIdentifier { root_name: "small_test", path: [] }, item_name: "Simple" }, is_module_local: true }, []), location: Location { line: 2, column: 24, file: Some(ModulePath { id: ModuleIdentifier { root_name: "small_test", path: [] }, file: "\\\\?\\C:\\Users\\Christian\\Documents\\Development\\lychee\\data2\\src\\main.lyc" }) } })
+      a: 
+      Literal(Integer(1))
+      b: 
+      Literal(Integer(2))
+  FunctionCall
+    Var(small_test::::add)
+    Unary(Member("a"))
+      Var(small_test::::s)
+    Unary(Member("b"))
+      Var(small_test::::s)
+}
+fn add<ParsedGenericParams { order: [] }>(
+  a: Integer(4)
+  b: Integer(4)
+)
+{
+  Binary(Math(Add))
+    Var(small_test::::a)
+    Var(small_test::::b)
+}

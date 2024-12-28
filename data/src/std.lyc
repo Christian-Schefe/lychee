@@ -1,5 +1,5 @@
-module arrays;
-module strings;
+module array;
+module string;
 module io;
 module print;
 module vec;

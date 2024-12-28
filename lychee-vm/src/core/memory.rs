@@ -114,6 +114,12 @@ impl Memory {
         self.data.copy_within(src..src + bytes, dest);
     }
 
+    pub fn memory_set(&mut self, address: usize, value: u8, bytes: usize) {
+        for i in 0..bytes {
+            self.data[address + i] = value;
+        }
+    }
+
     pub fn read_string(&self, address: usize) -> String {
         let mut i = address;
         while self.data[i] != 0 {

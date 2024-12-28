@@ -74,7 +74,7 @@ pub fn collect_function_data(
 )> {
     let builtin_functions = crate::compiler::builtin::BuiltinFunction::get_builtin_function_ids();
     let mut function_bodies = Vec::new();
-    let mut functions = collect_functions(program, &mut function_bodies)?;
+    let functions = collect_functions(program, &mut function_bodies)?;
     let function_imports = collect_function_imports(program, &functions)?;
     Ok((
         CollectedFunctionData {

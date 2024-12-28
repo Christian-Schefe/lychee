@@ -13,7 +13,6 @@ pub struct AnalyzedProgram {
     pub resolved_functions: ResolvedFunctions,
     pub function_bodies: HashMap<FunctionId, AnalyzedExpression>,
     pub main_function: FunctionRef,
-    pub root_name: String,
 }
 
 #[derive(Debug, Clone)]

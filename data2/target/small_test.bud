@@ -1,0 +1,102 @@
+call _L1_small_test::::main;0;<0>;(0);<>;()
+exit
+_L2_::::read_char;-1;<0>;(0);<>;():
+movi r0 1
+subi sp 1
+read r0 [sp]
+pop #8 r0
+ret
+_L3_::::write_char;-1;<0>;(1);<>;(char):
+movi r0 1
+write r0 [sp;8]
+ret
+_L4_::::write;-1;<0>;(2);<>;(&char,int):
+load #32 r0 [sp;8]
+load #64 r1 [sp;12]
+write r0 [r1]
+ret
+_L5_::::read;-1;<0>;(2);<>;(&char,int):
+load #32 r0 [sp;8]
+load #64 r1 [sp;12]
+read r0 [r1]
+ret
+_L6_::::malloc;-1;<0>;(1);<>;(int):
+load #32 r1 [sp;8]
+alloc r1 r0
+ret
+_L7_::::free;-1;<0>;(1);<>;(&unit):
+load #64 r0 [sp;8]
+free r0
+ret
+_L8_::::random;-1;<0>;(0);<>;():
+rand r0
+ret
+_L9_::::exit;-1;<0>;(1);<>;(int):
+load #32 r0 [sp;8]
+exit
+_L10_::::memcopy;-1;<0>;(3);<>;(&unit,&unit,int):
+load #32 r0 [sp;8]
+load #64 r1 [sp;12]
+load #64 r2 [sp;20]
+memcopy r0 [r1] [r2]
+ret
+_L11_::::fopen;-1;<0>;(1);<>;(&char):
+load #64 r0 [sp;8]
+fileopen r0 [r0]
+ret
+_L12_::::fclose;-1;<0>;(1);<>;(int):
+load #32 r0 [sp;8]
+fileclose r0
+ret
+_L13_::::fread;-1;<0>;(3);<>;(&char,int,int):
+load #32 r0 [sp;8]
+load #32 r1 [sp;12]
+load #64 r2 [sp;16]
+fileread r0 r1 [r2]
+ret
+_L14_::::fwrite;-1;<0>;(3);<>;(&char,int,int):
+load #32 r0 [sp;8]
+load #32 r1 [sp;12]
+load #64 r2 [sp;16]
+filewrite r0 r1 [r2]
+ret
+_L0_small_test::::add;1;<0>;(2);<>;(int,int):
+push #64 bp
+mov bp sp
+subi sp 0
+load #32 r0 [bp;20]
+push #32 r0
+load #32 r0 [bp;16]
+mov r1 r0
+pop #32 r0
+add r0 r1
+_L15_small_test::::add;1;<0>;(2);<>;(int,int)_return:
+mov sp bp
+pop #64 bp
+ret
+_L1_small_test::::main;0;<0>;(0);<>;():
+push #64 bp
+mov bp sp
+subi sp 8
+movi r0 1
+push #32 r0
+movi r0 2
+push #32 r0
+movi r0 8
+popmem r0 [bp;-8]
+movi r0 8
+pushmem r0 [bp;-8]
+addi sp 8
+load #32 r0 [sp;-4]
+push #32 r0
+movi r0 8
+pushmem r0 [bp;-8]
+addi sp 8
+load #32 r0 [sp;-8]
+push #32 r0
+call _L0_small_test::::add;1;<0>;(2);<>;(int,int)
+addi sp 8
+_L16_small_test::::main;0;<0>;(0);<>;()_return:
+mov sp bp
+pop #64 bp
+ret

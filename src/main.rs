@@ -12,34 +12,32 @@ struct Args {
     input: PathBuf,
     #[arg(short, long)]
     output: Option<PathBuf>,
-    #[arg(short, long)]
-    assembly_output: Option<PathBuf>,
-    #[arg(long, default_value("false"))]
-    assemble_only: bool,
     #[arg(long)]
     bundle_vm: Option<PathBuf>,
+    #[arg(short, long, default_value("false"))]
+    debug_output: bool,
 }
 
 fn main() {
     let args = Args::parse();
-    let output = args
+    let output_dir = args
         .output
         .clone()
-        .unwrap_or_else(|| args.input.with_extension("o"));
+        .unwrap_or_else(|| args.input.join("target"));
 
-    if args.assemble_only {
-        assemble(&args.input, &output);
-    } else {
-        let assembly_output = args
-            .assembly_output
-            .clone()
-            .unwrap_or_else(|| output.with_extension("bud"));
-        compile(&args.input, &assembly_output);
-        assemble(&assembly_output, &output);
+    if !output_dir.try_exists().unwrap() {
+        std::fs::create_dir_all(&output_dir).unwrap();
     }
 
+    let input_dir = args.input.canonicalize().unwrap();
+    let output_dir = output_dir.canonicalize().unwrap();
+
+    let config = compiler::config::read_config(&input_dir).unwrap();
+    let assembly_output = compile(config, &output_dir, args.debug_output).unwrap();
+    let executable_output = assemble(&assembly_output).unwrap();
+
     if let Some(vm_path) = args.bundle_vm {
-        bundle_vm(&output, &vm_path);
+        bundle_vm(&executable_output, &vm_path);
     }
 }
 

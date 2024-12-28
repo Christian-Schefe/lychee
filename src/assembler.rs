@@ -4,8 +4,8 @@ use std::path::PathBuf;
 mod core;
 mod instruction_type;
 
-pub fn assemble(input: &PathBuf, output: &PathBuf) {
-    let str = std::fs::read_to_string(input).unwrap();
+pub fn assemble(input_file: &PathBuf) -> Result<PathBuf, anyhow::Error> {
+    let str = std::fs::read_to_string(input_file)?;
     let mut instructions = Vec::new();
     for line in str.lines().filter(|line| !line.is_empty()) {
         let instr = convert_line(line);
@@ -13,5 +13,7 @@ pub fn assemble(input: &PathBuf, output: &PathBuf) {
     }
     let bytes = instructions_to_bytes(instructions);
 
-    std::fs::write(output, bytes).unwrap();
+    let output = input_file.with_extension("o");
+    std::fs::write(&output, bytes)?;
+    Ok(output)
 }

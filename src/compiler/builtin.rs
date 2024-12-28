@@ -200,6 +200,28 @@ impl BuiltinFunction {
         )
     }
 
+    fn memset() -> BuiltinFunction {
+        BuiltinFunction::new(
+            "memset".to_string(),
+            AnalyzedTypeId::Unit,
+            vec![
+                (
+                    "dest".to_string(),
+                    AnalyzedTypeId::Pointer(Box::new(AnalyzedTypeId::Unit)),
+                ),
+                ("value".to_string(), AnalyzedTypeId::Integer(4)),
+                ("length".to_string(), AnalyzedTypeId::Integer(4)),
+            ],
+            Box::new(|context| {
+                context.load(4, "r0", "[sp;8]");
+                context.load(4, "r1", "[sp;12]");
+                context.load(8, "r2", "[sp;16]");
+                context.memset("r0", "r1", "[r2]");
+                context.ret();
+            }),
+        )
+    }
+
     fn fopen() -> BuiltinFunction {
         BuiltinFunction::new(
             "fopen".to_string(),
@@ -232,7 +254,7 @@ impl BuiltinFunction {
     fn fread() -> BuiltinFunction {
         BuiltinFunction::new(
             "fread".to_string(),
-            AnalyzedTypeId::Unit,
+            AnalyzedTypeId::Integer(4),
             vec![
                 (
                     "buffer".to_string(),
@@ -242,10 +264,10 @@ impl BuiltinFunction {
                 ("file".to_string(), AnalyzedTypeId::Integer(4)),
             ],
             Box::new(|context| {
-                context.load(4, "r0", "[sp;8]");
-                context.load(4, "r1", "[sp;12]");
+                context.load(4, "r1", "[sp;8]");
+                context.load(4, "r0", "[sp;12]");
                 context.load(8, "r2", "[sp;16]");
-                context.file_read("r0", "r1", "[r2]");
+                context.file_read("r1", "r0", "[r2]");
                 context.ret();
             }),
         )
@@ -284,6 +306,7 @@ impl BuiltinFunction {
             BuiltinFunction::random(),
             BuiltinFunction::exit(),
             BuiltinFunction::memcopy(),
+            BuiltinFunction::memset(),
             BuiltinFunction::fopen(),
             BuiltinFunction::fclose(),
             BuiltinFunction::fread(),

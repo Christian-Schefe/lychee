@@ -124,6 +124,7 @@ pub fn run(memory: &mut Memory, heap: &mut Heap, debug_print: bool) -> i64 {
             0x3D => file_read(pc, memory, debug_print),
             0x3E => file_write(pc, memory, debug_print),
             0x3F => mem_copy(pc, memory, debug_print),
+            0x40 => mem_set(pc, memory, debug_print),
             _ => panic!("Unknown opcode: {}", opcode),
         };
         if debug_print {
@@ -611,9 +612,10 @@ fn file_read(pc: usize, memory: &mut Memory, debug_print: bool) {
 
     let file = memory.files[file_id].as_mut().unwrap();
     let mut buffer = vec![0; size];
-    file.read_exact(&mut buffer).unwrap();
+    let read_bytes = file.read(&mut buffer).unwrap();
     memory.write_bytes(address, &buffer);
     memory.registers[constants::PC] += 2;
+    memory.registers[size_register] = read_bytes as u64;
 
     if debug_print {
         println!(
@@ -658,6 +660,25 @@ fn mem_copy(pc: usize, memory: &mut Memory, debug_print: bool) {
         println!(
             "Copied {} bytes from address {} to address {}",
             size, src_address, dest_address
+        );
+    }
+}
+
+fn mem_set(pc: usize, memory: &mut Memory, debug_print: bool) {
+    let byte1 = memory.data[pc + 1];
+    let size_register = (byte1 & 0x0F) as usize;
+    let value_register = ((byte1 & 0xF0) >> 4) as usize;
+    let value = memory.registers[value_register] as u8;
+    let size = memory.registers[size_register] as usize;
+    let address = read_address(pc + 2, memory) as usize;
+
+    memory.memory_set(address, value, size);
+    memory.registers[constants::PC] += 2;
+
+    if debug_print {
+        println!(
+            "Set {} bytes at address {} to value {}",
+            size, address, value
         );
     }
 }

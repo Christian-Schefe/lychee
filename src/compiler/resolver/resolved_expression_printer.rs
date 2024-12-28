@@ -3,13 +3,15 @@ use crate::compiler::resolver::resolved_expression::{
     ResolvedAssignableExpression, ResolvedExpression, ResolvedExpressionKind, ResolvedFunction,
     ResolvedProgram,
 };
+use std::path::PathBuf;
 
-pub fn print_program(expr: &ResolvedProgram) {
+pub fn print_program(expr: &ResolvedProgram, output_path: &PathBuf) {
     let mut printer = Printer::new();
     for function in &expr.functions {
         print_function(&mut printer, &function);
     }
-    println!("{}", printer.build());
+    let output = printer.build();
+    std::fs::write(output_path, output).unwrap();
 }
 
 fn print_function(printer: &mut Printer, function: &ResolvedFunction) {

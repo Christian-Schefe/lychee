@@ -44,7 +44,7 @@ unit print(Vec<int> this) {
     write_char('\n');
 }
 
-Vec<T> createVec<T>(int initial_capacity) {
+Vec<T> create_vec<T>(int initial_capacity) {
     if initial_capacity <= 0 {
         panic("Initial capacity must be greater than 0");
     };
@@ -53,6 +53,16 @@ Vec<T> createVec<T>(int initial_capacity) {
         size: 0,
         capacity: initial_capacity
     };
+    arr
+}
+
+Vec<T> create_sized_vec<T>(int size) {
+    let Vec<T> arr = new Vec<T> {
+        data: malloc(size * sizeof(T)) as &T,
+        size: size,
+        capacity: size
+    };
+    memset(arr.data as &unit, 0, size * sizeof(T));
     arr
 }
 
@@ -87,14 +97,14 @@ T pop<T>(&Vec<T> this) {
 }
 
 Vec<T> clone<T>(Vec<T> this) {
-    let Vec<T> new_vec = createVec::<T>(this.capacity);
+    let Vec<T> new_vec = create_vec::<T>(this.capacity);
     memcopy(this.data as &unit, new_vec.data as &unit, this.size * sizeof(T));
     new_vec.size = this.size;
     new_vec
 }
 
 Vec<K> map<T,K>(Vec<T> this, (T) -> K fn) {
-    let Vec<K> arr = createVec::<K>(this.size);
+    let Vec<K> arr = create_vec::<K>(this.size);
     let int i = 0;
     while (i < this.size) {
         (&arr).push(fn(this.get(i)));

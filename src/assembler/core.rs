@@ -53,7 +53,9 @@ pub(crate) fn convert_line(line: &str) -> AssemblyInstruction {
         | OpCode::PopMem
         | OpCode::PeekMem
         | OpCode::FileOpen => InstructionKind::parse_register_address(parts),
-        OpCode::FileRead | OpCode::FileWrite => InstructionKind::parse_two_registers_address(parts),
+        OpCode::FileRead | OpCode::FileWrite | OpCode::MemSet => {
+            InstructionKind::parse_two_registers_address(parts)
+        }
         OpCode::MemCopy => InstructionKind::parse_register_two_addresses(parts),
     };
 
@@ -178,6 +180,7 @@ lazy_static! {
             ("fileread".to_string(), OpCode::FileRead),
             ("filewrite".to_string(), OpCode::FileWrite),
             ("memcopy".to_string(), OpCode::MemCopy),
+            ("memset".to_string(), OpCode::MemSet),
         ])
     };
     pub static ref REGISTER_MAP: HashMap<String, RegisterCode> = {

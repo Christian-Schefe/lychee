@@ -3,6 +3,7 @@ use crate::compiler::parser::parsed_expression::{
     ParsedStructDefinition,
 };
 use std::fmt::Display;
+use std::path::PathBuf;
 
 struct Line(usize, String);
 
@@ -43,12 +44,13 @@ impl Printer {
     }
 }
 
-pub fn print_program(program: &ParsedProgram) {
+pub fn print_program(program: &ParsedProgram, output_path: &PathBuf) {
     let mut printer = Printer::new();
     for (_, module) in &program.module_tree {
         print_module(&mut printer, module);
     }
-    println!("{}", printer.build());
+    let output = printer.build();
+    std::fs::write(output_path, output).unwrap();
 }
 
 pub fn print_module(printer: &mut Printer, expr: &ParsedModule) {

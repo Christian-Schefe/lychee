@@ -1,5 +1,5 @@
 [package]
-root_name = "test"
+name = "test"
 
 [dependencies]
 small_test = { path = "../data2" }

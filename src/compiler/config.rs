@@ -10,7 +10,7 @@ pub struct LycheeConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Package {
-    pub root_name: String,
+    pub name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,33 +25,43 @@ pub struct ConfigData {
 }
 
 impl ConfigData {
-    pub fn get_entry_point(&self) -> PathBuf {
-        self.root_path.join("main.lyc")
+    pub fn get_entry_point(&self) -> ConfigResult<PathBuf> {
+        let path = self.root_path.join("src/main.lyc");
+        if !path.try_exists()? {
+            return Err(anyhow::anyhow!("Entry point not found at {:?}", path));
+        }
+        Ok(path)
     }
 }
 
-pub fn read_config(root_path: &PathBuf) -> ConfigData {
+pub fn read_config(root_path: &PathBuf) -> ConfigResult<ConfigData> {
     let config_path = root_path.join("lychee.toml");
+    if !config_path.try_exists()? {
+        return Err(anyhow::anyhow!(
+            "Config file not found at {:?}",
+            config_path
+        ));
+    }
     let config_str = std::fs::read_to_string(config_path.clone())
         .unwrap_or_else(|_| panic!("Failed to read config file at {config_path:?}"));
     match toml::from_str(&config_str) {
-        Ok(config) => ConfigData {
+        Ok(config) => Ok(ConfigData {
             config,
             root_path: root_path.clone(),
-        },
+        }),
         Err(e) => {
-            panic!("Failed to parse config file: {}", e);
+            panic!("Failed to parse config file at {:?}: {}", root_path, e);
         }
     }
 }
 
 pub type ConfigResult<T> = Result<T, anyhow::Error>;
 
-pub fn find_all_entry_points(config: &ConfigData) -> Vec<ConfigData> {
+pub fn find_all_entry_points(config: &ConfigData) -> ConfigResult<Vec<ConfigData>> {
     let mut visited = HashSet::new();
     let mut entries = vec![config.clone()];
-    find_all_entry_points_inner(config, &mut visited, &mut entries).unwrap();
-    entries
+    find_all_entry_points_inner(config, &mut visited, &mut entries)?;
+    Ok(entries)
 }
 
 fn find_all_entry_points_inner(
@@ -59,18 +69,25 @@ fn find_all_entry_points_inner(
     visited: &mut HashSet<String>,
     entries: &mut Vec<ConfigData>,
 ) -> ConfigResult<()> {
-    if visited.contains(&config.config.package.root_name) {
+    if visited.contains(&config.config.package.name) {
         return Err(anyhow::anyhow!(
             "Circular dependency to root '{}'",
-            config.config.package.root_name
+            config.config.package.name
         ));
     }
-    visited.insert(config.config.package.root_name.clone());
+    visited.insert(config.config.package.name.clone());
 
     if let Some(deps) = &config.config.dependencies {
-        for (_, dep) in deps {
+        for (dep_name, dep) in deps {
             let config_path = config.root_path.join(&dep.path);
-            let dep_config = read_config(&config_path);
+            let dep_config = read_config(&config_path)?;
+            if dep_config.config.package.name != *dep_name {
+                return Err(anyhow::anyhow!(
+                    "Dependency name mismatch: expected '{}', found '{}'",
+                    dep_name,
+                    dep_config.config.package.name
+                ));
+            }
             find_all_entry_points_inner(&dep_config, visited, entries)?;
             entries.push(dep_config);
         }

@@ -1,0 +1,43 @@
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "small_test", path: [] }, item_name: "main" }, body_index: 0, param_count: 0, generic_count: 0 }) }>(small_test::::main())
+-> int
+Expr type: int
+Block (returns: true) {
+  Expr type: unit
+  Declaration(s)
+    Expr type: small_test::::Simple
+    Struct
+      a: 
+      Expr type: int
+      Literal(Integer(1))
+      b: 
+      Expr type: int
+      Literal(Integer(2))
+  Expr type: int
+  FunctionCall
+    Function(small_test::::add(int,int))
+    Expr type: int
+    FieldAccess(a)
+      Expr type: small_test::::Simple
+      ValueOfAssignable
+        LocalVariable(s)
+    Expr type: int
+    FieldAccess(b)
+      Expr type: small_test::::Simple
+      ValueOfAssignable
+        LocalVariable(s)
+}
+Function<GenericParams { mapping: {}, kind: Function(FunctionId { id: ItemId { module_id: ModuleIdentifier { root_name: "small_test", path: [] }, item_name: "add" }, body_index: 1, param_count: 2, generic_count: 0 }) }>(small_test::::add(_,_))
+  b: int
+  a: int
+-> int
+Expr type: int
+Block (returns: true) {
+  Expr type: int
+  Binary(Math(Add))
+    Expr type: int
+    ValueOfAssignable
+      LocalVariable(a)
+    Expr type: int
+    ValueOfAssignable
+      LocalVariable(b)
+}

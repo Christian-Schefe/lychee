@@ -56,7 +56,7 @@ impl Heap {
 
     fn split_block(&self, memory: &mut Memory, block_address: usize, size: u64) {
         let block_size = memory.read_i64_le(block_address, DATA_SIZE_64);
-        if block_size == size as i64 {
+        if block_size <= size as i64 + self.header_size as i64 {
             return;
         }
         let next = memory.read_i64_le(block_address + 8, DATA_SIZE_32);

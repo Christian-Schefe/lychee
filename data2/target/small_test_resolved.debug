@@ -1,0 +1,36 @@
+fn small_test::::main;0;<0>;(0);<>;() (stack: 8, return location: Register)
+  Expr: ValueData { size: 4, location: Register }, stack discard: 0
+  {
+    Expr: ValueData { size: 0, location: None }, stack discard: 0
+    Declaration (offset: -8)
+      Expr: ValueData { size: 8, location: Stack }, stack discard: 0
+      StructLiteral
+          Expr: ValueData { size: 4, location: Register }, stack discard: 0
+          Literal Integer(1)
+          Expr: ValueData { size: 4, location: Register }, stack discard: 0
+          Literal Integer(2)
+    Expr: ValueData { size: 4, location: Register }, stack discard: 8
+    FunctionCall Function("small_test::::add;1;<0>;(2);<>;(int,int)") (return on stack: 0)
+      Expr: ValueData { size: 4, location: Register }, stack discard: 0
+      FieldAccess (offset: 4, struct size: 8)
+        Expr: ValueData { size: 8, location: Stack }, stack discard: 0
+        ValueOfAssignable
+          LocalVariable (offset: -8)
+      Expr: ValueData { size: 4, location: Register }, stack discard: 0
+      FieldAccess (offset: 0, struct size: 8)
+        Expr: ValueData { size: 8, location: Stack }, stack discard: 0
+        ValueOfAssignable
+          LocalVariable (offset: -8)
+  }
+fn small_test::::add;1;<0>;(2);<>;(int,int) (stack: 0, return location: Register)
+  Expr: ValueData { size: 4, location: Register }, stack discard: 0
+  {
+    Expr: ValueData { size: 4, location: Register }, stack discard: 0
+    Binary Math(Add)
+      Expr: ValueData { size: 4, location: Register }, stack discard: 0
+      ValueOfAssignable
+        LocalVariable (offset: 20)
+      Expr: ValueData { size: 4, location: Register }, stack discard: 0
+      ValueOfAssignable
+        LocalVariable (offset: 16)
+  }

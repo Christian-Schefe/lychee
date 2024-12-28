@@ -235,6 +235,12 @@ impl CodegenContext {
         ));
     }
 
+    pub fn memset(&mut self, size_register: &str, value_register: &str, address: &str) {
+        self.lines.push(format!(
+            "memset {size_register} {value_register} {address}"
+        ));
+    }
+    
     pub fn file_open(&mut self, pointer_register: &str, filename_address: &str) {
         self.lines
             .push(format!("fileopen {pointer_register} {filename_address}"));

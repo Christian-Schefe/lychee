@@ -3,14 +3,14 @@ module enum_test;
 module std;
 
 import root::generic_test::{createStruct, test, MyStructIntInt, MyStruct};
-import root::std::arrays::*;
+import root::std::array::*;
 import root::std::print::*;
 import root::std::vec::*;
 
 import small_test::add;
 
 int main() {
-    let Test arr = createArray::<int>(100);
+    let Test arr = create_array::<int>(100);
     arr.fill(10);
     arr.set(8, generic_sizeof_test::<MyStruct<char, long>, int>());
     for (let int i = 0; i < 5; i++) {
@@ -42,7 +42,7 @@ int main() {
     let var arr2 = arr.map(test_fn);
     arr2.print();
 
-    let var vec = createVec::<int>(1);
+    let var vec = create_vec::<int>(1);
     (&vec).push(10);
     (&vec).push(20);
     vec.print();
@@ -92,6 +92,10 @@ int main() {
 
     let int extern_test = small_test::add(10, 20).add(20);
     extern_test.println();
+
+    println("MEM TEST");
+    let var vec3 = create_sized_vec::<int>(5);
+    vec3.print();
 
     println("PANIC TEST");
     (&vec).pop().println();

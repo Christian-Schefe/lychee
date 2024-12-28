@@ -1,4 +1,4 @@
-import root::std::strings::{String, create_string, print, free};
+import root::std::string::*;
 import root::std::print::*;
 
 unit file_test() {
@@ -33,7 +33,7 @@ unit read(File this, &String string) {
 }
 
 String read_chars(File this, int amount) {
-    let var str = create_string(amount);
+    let var str = create_sized_string(amount);
     fread(str.data, str.size, this.file);
     str
 }

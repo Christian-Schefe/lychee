@@ -27,6 +27,7 @@ pub enum OpCode {
     FileRead,
     FileWrite,
     MemCopy,
+    MemSet,
 }
 
 impl OpCode {
@@ -59,6 +60,7 @@ impl OpCode {
             OpCode::FileRead => 0x3D,
             OpCode::FileWrite => 0x3E,
             OpCode::MemCopy => 0x3F,
+            OpCode::MemSet => 0x40,
         }
     }
 }

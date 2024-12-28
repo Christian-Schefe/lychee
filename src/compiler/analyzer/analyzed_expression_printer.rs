@@ -4,15 +4,17 @@ use crate::compiler::analyzer::analyzed_expression::{
 };
 use crate::compiler::merger::merged_expression::ResolvedFunctionHeader;
 use crate::compiler::parser::expression_tree_printer::Printer;
+use std::path::PathBuf;
 
-pub fn print_program(program: &AnalyzedProgram) {
+pub fn print_program(program: &AnalyzedProgram, output_path: &PathBuf) {
     let mut printer = Printer::new();
     for (id, function_body) in program.function_bodies.iter() {
         let header = program.resolved_functions.get_header(id);
         print_function_header(&mut printer, header);
         print_expression(&mut printer, function_body);
     }
-    println!("{}", printer.build());
+    let output = printer.build();
+    std::fs::write(output_path, output).unwrap();
 }
 
 fn print_function_header(printer: &mut Printer, header: &ResolvedFunctionHeader) {
@@ -158,7 +160,7 @@ fn print_expression(printer: &mut Printer, expr: &AnalyzedExpression) {
             printer.dedent();
         }
         AnalyzedExpressionKind::FunctionCall { call_type, args } => {
-            printer.add_line(format!("FunctionCall"));
+            printer.add_line("FunctionCall".to_string());
             printer.indent();
             match call_type {
                 AnalyzedFunctionCallType::Function(function) => {

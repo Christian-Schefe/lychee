@@ -1,15 +1,14 @@
-// Zero-terminated strings with known size.
-struct String {
-    &char data;
-    int size;
+import root::std::vec::*;
+
+alias String = Vec<char>;
+
+String create_string(int capacity) {
+    let var str = create_vec::<char>(capacity);
+    str
 }
 
-String create_string(int size) {
-    let var str = new String {
-        data: malloc(size + 1) as &char,
-        size: size
-    };
-    str.data[size] = '\0';
+String create_sized_string(int size) {
+    let var str = create_sized_vec::<char>(size);
     str
 }
 

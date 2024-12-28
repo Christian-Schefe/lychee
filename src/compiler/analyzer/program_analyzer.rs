@@ -75,7 +75,6 @@ pub fn analyze_program(program: &MergedProgram) -> AnalyzerResult<AnalyzedProgra
         resolved_functions: program.resolved_functions.clone(),
         function_bodies: analyzed_function_vec,
         main_function: main_func_ref,
-        root_name: program.root_name.clone(),
     })
 }
 

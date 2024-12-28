@@ -36,7 +36,7 @@ unit print(Array<int> this) {
     write_char('\n');
 }
 
-Array<T> createArray<T>(int size) {
+Array<T> create_array<T>(int size) {
     let Array<T> arr = new Array<T> {
         data: malloc(size * sizeof(T)) as &T,
         size: size
@@ -49,7 +49,7 @@ unit free<T>(Array<T> this) {
 }
 
 Array<K> map<T,K>(Array<T> this, (T) -> K fn) {
-    let Array<K> arr = createArray::<K>(this.size);
+    let Array<K> arr = create_array::<K>(this.size);
     let int i = 0;
     while (i < this.size) {
         arr.set::<K>(i, fn(this.get::<T>(i)));
@@ -59,7 +59,7 @@ Array<K> map<T,K>(Array<T> this, (T) -> K fn) {
 }
 
 Array<T> filter<T>(Array<T> this, (T) -> bool fn) {
-    let Array<T> arr = createArray::<T>(this.size);
+    let Array<T> arr = create_array::<T>(this.size);
     let int i = 0;
     let int j = 0;
     while (i < this.size) {
